@@ -35,8 +35,8 @@
         "The contract supports registering additional independent adversarial agents without coupling their prompts or verdicts"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Delivered all 5 acceptance criteria: (1) schema.json defines versioned finding, verdict, severity, confidence, citations, attribution; (2) unit-test-reviewer/prompt.md human-editable markdown with version 1.0.0 and SHA-256 hash; (3) schema 1.0.0, policy 1.0.0, agents 1.0.0, prompt 1.0.0, model deployment all versioned independently; (4) TypeScript validator enforces schema compliance, actionability (citations, scenarios, suggested tests), policy thresholds; (5) agents-config.json registry enables adding agents independently. Tested with valid/invalid example findings.",
       "dependencies": []
     },
     {

@@ -1,0 +1,33 @@
+{
+  "registryVersion": "1.0.0",
+  "agents": [
+    {
+      "name": "unit-test-reviewer",
+      "version": "1.0.0",
+      "enabled": true,
+      "promptFile": ".github/adversarial-agents/unit-test-reviewer/prompt.md",
+      "promptVersion": "1.0.0",
+      "promptContentHash": "8043aabd4090fae03973eb6e93316c065a0eac7f994d6bcc9aafd35205fd5519",
+      "modelDeployment": "gpt-4-1-mini@eastus",
+      "modelVersion": "2025-01",
+      "toolsVersion": "1.0.0",
+      "description": "Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns.",
+      "targetScopes": [
+        "tests"
+      ],
+      "contactEmail": "dylan@microsoft.com",
+      "verdictRules": {
+        "blockingThreshold": 1,
+        "allowHighConfidenceOnly": true
+      }
+    }
+  ],
+  "subscriptionId": "11213dbd-39fe-46ba-87db-5f5e8c449aed",
+  "requirementsMet": {
+    "versionedJsonSchema": true,
+    "dedicatedPromptFiles": true,
+    "independentVersioning": true,
+    "validationRequired": true,
+    "agentRegistration": true
+  }
+}
