@@ -319,14 +319,15 @@ for (const fragment of requiredEvaluatorFragments) {
 if (
   workflowSources.some(
     (source) =>
-      source.includes('review:adversarial') ||
-      source.includes('calibrate:adversarial') ||
-      source.includes('evaluate-adversarial-reviewer') ||
-      source.includes('publish:adversarial') ||
-      source.includes('publish-adversarial-evidence'),
+      !source.startsWith('name: Adversarial review') &&
+      (source.includes('review:adversarial') ||
+        source.includes('calibrate:adversarial') ||
+        source.includes('evaluate-adversarial-reviewer') ||
+        source.includes('publish:adversarial') ||
+        source.includes('publish-adversarial-evidence')),
   )
 ) {
-  violations.push('Model-backed review and publication must remain outside workflows until orchestration.');
+  violations.push('Model-backed review and publication may run only in the reviewed downstream workflow.');
 }
 
 if (

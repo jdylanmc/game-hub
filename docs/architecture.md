@@ -120,6 +120,20 @@ kit (SDK) version.
 Read the [Azure Static Web Apps documentation](https://learn.microsoft.com/azure/static-web-apps/)
 before changing deployment behavior.
 
+### Adversarial review runs only after deterministic CI
+
+The model-backed review workflow is triggered by the completed canonical
+continuous integration (CI) workflow, not directly by pull-request code.
+GitHub loads the workflow from protected `main`; both jobs explicitly check out
+that protected commit. Pull-request Git objects are fetched without checkout
+and are consumed only by the bounded untrusted-data collector.
+
+Three deterministic concurrency lanes cap shared model work at three active
+reviews. A successful deterministic result, current exact head SHA, promoted
+calibration, protected-environment OpenID Connect identity, restricted Azure
+endpoint, and revalidated structured output are mandatory before publication.
+The downstream model check never replaces the deterministic CI check.
+
 ### Azure infrastructure uses Bicep
 
 Define every Azure resource through idempotent

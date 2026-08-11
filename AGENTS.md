@@ -80,6 +80,13 @@ redacted evidence bundle; the artifact is authoritative when repeated runs
 supersede annotations. Publication must remain downstream of complete
 deterministic continuous integration.
 
+`.github/workflows/adversarial-review.yml` runs only from protected default-
+branch code after the exact pull-request head passes complete deterministic
+continuous integration. Never check out or execute pull-request code in that
+workflow. Preserve its three deterministic capacity lanes, two exact-head
+revalidations, least-privilege job permissions, promoted-calibration gate, and
+90-day evidence retention.
+
 `yarn policy:check` rejects unapproved lint suppressions and weakened workflow
 invariants. Record an exceptional suppression with a specific rationale in
 `config/lint-suppressions.json`. `yarn bundle:check` enforces the reviewed

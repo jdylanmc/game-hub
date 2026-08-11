@@ -120,8 +120,8 @@
         "Three reviews can execute concurrently without shared mutable state"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a protected-base workflow_run pipeline that gates on the canonical Continuous integration workflow completing successfully for the exact current pull-request head SHA. It resolves fork metadata and issue requirements through read-only GitHub APIs, checks out/installs only protected main, fetches exact untrusted Git objects without checkout, collects bounded evidence, requires promoted calibration before OpenID Connect, invokes the restricted reviewer, revalidates the head before publication, retains evidence for 90 days, and fails closed. Job-scoped least permissions, a protected inference environment, immutable verified action SHAs, explicit 10/20-minute timeouts, and three deterministic concurrency lanes are policy-enforced. Twenty-five deterministic resolver/policy tests cover forks, failed/missing/canceled/stale CI, base-code control, exact SHA, relevant reruns, permission/action/timeout/concurrency/retention weakening, missing output, and ambiguity. No live Azure deployment, environment configuration, branch protection, or US-008 work was performed.",
       "dependencies": ["US-002", "US-003", "US-004", "US-006"]
     },
     {

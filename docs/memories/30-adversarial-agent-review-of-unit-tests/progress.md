@@ -293,3 +293,62 @@
   publication, the final fork-safe workflow, Azure deployment, and enforcement
   remain later-story work. The policy content change intentionally invalidates
   any older calibration report.
+
+## 2026-08-11 - Iteration 8: US-007 completion
+
+- Added `.github/workflows/adversarial-review.yml` using `workflow_run` for the
+  canonical `Continuous integration` workflow. Resolve/model jobs are eligible
+  only after a completed pull-request run concludes successfully.
+- Both jobs check out the explicit protected default-branch commit identified by
+  `github.sha`, verify `refs/heads/main`, and install only immutable protected-
+  base dependencies. Pull-request branches, workflows, manifests, dependencies,
+  tests, and scripts are never checked out or executed.
+- Added `scripts/prepare-adversarial-workflow.ts` to resolve fork and same-repo
+  pull requests through read-only GitHub APIs. It verifies workflow name/path,
+  repository, open PR, trusted base, exact current head SHA, a single source
+  issue, bounded changed-file metadata, and relevant paths before producing the
+  collector input.
+- Empty workflow-run PR metadata is safely recovered from validated fork owner,
+  branch, and exact head SHA. Pull-request and issue content remains inert data;
+  shell-consumed repository URLs, SHAs, numbers, and outputs are constrained.
+- Failed, missing, canceled, noncanonical, ambiguous, irrelevant, or stale
+  deterministic runs stop before model work. Every relevant later head SHA gets
+  a separate resolver decision after its own successful deterministic run.
+- The review job revalidates all exact metadata before Azure access and again
+  immediately before publication, preventing a run for an old head from
+  publishing after a new push.
+- Exact base/head Git objects are fetched without checkout, hooks, credentials,
+  external protocols, or PR dependency installation. The bounded collector
+  remains the only consumer of untrusted repository content.
+- Promoted calibration is checked before Azure authentication. The review job
+  alone receives `id-token: write` and `checks: write`; metadata permissions are
+  read-only. The `adversarial-review` environment scopes OpenID Connect and
+  Azure variables, Azure CLI output is suppressed, and the reviewer restricts
+  inference to the registered deployment and `*.openai.azure.com` endpoint.
+- Pull requests map deterministically to three concurrency lanes, allowing at
+  most three active isolated reviews. Runs use explicit 10- and 20-minute
+  timeouts, do not cancel active lane work, and queued runs revalidate freshness
+  before spending model capacity.
+- Reviewer FAIL/ERROR outputs are published and then fail the workflow. Missing
+  output, unexpected exit, timeout, stale head, publication failure, artifact
+  failure, or non-PASS final validation also fails closed and cannot mask the
+  independently required deterministic check.
+- Evidence uploads use the verified immutable upload action, fail when evidence
+  is absent, and retain context, result, workflow inputs, and publication
+  artifacts for 90 days.
+- Added versioned workflow configuration, operating/architecture documentation,
+  a dedicated workflow-policy gate, 15 metadata simulations, and 10 adversarial
+  mutation tests covering fork safety, exact-SHA dependency, base-code control,
+  permission weakening, immutable pins, missing outputs, timeouts, concurrency,
+  retention, ambiguity, and downstream head reruns.
+- Verified the checkout, setup-node, Azure login, and upload-artifact full action
+  SHAs exist in their upstream repositories.
+- Passed the complete deterministic suite in cheapest-to-most-expensive order:
+  immutable install, formatting, lint, workflow/adversarial policy, generation,
+  typecheck, security audit, 110 tests with coverage, production build, bundle
+  budgets, Storybook, and 11 fail-closed continuous-integration probes.
+- US-007 is passed. US-008 and US-009 were not advanced. The workflow remains
+  inert until merged to protected main and still requires a real promoted active
+  calibration report, protected environment variables, environment-scoped
+  federated identity, narrow Azure role assignment, deployed model, and live
+  GitHub/Azure verification. Branch protection remains unchanged.
