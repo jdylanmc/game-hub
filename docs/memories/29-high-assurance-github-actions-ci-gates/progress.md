@@ -104,3 +104,24 @@
   unchanged unrelated local edits are permitted while any generator-created
   dirty state fails closed.
 - No blockers. US-004 is the next eligible story.
+
+## 2026-08-11 - US-004 complete
+
+- Added a fork-safe GitHub Actions workflow for pull requests and main updates
+  that runs immutable installation, formatting, lint, dependency audit,
+  coverage-enforced tests, generated-state verification, type checking,
+  production build, and Storybook build through the canonical root commands.
+- Pinned Node.js, Yarn, and every action reference; limited workflow permissions
+  to read-only repository contents; added concurrency cancellation and a
+  30-minute job timeout.
+- Added JUnit test output and 14-day artifact retention for continuous
+  integration logs, test results, coverage, production output, Storybook, and
+  security audit evidence.
+- Files changed: `.github/workflows/continuous-integration.yml`, `.gitignore`,
+  `package.json`, `AGENTS.md`, and this issue memory.
+- Checks passed: `yarn validate`, including the new high-severity recursive
+  dependency audit and JUnit test reporting.
+- Reusable discovery: keep continuous integration steps on the same root Yarn
+  commands used locally, and make evidence upload run unconditionally so failed
+  gates preserve prior logs.
+- No blockers. US-005 is the next eligible story.

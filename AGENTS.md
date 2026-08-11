@@ -39,6 +39,14 @@ Run `yarn generate:check` after changing game workspace metadata or discovery
 logic. It fails when generation changes Git state or the committed catalog
 outputs are dirty.
 
+## Continuous Integration
+
+`.github/workflows/continuous-integration.yml` runs the same root validation
+commands as local development. Keep action references pinned to full commit
+SHAs, preserve least-privilege permissions and fork safety, and retain the
+workflow's logs, test results, coverage, production build, and Storybook
+evidence.
+
 ## Test Integrity
 
 Keep at least one deterministic test under each of `src/`, `games/`, and
