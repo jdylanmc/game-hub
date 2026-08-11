@@ -20,6 +20,11 @@ state for one issue; they do not replace or silently broaden the issue.
 
 ## Memory Rules
 
+- Bind each plan to an exact `repoNameWithOwner`, issue URL, issue number,
+  branch, and base branch.
+- Read and reconcile an existing issue directory before updating it.
+- Reject absolute paths, dot components, and paths that resolve outside this
+  directory.
 - Commit memory updates with the implementation they describe.
 - Append to `progress.md`; do not rewrite prior iteration entries.
 - Update `plan.json` only after the story's required checks pass.

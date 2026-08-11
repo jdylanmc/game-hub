@@ -63,7 +63,8 @@ When no issue is supplied, the `ralph-loop` skill:
 The user may explicitly delegate selection and continuation by best judgment.
 That delegation removes later issue-selection prompts for the current run; it
 does not permit autonomous merges, scope outside open issues, or bypassing
-failed checks.
+failed checks. The runner rejects `--continuous` unless `plan.json` records that
+delegation.
 
 ## Persistent State Lives in `docs/memories`
 
@@ -80,7 +81,8 @@ docs/memories/<issue>-<slug>/
 
 `issue.md` snapshots the issue title, URL, body, labels, and acceptance criteria
 used to prepare the run. `plan.json` splits the issue into ordered stories and
-records their pass state. `progress.md` records outcomes and reusable context.
+binds the run to one repository, issue, branch, and base branch while recording
+ordered story pass state. `progress.md` records outcomes and reusable context.
 The runner writes raw Copilot output to the local `iterations/` directory. Git
 ignores these logs because tool output can contain machine-specific or sensitive
 data. Durable context belongs in the committed `progress.md`.
@@ -114,6 +116,12 @@ failed attempts in the issue memory.
 6. **The loop never merges.** A human owns the merge decision.
 7. **All cross-iteration memory lives under `docs/memories`.** Conversation
    history and local hidden files are not durable project state.
+8. **Run identity cannot drift.** Repository, issue, branch, base branch, and
+   draft pull request must continue to identify the same work.
+9. **Remote state is reconciled before publication.** The runner fetches and
+   stops on branch divergence or pull request collisions.
+10. **GitHub API calls use the repository owner account.** The runner switches
+    to `jdylanmc` and restores the account that was active at startup.
 
 The runner enforces branch, clean-worktree, workspace guidance, tool, and memory
 preconditions before launching Copilot.
@@ -136,8 +144,8 @@ Copilot and GitHub CLI, and verifying that local checks run successfully.
 
 Continuous mode means "continue until the selected issue and its draft pull
 request are ready." It does not mean "ignore failures." The runner stops on
-dirty state, lost authentication, branch drift, malformed memory, or repeated
-tool failure.
+dirty state, lost authentication, stale or diverged branches, pull request
+identity conflicts, malformed memory, absent CI gates, or repeated tool failure.
 
 ## When the Pattern Backfires
 

@@ -19,6 +19,10 @@ Treat the GitHub Issue snapshot as scope and GitHub as the current source of
 truth. If the live issue materially differs from the snapshot, update the
 snapshot and stop so the next iteration can re-plan.
 
+The `repoNameWithOwner`, `issueNumber`, `issueUrl`, `branchName`, and
+`baseBranch` fields are immutable run identity. Do not change them. Use
+`repoNameWithOwner` explicitly for every GitHub CLI query.
+
 ## Select One Story
 
 If every planned story passes but the draft pull request has a failing required
@@ -62,8 +66,9 @@ When every acceptance criterion passes:
    commit conventions.
 
 If checks fail, fix them within this story when safe. If you cannot finish,
-append the blocker to `progress.md` and leave a clean worktree. Do not create a
-passing commit for broken code.
+remove only your own incomplete implementation, append the blocker to
+`progress.md`, and commit the progress-only checkpoint. Preserve pre-existing
+work and do not create a passing implementation commit for broken code.
 
 ## Pull Request Rules
 

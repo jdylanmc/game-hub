@@ -27,13 +27,28 @@ worktree.
 - Require authenticated GitHub CLI access to the `origin` repository.
 - Start with a clean worktree.
 
+## Phase 0: Bind the Repository Identity
+
+1. Resolve the repository root with `git rev-parse --show-toplevel`. Do not infer
+   a repository from a sibling directory.
+2. Resolve `origin` and require it to identify `jdylanmc/game-hub`.
+3. Read the active GitHub CLI account with `gh api user --jq .login`.
+4. Switch to `jdylanmc` before any `gh repo`, `gh issue`, or `gh pr` operation:
+
+   ```bash
+   gh auth switch --hostname github.com --user jdylanmc
+   ```
+
+5. Restore the original active account after setup or on any failure. The
+   bundled runner performs the same switch and restoration for unattended work.
+
 ## Phase 1: Select the Issue
 
 1. If the user supplied an issue number or URL, retrieve that issue and use it.
 2. If no issue was supplied, run:
 
    ```bash
-   gh issue list --state open --limit 100 \
+   gh issue list --repo jdylanmc/game-hub --state open --limit 100 \
      --json number,title,body,labels,url
    ```
 
@@ -48,13 +63,20 @@ worktree.
 
 ## Phase 2: Prepare Durable Memory
 
-1. Create `docs/memories/<issue>-<slug>/`.
-2. Write `issue.md` with the issue number, title, URL, labels, body, and
+1. Derive `docs/memories/<issue>-<slug>/` using the numeric issue ID and a
+   lowercase ASCII slug. Reject absolute paths, `.` or `..` components, and
+   paths outside `docs/memories/`.
+2. Check whether the exact directory already exists. If it does, read
+   `issue.md`, `plan.json`, and `progress.md` before writing. Ask whether to
+   resume the matching issue memory or choose a different path. Never overwrite
+   existing memory blindly.
+3. Write `issue.md` with the issue number, title, URL, labels, body, and
    acceptance criteria. Preserve the issue's meaning; do not invent scope.
-3. Write `plan.json` with this shape:
+4. Write `plan.json` with this shape:
 
    ```json
    {
+     "repoNameWithOwner": "jdylanmc/game-hub",
      "issueNumber": 27,
      "issueTitle": "Repository-Wide Code Linting",
      "issueUrl": "https://github.com/jdylanmc/game-hub/issues/27",
@@ -77,18 +99,29 @@ worktree.
    }
    ```
 
-4. Make each story small enough for one Copilot context and independently
+   Set `continuousByBestJudgment` to `true` only after the user explicitly
+   delegates unattended continuation for this issue.
+
+5. Make each story small enough for one Copilot context and independently
    verifiable. Put dependency stories first.
-5. Write `progress.md` with a `# Progress` heading and a `## Codebase Patterns`
+6. Write `progress.md` with a `# Progress` heading and a `## Codebase Patterns`
    section.
-6. Create an empty `iterations/` directory.
+7. Create an empty `iterations/` directory.
+8. Show the exact issue identity, repository, branch, story list, acceptance
+   criteria, and continuous-mode choice. Require confirmation before committing
+   memory or launching the runner.
 
 ## Phase 3: Create the Issue Branch
 
 1. Fetch `origin`.
 2. Create the `branchName` from the latest `origin/<baseBranch>`.
-3. Commit the issue memory before starting unattended iterations.
-4. Never reuse a branch whose pull request covers a different issue.
+3. If the branch exists remotely, fetch it and verify that the remote branch is
+   an ancestor of the local branch. Stop on behind or diverged state.
+4. Query existing pull requests for the branch with
+   `--repo jdylanmc/game-hub`. Stop if a pull request is closed, ready for
+   review, targets another base branch, or references another issue.
+5. Commit the issue memory before starting unattended iterations.
+6. Never reuse a branch whose pull request covers a different issue.
 
 ## Phase 4: Launch Fresh Contexts
 
@@ -123,8 +156,9 @@ Do not describe an incomplete or failing pull request as ready.
 
 ### GitHub authentication fails
 
-- Fail if `gh repo view` cannot read the `origin` repository.
-- Ask the user to authenticate the correct GitHub account, then rerun.
+- Fail if the `jdylanmc` account is unavailable or `gh repo view
+  jdylanmc/game-hub` fails.
+- Restore the original active account before asking the user to authenticate.
 
 ### Worktree is dirty
 
@@ -146,6 +180,18 @@ Do not describe an incomplete or failing pull request as ready.
 
 - Fail before invoking Copilot.
 - Repair `plan.json` or the required memory files and commit the repair.
+
+### Remote branch diverges
+
+- Stop before launching or pushing another iteration.
+- Preserve local and remote commits. Do not force-push, reset, rebase, or merge
+  without a human decision.
+
+### Publication partially succeeds
+
+- Report the exact pushed commit, branch, and pull request state.
+- Rerun only after verifying that the existing branch and pull request still
+  match the issue memory.
 
 ## Examples
 

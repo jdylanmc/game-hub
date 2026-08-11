@@ -34,6 +34,7 @@ plus one statically analyzable Vite import map.
 | Lazy import map | `src/generated/game-import-map.ts` | Vite-analyzable dynamic game imports |
 | Component grounding | `.storybook/`, `src/stories/`, `src/storybook/` | Shared component and composition development |
 | Static hosting config | `public/staticwebapp.config.json` | Azure Static Web Apps routing and security headers |
+| Azure infrastructure | `infra/` when introduced | Idempotent Bicep resources and environment parameter files |
 | Autonomous development | `.github/skills/ralph-loop/`, `docs/memories/` | Fresh-context issue execution and persistent state |
 
 The planned containerized application programming interface (API) remains
@@ -118,6 +119,27 @@ kit (SDK) version.
 Read the [Azure Static Web Apps documentation](https://learn.microsoft.com/azure/static-web-apps/)
 before changing deployment behavior.
 
+### Azure infrastructure uses Bicep
+
+Define every Azure resource through idempotent
+[Bicep](https://learn.microsoft.com/azure/azure-resource-manager/bicep/)
+declarations. Reapplying the same template and environment parameters must
+converge on the intended state without creating duplicate resources or requiring
+manual cleanup.
+
+Store environment-specific values in committed Bicep parameter or configuration
+files. Keep credentials and secret values in an approved secret store and pass
+them at deployment time; do not commit them in environment files.
+
+The first infrastructure change must pin the Bicep CLI version used by local and
+continuous integration (CI) deployments. Update that pin through a reviewed
+dependency change, not an implicit workstation or hosted-agent upgrade.
+
+Target Azure subscription
+`11213dbd-39fe-46ba-87db-5f5e8c449aed` unless a future architecture decision
+defines another subscription for a specific environment. Deployment automation
+must select the subscription explicitly before previewing or applying changes.
+
 ## Architectural Invariants
 
 1. **The root website does not own game rendering dependencies.** Each game
@@ -134,6 +156,9 @@ before changing deployment behavior.
    replacing issue requirements.
 7. **The static host and future API remain separate deployable boundaries.**
    Browser code must not assume same-process access to future server code.
+8. **Azure infrastructure is idempotent and declarative.** Use Bicep with
+   environment-specific parameter or configuration files; do not create
+   long-lived Azure resources through undocumented imperative commands.
 
 ## Version Update Procedure
 
@@ -153,4 +178,3 @@ When an issue requires a core technology update:
 - [Root Agent Guide](../AGENTS.md)
 - [Game Contract Agent Guide](../packages/game-contract/AGENTS.md)
 - [Game Hub README](../README.md)
-
