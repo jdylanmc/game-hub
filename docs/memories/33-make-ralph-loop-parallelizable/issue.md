@@ -6,12 +6,17 @@
 
 ## Body
 
-The orchestrator should be able to manage multiple Ralph loops, prioritizing
-which get run in parallel and distilling down interdependencies. Two independent
-games should be creatable by two different agents at the same time. Ralph loops
-always work in their own Git worktree, using worktrees and branches to
-distinguish loops. The orchestrator should report meaningful changes and
-periodic status without flooding output.
+The orchestrator should be able to manage multiple ralph loops, prioritizing
+which get run in parallel and distilling down interdependencies. The idea is
+that two independent games could be created by two different agents at the same
+time.
+
+To achieve this, ralph loops _always_ work in their own git worktree. We use
+worktrees on branches to distinguish different loops.
+
+The orchestrator should also output a status report, each time a meaningful
+change has occurred. Do not flood with status reports, but do provide an update
+periodically as ralphs are working.
 
 ## Acceptance Criteria
 
@@ -26,3 +31,6 @@ periodic status without flooding output.
   failures.
 - Documentation, skill guidance, runner contracts, and durable memory describe
   the parallel model.
+- Status reporting emits on meaningful loop, story, publication, continuous
+  integration, blocker, and completion transitions; unchanged polling is quiet
+  except for a rate-limited heartbeat.

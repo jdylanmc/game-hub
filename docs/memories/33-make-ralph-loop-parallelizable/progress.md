@@ -8,6 +8,32 @@
   request merged to the configured base branch.
 - Change scopes are conservative repository-relative file or directory
   prefixes; prefix overlap is unsafe for concurrent execution.
+- Status polling is observational, not itself report-worthy. Reports are
+  event-driven for state transitions, with one coalesced report per observation
+  and a separate rate-limited heartbeat for unchanged long-running work.
+
+## 2026-08-11 — Live issue status-reporting update
+
+- Re-read the live issue and added its explicit status-reporting requirement to
+  `issue.md` and the new `US-004` plan story before publication.
+- Meaningful transitions are loop launch, story completion, local/remote or
+  draft pull-request publication change, continuous-integration state change,
+  blocker, and loop completion.
+- The orchestrator polls observable state at a short configurable interval but
+  emits nothing for unchanged polls until the longer heartbeat interval.
+  Multiple transitions discovered in one poll are coalesced into one report.
+- Added `ralph-status-reporter.mjs` and integrated status snapshots of passed
+  stories, local and remote commits, draft pull-request publication, and
+  continuous-integration rollups into the orchestrator.
+- Checks passed:
+  - Node syntax checks for all Ralph JavaScript scripts
+  - `bash -n .github/skills/ralph-loop/scripts/run-ralph-loop.sh`
+  - `node --test .github/skills/ralph-loop/tests/ralph-parallel.test.mjs`
+    (8 tests, including meaningful-change emission and unchanged-poll
+    suppression)
+  - `yarn typecheck`
+  - `yarn build`
+  - `yarn build-storybook`
 
 ## 2026-08-11 — Implementation
 

@@ -11,6 +11,7 @@ import {
   scheduleLoops,
   verifyRemoteBranch,
 } from '../scripts/ralph-worktrees.mjs';
+import { RalphStatusReporter } from '../scripts/ralph-status-reporter.mjs';
 
 const scratchRoot = path.resolve('.ralph-test-work');
 
@@ -180,4 +181,103 @@ test('remote branch divergence stops without changing either side', () => {
     command('git', ['show', 'origin/ralph/issue-41:remote.txt'], root),
     'remote',
   );
+});
+
+test('meaningful status changes emit once while unchanged polls stay quiet', () => {
+  let now = 0;
+  const reports = [];
+  const reporter = new RalphStatusReporter({
+    emit: (report) => reports.push(report),
+    now: () => now,
+    heartbeatMs: 300_000,
+  });
+  const statusLoop = {
+    issueNumber: 41,
+    branchName: 'ralph/issue-41',
+    worktreePath: '/worktrees/issue-41',
+  };
+  const initial = {
+    passedStoryIds: [],
+    localCommit: 'aaa',
+    remoteCommit: null,
+    pullRequestState: 'none',
+    pullRequestUrl: null,
+    ciState: 'none',
+    monitorError: null,
+  };
+
+  reporter.reportLaunch(statusLoop, initial);
+  reporter.observe(statusLoop, initial);
+  now = 299_999;
+  reporter.observe(statusLoop, initial);
+  assert.deepEqual(reports.map(({ type }) => type), ['loop-launch']);
+
+  now = 300_000;
+  reporter.observe(statusLoop, initial);
+  reporter.observe(statusLoop, initial);
+  assert.deepEqual(reports.map(({ type }) => type), [
+    'loop-launch',
+    'periodic-heartbeat',
+  ]);
+
+  now += 1;
+  const storyComplete = {
+    ...initial,
+    passedStoryIds: ['US-001'],
+    localCommit: 'bbb',
+  };
+  reporter.observe(statusLoop, storyComplete);
+  reporter.observe(statusLoop, storyComplete);
+  assert.equal(reports.at(-1).type, 'meaningful-change');
+  assert.deepEqual(
+    reports.at(-1).transitions.map(({ type }) => type),
+    ['story-completion', 'publication-change'],
+  );
+
+  const published = {
+    ...storyComplete,
+    remoteCommit: 'bbb',
+    pullRequestState: 'open:draft',
+    pullRequestUrl: 'https://github.com/jdylanmc/game-hub/pull/99',
+    ciState: 'pending',
+  };
+  reporter.observe(statusLoop, published);
+  reporter.observe(statusLoop, published);
+  assert.deepEqual(
+    reports.at(-1).transitions.map(({ type }) => type),
+    ['publication-change', 'ci-change'],
+  );
+  assert.equal(reports.length, 4);
+});
+
+test('blocker and completion transitions are deduplicated', () => {
+  const reports = [];
+  const reporter = new RalphStatusReporter({
+    emit: (report) => reports.push(report),
+    now: () => 0,
+  });
+  const statusLoop = {
+    issueNumber: 41,
+    branchName: 'ralph/issue-41',
+    worktreePath: '/worktrees/issue-41',
+  };
+  const snapshot = {
+    passedStoryIds: ['US-001'],
+    localCommit: 'aaa',
+    remoteCommit: 'aaa',
+    pullRequestState: 'open:draft',
+    pullRequestUrl: 'https://github.com/jdylanmc/game-hub/pull/99',
+    ciState: 'failure',
+    monitorError: null,
+  };
+  reporter.reportLaunch(statusLoop, snapshot);
+  reporter.reportBlocker(statusLoop, 'CI failed', snapshot);
+  reporter.reportBlocker(statusLoop, 'CI failed', snapshot);
+  reporter.reportCompletion(statusLoop, snapshot);
+  reporter.reportCompletion(statusLoop, snapshot);
+  assert.deepEqual(reports.map(({ type }) => type), [
+    'loop-launch',
+    'blocker',
+    'loop-completion',
+  ]);
 });

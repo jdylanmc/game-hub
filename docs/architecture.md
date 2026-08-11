@@ -163,6 +163,10 @@ must select the subscription explicitly before previewing or applying changes.
    issue uses `ralph/issue-<number>-<slug>` in the deterministic sibling path
    `<repository>-worktrees/issue-<number>`; concurrent loops must declare
    non-overlapping change scopes and have no unmet issue dependencies.
+10. **Orchestration status is transition-driven and rate-limited.** Meaningful
+    loop, story, publication, continuous-integration, blocker, and completion
+    transitions emit coalesced reports; unchanged polling is silent except for
+    a longer periodic heartbeat.
 
 ## Version Update Procedure
 

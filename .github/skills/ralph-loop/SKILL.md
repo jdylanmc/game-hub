@@ -182,7 +182,10 @@ node .github/skills/ralph-loop/scripts/orchestrate-ralph-loops.mjs \
 The orchestrator verifies dependency pull requests are merged to the base
 branch, sorts eligible work by priority and issue number, refuses duplicate
 ownership and overlapping eligible scopes, starts each runner in its own
-worktree, and emits start, finish, and periodic status reports.
+worktree, and emits coalesced status reports for loop launch, story completion,
+publication or continuous-integration state changes, blockers, and completion.
+Unchanged short-interval polls are silent; a longer rate-limited heartbeat
+reports continued work without flooding output.
 
 ## Phase 6: Report the Run
 

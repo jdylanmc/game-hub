@@ -60,6 +60,25 @@
         "US-001",
         "US-002"
       ]
+    },
+    {
+      "id": "US-004",
+      "title": "Report meaningful orchestration status without flooding",
+      "description": "Add event-driven transition reports plus a rate-limited heartbeat while suppressing unchanged status polls.",
+      "acceptanceCriteria": [
+        "Loop launch, story completion, publication or CI change, blocker, and completion emit status reports",
+        "Multiple changes observed in one poll are coalesced into one report",
+        "Unchanged polls emit nothing before the heartbeat interval",
+        "Long-running unchanged loops emit one rate-limited periodic heartbeat",
+        "Focused tests prove meaningful emissions and unchanged-poll suppression"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "A transition-aware reporter coalesces observed changes, deduplicates repeated terminal events, suppresses unchanged polls, and emits configurable heartbeats.",
+      "dependencies": [
+        "US-002",
+        "US-003"
+      ]
     }
   ]
 }

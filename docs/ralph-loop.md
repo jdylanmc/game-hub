@@ -97,9 +97,26 @@ into:
 - **unsafe:** two eligible loops claim overlapping change scopes.
 
 Only eligible, non-overlapping loops launch, up to `maxParallel`. The
-orchestrator reports eligibility, starts, finishes, failures, and periodic
-running/queued state. A failed child stops new launches but does not terminate
-or discard already-running worktrees.
+orchestrator uses event-driven status reports rather than printing every poll.
+Meaningful transitions are:
+
+- loop launch;
+- one or more story completions;
+- local commit, remote publication, or draft pull-request state change;
+- continuous integration state change;
+- blocker or failed runner;
+- loop completion.
+
+One observation that discovers several transitions produces one coalesced
+report. Polls with no change produce no output. A longer configurable heartbeat
+emits one periodic snapshot while a loop remains unchanged, then stays quiet
+until another heartbeat interval passes. A failed child stops new launches but
+does not terminate or discard already-running worktrees.
+
+`statusPollSeconds` controls how often observable state is compared and defaults
+to 30 seconds. `statusIntervalSeconds` controls the unchanged-work heartbeat and
+defaults to 300 seconds. Lowering the poll interval does not increase output
+when state is unchanged.
 
 ## GitHub Issues Define Scope
 

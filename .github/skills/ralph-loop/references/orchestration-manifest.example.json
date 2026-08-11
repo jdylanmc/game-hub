@@ -3,6 +3,7 @@
   "baseBranch": "main",
   "maxParallel": 2,
   "maxIterations": 10,
+  "statusPollSeconds": 30,
   "statusIntervalSeconds": 300,
   "loops": [
     {

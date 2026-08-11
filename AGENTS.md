@@ -71,6 +71,11 @@ parallel only when their declared repository-relative change scopes do not
 overlap. Never edit another issue's worktree, automatically remove a dirty or
 unmerged worktree, or reuse an issue branch for another loop.
 
+Orchestrator status is transition-driven. Emit reports for launch, story,
+publication or continuous-integration changes, blocker, and completion;
+coalesce changes found in one observation, suppress unchanged polls, and use a
+longer heartbeat for periodic unchanged status.
+
 Follow [Ralph Loop](docs/ralph-loop.md) for the full model and safety rules.
 
 ### Iteration Rules
