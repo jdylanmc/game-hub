@@ -32,6 +32,8 @@
   - `node --test .github/skills/ralph-loop/tests/ralph-parallel.test.mjs`
     (9 tests, including concurrent identity isolation during simulated global
     account switches)
+  - standalone runner `--dry-run`, verifying its repository-owner queries
+    succeed and the global GitHub CLI active account is unchanged before/after
   - `yarn typecheck`
   - `yarn build`
   - `yarn build-storybook`
