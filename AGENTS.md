@@ -61,6 +61,11 @@ representative failures into every mandatory gate. Keep each probe tied to the
 canonical root command and require evidence that it failed for the intended
 reason.
 
+The `main` branch requires the GitHub Actions `Continuous integration` check,
+an up-to-date branch, and a non-author Code Owner review. Keep workflow and
+ownership paths covered by `.github/CODEOWNERS`; `yarn policy:check` rejects
+weakened ownership rules.
+
 ## Test Integrity
 
 Keep at least one deterministic test under each of `src/`, `games/`, and

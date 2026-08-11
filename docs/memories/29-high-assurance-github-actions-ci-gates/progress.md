@@ -210,3 +210,27 @@
 - US-008 remains unpassed. Continue only after GitHub Pro is enabled or a human
   explicitly approves making the repository public; then require the
   `Continuous integration` check and heightened review for workflow changes.
+
+## 2026-08-11 - US-008 complete
+
+- Confirmed the repository is now public and configured `main` branch protection
+  through the GitHub API after the prior private-repository licensing blocker
+  cleared.
+- Required the strict GitHub Actions `Continuous integration` check from app ID
+  `15368`, one approving Code Owner review, stale-review dismissal, approval by
+  someone other than the last pusher, resolved conversations, linear history,
+  and administrator enforcement. Force pushes and branch deletion are disabled.
+- Added Code Owner rules for workflow and ownership changes, made
+  `yarn policy:check` reject weakened ownership, and documented the live
+  protection contract and verification command.
+- Files changed: `.github/CODEOWNERS`, `docs/branch-protection.md`,
+  `scripts/check-workflow-policy.mjs`, `README.md`, `AGENTS.md`, and this issue
+  memory.
+- Checks passed: `yarn validate` and exact live branch-protection API assertions.
+  Draft pull request #32 reports successful continuous integration while
+  remaining `BLOCKED` with `REVIEW_REQUIRED`.
+- Reusable discovery: bind required checks to both the check context and GitHub
+  Actions app ID, and pair required Code Owner reviews with a repository policy
+  check so workflow ownership cannot be removed while the required check stays
+  green.
+- No blockers. US-009 is the next eligible story.

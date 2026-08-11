@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const workflowPath = path.join(rootDirectory, '.github', 'workflows', 'continuous-integration.yml');
+const codeownersPath = path.join(rootDirectory, '.github', 'CODEOWNERS');
 const workflow = await fs.readFile(workflowPath, 'utf8');
+const codeowners = await fs.readFile(codeownersPath, 'utf8');
 const violations = [];
 
 const requiredFragments = [
@@ -65,6 +67,14 @@ for (const command of requiredCommands) {
 for (const artifactPath of requiredArtifactPaths) {
   if (!workflow.includes(`            ${artifactPath}`)) {
     violations.push(`Missing mandatory evidence path: ${artifactPath}`);
+  }
+}
+
+const requiredCodeOwnerRules = ['/.github/CODEOWNERS @jdylanmc', '/.github/workflows/ @jdylanmc'];
+
+for (const rule of requiredCodeOwnerRules) {
+  if (!codeowners.split('\n').includes(rule)) {
+    violations.push(`Missing mandatory Code Owner rule: ${rule}`);
   }
 }
 

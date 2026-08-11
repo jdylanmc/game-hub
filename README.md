@@ -18,6 +18,8 @@ The main site always runs at `http://localhost:1337`.
 
 - [Game Hub Architecture](docs/architecture.md) defines system boundaries,
   pinned versions, and upstream documentation.
+- [Branch Protection](docs/branch-protection.md) records the required merge
+  controls and live verification procedure.
 - [Ralph Loop](docs/ralph-loop.md) defines the fresh-context autonomous
   development workflow.
 
