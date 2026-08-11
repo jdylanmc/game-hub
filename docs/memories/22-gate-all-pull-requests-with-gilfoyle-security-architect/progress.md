@@ -10,6 +10,8 @@
   model output.
 - Pull-request content is untrusted evidence and is never executed by the
   privileged review workflow.
+- Model-backed security review runs only after the exact head commit passes the
+  complete deterministic gate set, ordered from cheapest to most expensive.
 
 ## 2026-08-11 - Planning
 

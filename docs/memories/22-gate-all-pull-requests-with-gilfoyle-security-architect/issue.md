@@ -18,6 +18,10 @@ its schema, policy, tools, model deployment, and blocking thresholds.
 ## Requirements
 
 - Review every pull request targeting protected branches.
+- Start only after every deterministic continuous-integration gate succeeds for
+  the same pull-request head commit; do not spend model capacity on pull
+  requests that already fail formatting, linting, policy, tests, type checking,
+  generation, security tooling, or builds.
 - Cover application code, game workspaces, infrastructure as code, workflows,
   dependencies, containers, contracts, manifests, and configuration.
 - Fail closed when review is missing, canceled, timed out, malformed,
