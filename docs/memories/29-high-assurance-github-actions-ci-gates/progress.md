@@ -195,3 +195,18 @@
   the committed Ralph marker, then validate every immutable plan identity field
   before resuming memory.
 - No blockers. US-008 is the next eligible story.
+
+## 2026-08-11 - US-008 blocked
+
+- Verified draft pull request #32 targets `main`, retains the Ralph issue
+  identity marker, and reports a successful `Continuous integration` check.
+- GitHub rejected both the `main` branch-protection endpoint and repository
+  rulesets endpoint with HTTP 403 because private repository protection requires
+  GitHub Pro for the current account.
+- Confirmed `jdylanmc/game-hub` is private. Repository visibility was not changed,
+  and no partial protection configuration was applied.
+- Files changed:
+  `docs/memories/29-high-assurance-github-actions-ci-gates/progress.md`.
+- US-008 remains unpassed. Continue only after GitHub Pro is enabled or a human
+  explicitly approves making the repository public; then require the
+  `Continuous integration` check and heightened review for workflow changes.
