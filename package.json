@@ -14,6 +14,7 @@
   "scripts": {
     "install:check": "yarn install --immutable",
     "generate:games": "node scripts/generate-game-workspaces.mjs",
+    "generate:check": "node scripts/check-generated-state.mjs",
     "dev": "yarn generate:games && vite",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -27,7 +28,7 @@
     "preview": "vite preview",
     "storybook": "yarn generate:games && storybook dev -p 6006",
     "typecheck": "yarn generate:games && tsc -b",
-    "validate": "yarn install:check && yarn format:check && yarn lint && yarn test:coverage && yarn typecheck && yarn build && yarn build-storybook"
+    "validate": "yarn install:check && yarn format:check && yarn lint && yarn test:coverage && yarn generate:check && yarn typecheck && yarn build && yarn build-storybook"
   },
   "dependencies": {
     "@game-hub/game-contract": "workspace:*",

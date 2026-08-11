@@ -88,3 +88,19 @@
   tests in the host, game, and shared-package boundaries so suite loss fails
   before Vitest runs.
 - No blockers. US-003 is the next eligible story.
+
+## 2026-08-11 - US-003 complete
+
+- Added a deterministic game workspace generation check that snapshots Git
+  state, runs the canonical generator, and fails if generation changes tracked
+  or untracked state or leaves either committed catalog output dirty.
+- Added `yarn generate:check` to the aggregate `yarn validate` contract and
+  documented the reusable command in the root agent guidance.
+- Files changed: `package.json`, `scripts/check-generated-state.mjs`,
+  `AGENTS.md`, and this issue memory.
+- Checks passed: targeted Prettier and ESLint checks, clean
+  `yarn generate:check`, a deliberate stale-output failure, and `yarn validate`.
+- Reusable discovery: compare Git status before and after generation so
+  unchanged unrelated local edits are permitted while any generator-created
+  dirty state fails closed.
+- No blockers. US-004 is the next eligible story.

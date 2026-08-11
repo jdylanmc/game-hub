@@ -29,10 +29,15 @@ currently provides:
 yarn typecheck
 yarn build
 yarn build-storybook
+yarn generate:check
 ```
 
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
+
+Run `yarn generate:check` after changing game workspace metadata or discovery
+logic. It fails when generation changes Git state or the committed catalog
+outputs are dirty.
 
 ## Test Integrity
 

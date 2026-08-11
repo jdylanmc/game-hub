@@ -45,8 +45,8 @@
         "The same command is suitable for local and continuous integration execution"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added generate:check to run game workspace discovery and fail when generation changes repository state or either committed catalog output is dirty. The aggregate validate command now runs this same deterministic check.",
       "dependencies": ["US-001"]
     },
     {
