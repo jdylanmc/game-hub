@@ -87,8 +87,8 @@
         "Model, prompt, tool, framework, or architecture changes invalidate or rerun calibration"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a versioned 18-case paired weak/strong benchmark corpus for all nine required scenarios, deterministic fake-transport and future keyless Azure evaluation, measured detection/false positives/missed critical scenarios/agreement/tokens/cost/latency/errors, and a fail-closed Azure-only promotion policy. Promotion validates complete repeated case evidence, recomputed metrics, report integrity, strict thresholds, and fingerprints the model, prompt, tools, framework, schema, verdict policy, system policy, reviewer config, corpus, and architecture. Fourteen calibration tests prove fixture, stale, incomplete, malformed, threshold-failing, inconsistent, and tampered reports cannot promote.",
       "dependencies": ["US-004"]
     },
     {

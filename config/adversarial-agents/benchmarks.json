@@ -1,0 +1,168 @@
+{
+  "version": "1.0.0",
+  "testFramework": "vitest@4.1.10",
+  "cases": [
+    {
+      "id": "tautology-weak",
+      "scenario": "tautology",
+      "strength": "weak",
+      "critical": true,
+      "expectedCategory": "tautology",
+      "production": "export const isReady = () => false;",
+      "test": "it('is ready', () => expect(true).toBe(true));"
+    },
+    {
+      "id": "tautology-strong",
+      "scenario": "tautology",
+      "strength": "strong",
+      "critical": false,
+      "expectedCategory": null,
+      "production": "export const isReady = () => false;",
+      "test": "it('is not ready', () => expect(isReady()).toBe(false));"
+    },
+    {
+      "id": "mocked-away-weak",
+      "scenario": "ineffective-mock",
+      "strength": "weak",
+      "critical": true,
+      "expectedCategory": "mock-evasion",
+      "production": "export const load = () => api.fetch().then(mapResponse);",
+      "test": "vi.mock('./api', () => ({ fetch: vi.fn().mockResolvedValue('mapped') })); expect(await api.fetch()).toBe('mapped');"
+    },
+    {
+      "id": "mocked-away-strong",
+      "scenario": "ineffective-mock",
+      "strength": "strong",
+      "critical": false,
+      "expectedCategory": null,
+      "production": "export const load = () => api.fetch().then(mapResponse);",
+      "test": "vi.mock('./api'); api.fetch.mockResolvedValue({ value: 3 }); expect(await load()).toEqual({ score: 3 });"
+    },
+    {
+      "id": "missing-error-weak",
+      "scenario": "missing-error-path",
+      "strength": "weak",
+      "critical": true,
+      "expectedCategory": "missing-error-case",
+      "production": "export async function save(value) { if (!value) throw new Error('required'); return store(value); }",
+      "test": "it('saves', async () => expect(await save('ok')).toBeTruthy());"
+    },
+    {
+      "id": "missing-error-strong",
+      "scenario": "missing-error-path",
+      "strength": "strong",
+      "critical": false,
+      "expectedCategory": null,
+      "production": "export async function save(value) { if (!value) throw new Error('required'); return store(value); }",
+      "test": "it('rejects empty values', async () => expect(save('')).rejects.toThrow('required'));"
+    },
+    {
+      "id": "race-weak",
+      "scenario": "race-condition",
+      "strength": "weak",
+      "critical": true,
+      "expectedCategory": "race-condition",
+      "production": "export const refresh = async () => state.value = await fetchValue();",
+      "test": "refresh(); expect(state.value).toBeDefined();"
+    },
+    {
+      "id": "race-strong",
+      "scenario": "race-condition",
+      "strength": "strong",
+      "critical": false,
+      "expectedCategory": null,
+      "production": "export const refresh = async () => state.value = await fetchValue();",
+      "test": "await refresh(); expect(state.value).toBe(expectedValue);"
+    },
+    {
+      "id": "duplicate-score-weak",
+      "scenario": "duplicate-score-submission",
+      "strength": "weak",
+      "critical": true,
+      "expectedCategory": "missing-edge-case",
+      "production": "export const submitScore = (id, score) => scoreStore.insert(id, score);",
+      "test": "expect(submitScore('run-1', 10)).toBeTruthy();"
+    },
+    {
+      "id": "duplicate-score-strong",
+      "scenario": "duplicate-score-submission",
+      "strength": "strong",
+      "critical": false,
+      "expectedCategory": null,
+      "production": "export const submitScore = (id, score) => scoreStore.insert(id, score);",
+      "test": "submitScore('run-1', 10); expect(() => submitScore('run-1', 10)).toThrow('duplicate');"
+    },
+    {
+      "id": "collision-boundary-weak",
+      "scenario": "collision-boundary",
+      "strength": "weak",
+      "critical": true,
+      "expectedCategory": "missing-edge-case",
+      "production": "export const collides = (a, b) => a.right >= b.left && a.left <= b.right;",
+      "test": "expect(collides(overlappingA, overlappingB)).toBe(true);"
+    },
+    {
+      "id": "collision-boundary-strong",
+      "scenario": "collision-boundary",
+      "strength": "strong",
+      "critical": false,
+      "expectedCategory": null,
+      "production": "export const collides = (a, b) => a.right >= b.left && a.left <= b.right;",
+      "test": "expect(collides(touchingA, touchingB)).toBe(true); expect(collides(separatedA, separatedB)).toBe(false);"
+    },
+    {
+      "id": "archive-traversal-weak",
+      "scenario": "zip-archive-traversal",
+      "strength": "weak",
+      "critical": true,
+      "expectedCategory": "authorization-bypass",
+      "production": "export const extract = entry => write(join(root, entry.name), entry.data);",
+      "test": "expect(extract({ name: 'safe.txt', data })).toBeTruthy();"
+    },
+    {
+      "id": "archive-traversal-strong",
+      "scenario": "zip-archive-traversal",
+      "strength": "strong",
+      "critical": false,
+      "expectedCategory": null,
+      "production": "export const extract = entry => write(join(root, entry.name), entry.data);",
+      "test": "expect(() => extract({ name: '../../escape.txt', data })).toThrow('unsafe path');"
+    },
+    {
+      "id": "authorization-weak",
+      "scenario": "authorization-bypass",
+      "strength": "weak",
+      "critical": true,
+      "expectedCategory": "authorization-bypass",
+      "production": "export const deleteGame = (user, id) => user.isAdmin ? remove(id) : deny();",
+      "test": "expect(deleteGame(admin, 'game')).toBe(true);"
+    },
+    {
+      "id": "authorization-strong",
+      "scenario": "authorization-bypass",
+      "strength": "strong",
+      "critical": false,
+      "expectedCategory": null,
+      "production": "export const deleteGame = (user, id) => user.isAdmin ? remove(id) : deny();",
+      "test": "expect(() => deleteGame(player, 'game')).toThrow('forbidden'); expect(remove).not.toHaveBeenCalled();"
+    },
+    {
+      "id": "cleanup-leak-weak",
+      "scenario": "cleanup-leak",
+      "strength": "weak",
+      "critical": true,
+      "expectedCategory": "cleanup-leak",
+      "production": "export const mount = () => window.addEventListener('resize', onResize);",
+      "test": "mount(); window.dispatchEvent(new Event('resize')); expect(onResize).toHaveBeenCalled();"
+    },
+    {
+      "id": "cleanup-leak-strong",
+      "scenario": "cleanup-leak",
+      "strength": "strong",
+      "critical": false,
+      "expectedCategory": null,
+      "production": "export const mount = () => { window.addEventListener('resize', onResize); return () => window.removeEventListener('resize', onResize); };",
+      "test": "const cleanup = mount(); cleanup(); window.dispatchEvent(new Event('resize')); expect(onResize).not.toHaveBeenCalled();"
+    }
+  ]
+}

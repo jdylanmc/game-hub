@@ -20,6 +20,19 @@ const reviewerConfig = JSON.parse(
 );
 const reviewerEngine = await fs.readFile(path.join(root, 'scripts/review-adversarial-context.ts'), 'utf8');
 const systemPolicy = await fs.readFile(path.join(root, reviewerConfig.systemPolicyFile), 'utf8');
+const benchmarkCorpus = JSON.parse(
+  await fs.readFile(path.join(root, 'config/adversarial-agents/benchmarks.json'), 'utf8'),
+);
+const promotionPolicy = JSON.parse(
+  await fs.readFile(path.join(root, 'config/adversarial-agents/promotion-policy.json'), 'utf8'),
+);
+const evaluator = await fs.readFile(path.join(root, 'scripts/evaluate-adversarial-reviewer.ts'), 'utf8');
+const workflowDirectory = path.join(root, '.github/workflows');
+const workflowSources = await Promise.all(
+  (await fs.readdir(workflowDirectory))
+    .filter((name) => /\.ya?ml$/.test(name))
+    .map((name) => fs.readFile(path.join(workflowDirectory, name), 'utf8')),
+);
 const violations = [];
 
 const requiredWorkflowFragments = [
@@ -187,8 +200,130 @@ if (
   violations.push('Reviewer transport must not use API keys or expose model tools.');
 }
 
+const requiredScenarios = [
+  'tautology',
+  'ineffective-mock',
+  'missing-error-path',
+  'race-condition',
+  'duplicate-score-submission',
+  'collision-boundary',
+  'zip-archive-traversal',
+  'authorization-bypass',
+  'cleanup-leak',
+];
+const benchmarkIds = new Set();
+if (benchmarkCorpus.version !== '1.0.0' || benchmarkCorpus.cases?.length !== 18) {
+  violations.push('Calibration corpus must remain version 1.0.0 with exactly 18 reviewed cases.');
+}
+for (const scenario of requiredScenarios) {
+  for (const strength of ['weak', 'strong']) {
+    const matches =
+      benchmarkCorpus.cases?.filter(
+        (benchmark) => benchmark.scenario === scenario && benchmark.strength === strength,
+      ) ?? [];
+    if (matches.length !== 1) {
+      violations.push(`Calibration corpus must contain exactly one ${strength} ${scenario} case.`);
+    }
+  }
+}
+for (const benchmark of benchmarkCorpus.cases ?? []) {
+  if (
+    !benchmark.id ||
+    benchmarkIds.has(benchmark.id) ||
+    typeof benchmark.production !== 'string' ||
+    typeof benchmark.test !== 'string' ||
+    benchmark.production.length === 0 ||
+    benchmark.test.length === 0 ||
+    (benchmark.strength === 'weak' && (!benchmark.critical || typeof benchmark.expectedCategory !== 'string')) ||
+    (benchmark.strength === 'strong' && (benchmark.critical || benchmark.expectedCategory !== null))
+  ) {
+    violations.push(`Calibration benchmark is malformed: ${benchmark.id ?? '<missing id>'}`);
+  }
+  benchmarkIds.add(benchmark.id);
+}
+
+const expectedPromotionPolicy = {
+  requiredRunMode: 'azure',
+  minimumCases: 18,
+  minimumRepetitionsPerCase: 2,
+  thresholds: {
+    minimumBlockingPatternDetectionRate: 1,
+    maximumStrongFalsePositiveRate: 0.05,
+    maximumMissedCriticalScenarios: 0,
+    minimumReviewerAgreementRate: 0.95,
+    maximumAverageCostUsd: 0.1,
+    maximumP95LatencyMs: 60000,
+    maximumErrorRate: 0,
+  },
+};
+if (
+  promotionPolicy.version !== '1.0.0' ||
+  promotionPolicy.requiredRunMode !== expectedPromotionPolicy.requiredRunMode ||
+  promotionPolicy.minimumCases !== expectedPromotionPolicy.minimumCases ||
+  promotionPolicy.minimumRepetitionsPerCase !== expectedPromotionPolicy.minimumRepetitionsPerCase ||
+  JSON.stringify(promotionPolicy.thresholds) !== JSON.stringify(expectedPromotionPolicy.thresholds)
+) {
+  violations.push('Calibration promotion thresholds or Azure-only requirement were weakened.');
+}
+const requiredInvalidationInputs = [
+  'modelDeployment',
+  'modelVersion',
+  'promptVersion',
+  'promptContentHash',
+  'toolsVersion',
+  'testFramework',
+  'schemaVersion',
+  'schemaContentHash',
+  'policyVersion',
+  'policyContentHash',
+  'architectureContentHash',
+  'systemPolicyVersion',
+  'systemPolicyContentHash',
+  'reviewerEngineConfigVersion',
+  'reviewerEngineConfigContentHash',
+  'benchmarkCorpusVersion',
+  'benchmarkCorpusContentHash',
+];
+for (const input of requiredInvalidationInputs) {
+  if (!promotionPolicy.invalidationInputs?.includes(input)) {
+    violations.push(`Calibration fingerprint must invalidate on ${input}.`);
+  }
+}
+if (
+  packageJson.scripts?.['calibrate:adversarial'] !== 'node scripts/evaluate-adversarial-reviewer.ts' ||
+  packageJson.scripts?.['calibration:check'] !== 'node scripts/evaluate-adversarial-reviewer.ts --mode check'
+) {
+  violations.push('Missing canonical calibration evaluation or promotion-check command.');
+}
+const requiredEvaluatorFragments = [
+  'runMode !== policy.requiredRunMode',
+  "'Calibration fingerprint is stale.'",
+  "'Report hash is invalid.'",
+  "'Reported metrics do not match case evidence.'",
+  'createReviewerFromEnvironment(repoRoot)',
+  'new AdversarialReviewerEngine',
+  'minimumReviewerAgreementRate',
+  'maximumStrongFalsePositiveRate',
+  'maximumMissedCriticalScenarios',
+];
+for (const fragment of requiredEvaluatorFragments) {
+  if (!evaluator.includes(fragment)) {
+    violations.push(`Missing calibration evaluator invariant: ${fragment}`);
+  }
+}
+if (
+  workflowSources.some(
+    (source) =>
+      source.includes('review:adversarial') ||
+      source.includes('calibrate:adversarial') ||
+      source.includes('evaluate-adversarial-reviewer'),
+  )
+) {
+  violations.push('Model-backed reviewer evaluation must remain outside workflows until promotion.');
+}
+
 if (violations.length > 0) {
   throw new Error(`Adversarial policy failed:\n${violations.join('\n')}`);
 }
 
-console.log('Adversarial infrastructure and runtime policy passed.');
+console.log('Adversarial infrastructure, runtime, and calibration policy passed.');

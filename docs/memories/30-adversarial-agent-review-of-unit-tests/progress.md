@@ -204,3 +204,44 @@
 - US-004 is passed. US-005 and later stories were not advanced. Calibration,
   GitHub publication, workflow orchestration, deployment, and enforcement
   remain later-story work.
+
+## 2026-08-11 - Iteration 6: US-005 completion
+
+- Added a versioned 18-case benchmark corpus with paired intentionally weak and
+  strong examples for tautologies, ineffective mocks, missing error paths, race
+  conditions, duplicate score submission, collision boundaries, ZIP/archive
+  traversal, authorization bypass, and cleanup leaks.
+- Added deterministic evaluation through the production reviewer engine with an
+  injected oracle transport. The same command supports later real Azure runs
+  through Microsoft Entra ID without embedded credentials or a live deployment
+  dependency in repository tests.
+- Reports measure blocking-pattern detection/true positives, strong-example
+  false positives, missed critical scenarios, repeated-review agreement, total
+  tokens, average estimated cost, p95 latency, and reviewer error rate.
+- Added a versioned Azure-only promotion policy requiring all 18 cases, two
+  repetitions, 100% blocking detection, no missed critical scenarios or errors,
+  at most 5% strong-example false positives, at least 95% agreement, at most
+  $0.10 average cost, and at most 60-second p95 latency.
+- Promotion fails closed for fixture, stale, incomplete, malformed,
+  threshold-failing, internally inconsistent, or tampered reports. It
+  recomputes metrics from case evidence and fingerprints the model, prompt,
+  tool contract, test framework, finding schema, verdict policy, system policy,
+  reviewer configuration, benchmark corpus, and architecture.
+- Added 14 calibration tests and policy enforcement for corpus coverage,
+  immutable thresholds, required fingerprints, canonical local commands, and
+  absence of model-backed workflow execution before promotion.
+- Verified the local fixture command deterministically reports perfect benchmark
+  metrics (9/9 weak detections, 0/9 strong false positives, zero errors, full
+  agreement, 54,000 estimated tokens, $0.0012 average estimated cost, and 10 ms
+  deterministic p95 test latency) while correctly refusing promotion because it
+  is not a real Azure calibration run.
+- Refactored TypeScript parameter properties in the reviewer runtime so the
+  documented Node.js local commands execute under the repository's runtime;
+  all 17 existing reviewer tests remain passed.
+- Passed the complete deterministic suite in cheapest-to-most-expensive order:
+  immutable install, formatting, lint, policy, generation, typecheck, security
+  audit, 70 tests with coverage, production build, bundle budgets, Storybook,
+  and 11 fail-closed continuous-integration probes.
+- US-005 is passed. US-006 and later stories were not advanced. A real Azure
+  calibration report, GitHub check publication, workflow orchestration, live
+  deployment, and enforcement remain later-story work.

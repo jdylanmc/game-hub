@@ -95,25 +95,29 @@ interface ReviewResult {
 }
 
 class ReviewerTransportError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly retryable: boolean,
-    readonly retryAfterMs?: number,
-  ) {
+  readonly code: string;
+  readonly retryable: boolean;
+  readonly retryAfterMs?: number;
+
+  constructor(code: string, message: string, retryable: boolean, retryAfterMs?: number) {
     super(message);
     this.name = 'ReviewerTransportError';
+    this.code = code;
+    this.retryable = retryable;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
 class ReviewSemaphore {
   private active = 0;
   private readonly waiters: Array<() => void> = [];
+  readonly capacity: number;
 
-  constructor(readonly capacity: number) {
+  constructor(capacity: number) {
     if (!Number.isInteger(capacity) || capacity < 1 || capacity > 3) {
       throw new Error('Review concurrency must be between one and three');
     }
+    this.capacity = capacity;
   }
 
   async run<T>(operation: () => Promise<T>): Promise<T> {
@@ -361,10 +365,13 @@ function deriveVerdict(findings: unknown[], blockingFindingsMinimum: number): Js
 }
 
 class AzureOpenAITransport implements ReviewerTransport {
-  constructor(
-    private readonly credential: TokenCredential,
-    private readonly fetchImplementation: typeof fetch = fetch,
-  ) {}
+  private readonly credential: TokenCredential;
+  private readonly fetchImplementation: typeof fetch;
+
+  constructor(credential: TokenCredential, fetchImplementation: typeof fetch = fetch) {
+    this.credential = credential;
+    this.fetchImplementation = fetchImplementation;
+  }
 
   async complete(request: Readonly<ReviewerTransportRequest>, signal: AbortSignal): Promise<ReviewerTransportResponse> {
     let token;
@@ -465,18 +472,26 @@ class AzureOpenAITransport implements ReviewerTransport {
 class AdversarialReviewerEngine {
   private readonly validator: AdversarialFindingValidator;
   private readonly semaphore: ReviewSemaphore;
+  private readonly options: {
+    repoRoot: string;
+    endpoint: string;
+    deploymentId: string;
+    transport: ReviewerTransport;
+    clock?: ReviewerClock;
+    semaphore?: ReviewSemaphore;
+    limitsOverride?: Partial<ReviewerEngineConfig['limits']>;
+  };
 
-  constructor(
-    private readonly options: {
-      repoRoot: string;
-      endpoint: string;
-      deploymentId: string;
-      transport: ReviewerTransport;
-      clock?: ReviewerClock;
-      semaphore?: ReviewSemaphore;
-      limitsOverride?: Partial<ReviewerEngineConfig['limits']>;
-    },
-  ) {
+  constructor(options: {
+    repoRoot: string;
+    endpoint: string;
+    deploymentId: string;
+    transport: ReviewerTransport;
+    clock?: ReviewerClock;
+    semaphore?: ReviewSemaphore;
+    limitsOverride?: Partial<ReviewerEngineConfig['limits']>;
+  }) {
+    this.options = options;
     this.validator = new AdversarialFindingValidator(options.repoRoot);
     const runtime = loadRuntime(options.repoRoot);
     if (options.limitsOverride) {

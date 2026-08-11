@@ -25,7 +25,14 @@ documentation links, and required architectural invariants.
 Run the smallest commands that cover the files you changed. The repository
 currently provides:
 
-```bash
+```
+
+Adversarial reviewer calibration is versioned and fail-closed. Use
+`yarn calibrate:adversarial --mode fixture` for deterministic local evaluation;
+only a complete real-Azure report that passes
+`yarn calibration:check --report <path>` is eligible for promotion. Recalibrate
+after any fingerprinted model, prompt, tool, framework, schema, policy, or
+architecture change.bash
 yarn typecheck
 yarn build
 yarn build-storybook
