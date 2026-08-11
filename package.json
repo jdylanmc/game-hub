@@ -1,0 +1,35 @@
+{
+  "name": "game-hub",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "yarn@4.17.1",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "build-storybook": "storybook build",
+    "generate:mamba-storybook": "node scripts/generate-mamba-storybook.mjs",
+    "preview": "vite preview",
+    "storybook": "storybook dev -p 6006",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "^10.5.7",
+    "@storybook/react-vite": "^10.5.7",
+    "@tailwindcss/forms": "^0.5.11",
+    "@tailwindcss/typography": "^0.5.20",
+    "@types/react": "18.3.20",
+    "@types/react-dom": "18.3.5",
+    "autoprefixer": "^10.4.27",
+    "node-html-parser": "^9.0.1",
+    "postcss": "^8.5.14",
+    "storybook": "^10.5.7",
+    "tailwindcss": "^3.4.19",
+    "typescript": "5.9.3",
+    "vite": "^6.0.0 || ^7.0.0"
+  }
+}

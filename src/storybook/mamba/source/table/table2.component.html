@@ -1,0 +1,58 @@
+<div class="container p-2 mx-auto sm:p-4" [ngClass]="['text' + defaultInv]">
+	<h2 class="mb-4 text-2xl font-semibold leading-tight">Invoices</h2>
+	<div class="overflow-x-auto">
+		<table class="min-w-full text-xs">
+			<colgroup>
+				<col />
+				<col />
+				<col />
+				<col />
+				<col />
+				<col class="w-24" />
+			</colgroup>
+			<thead class="" [ngClass]="['bg' + neutral]">
+				<tr class="text-left">
+					<th class="p-3">Invoice #</th>
+					<th class="p-3">Client</th>
+					<th class="p-3">Issued</th>
+					<th class="p-3">Due</th>
+					<th class="p-3 text-right">Amount</th>
+					<th class="p-3">Status</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr
+					*ngFor="let row of rows"
+					class="border-b border-opacity-20"
+					[ngClass]="['border' + neutral, 'bg' + contrast]"
+				>
+					<td class="p-3">
+						<p>{{ row.invoice }}</p>
+					</td>
+					<td class="p-3">
+						<p>{{ row.client }}</p>
+					</td>
+					<td class="p-3">
+						<p class="">{{ row.issued }}</p>
+						<p class="" [ngClass]="['text' + plainInv]">Friday</p>
+					</td>
+					<td class="p-3">
+						<p class="">{{ row.due }}</p>
+						<p class="" [ngClass]="['text' + plainInv]">Tuesday</p>
+					</td>
+					<td class="p-3 text-right">
+						<p>${{ row.amount }}</p>
+					</td>
+					<td class="p-3 text-right">
+						<span
+							class="px-3 py-1 font-semibold rounded-md"
+							[ngClass]="['bg' + primary, 'text' + contrast]"
+						>
+							<span class="">{{ row.status }}</span>
+						</span>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
