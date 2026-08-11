@@ -11,6 +11,10 @@ import {
   scheduleLoops,
 } from './ralph-worktrees.mjs';
 import { RalphStatusReporter } from './ralph-status-reporter.mjs';
+import {
+  createIsolatedGitHubEnvironment,
+  verifyGitHubIdentity,
+} from './ralph-github-auth.mjs';
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => {
@@ -22,28 +26,8 @@ const fail = (message) => {
   console.error(`Ralph orchestrator error: ${message}`);
   process.exit(1);
 };
-let originalAccount;
-let accountSwitched = false;
-
-function restoreAccount() {
-  if (!accountSwitched || !originalAccount) return;
-  try {
-    execFileSync(
-      'gh',
-      ['auth', 'switch', '--hostname', 'github.com', '--user', originalAccount],
-      { stdio: 'ignore' },
-    );
-    accountSwitched = false;
-  } catch {
-    console.error(`Ralph orchestrator warning: could not restore ${originalAccount}.`);
-    process.exitCode = 1;
-  }
-}
-
-process.on('exit', restoreAccount);
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
-    restoreAccount();
     process.exit(128);
   });
 }
@@ -145,17 +129,9 @@ async function main() {
   const repoNameWithOwner = manifest.repoNameWithOwner ?? 'jdylanmc/game-hub';
   const baseBranch = manifest.baseBranch ?? 'main';
   const owner = repoNameWithOwner.split('/')[0];
-  originalAccount = execFileSync('gh', ['api', 'user', '--jq', '.login'], {
-    encoding: 'utf8',
-  }).trim();
-  if (originalAccount !== owner) {
-    execFileSync(
-      'gh',
-      ['auth', 'switch', '--hostname', 'github.com', '--user', owner],
-      { stdio: 'ignore' },
-    );
-    accountSwitched = true;
-  }
+  const githubEnvironment = createIsolatedGitHubEnvironment(owner);
+  verifyGitHubIdentity(owner, githubEnvironment, repoRoot);
+  process.env.GH_TOKEN = githubEnvironment.GH_TOKEN;
   const loops = manifest.loops.map((entry) => {
     const worktreePath = deterministicWorktreePath(repoRoot, entry.issueNumber);
     const plan = loadPlan(worktreePath, entry.memoryDir);
@@ -265,7 +241,11 @@ async function main() {
     const child = spawn(
       runner,
       ['--memory-dir', loop.memoryDir, '--max-iterations', String(manifest.maxIterations ?? 10)],
-      { cwd: loop.worktreePath, stdio: 'inherit' },
+      {
+        cwd: loop.worktreePath,
+        env: { ...githubEnvironment },
+        stdio: 'inherit',
+      },
     );
     const childKey = child.pid ?? Symbol(`issue-${loop.issueNumber}`);
     running.set(childKey, { child, loop });

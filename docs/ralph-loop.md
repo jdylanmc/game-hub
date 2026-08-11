@@ -193,7 +193,9 @@ failed attempts in the issue memory.
 9. **Remote state is reconciled before publication.** The runner fetches and
    stops on branch divergence or pull request collisions.
 10. **GitHub API calls use the repository owner account.** The runner switches
-    to `jdylanmc` and restores the account that was active at startup.
+    to no global account. It resolves `jdylanmc`'s stored credential and binds
+    the orchestrator and each child process through an isolated `GH_TOKEN`
+    environment.
 11. **Issue worktrees are deterministic and exclusive.** A loop runs only at
     `<repository>-worktrees/issue-<number>`.
 12. **Parallel eligibility is explicit.** Unmerged dependencies block work and
@@ -203,6 +205,21 @@ The runner stores issue, branch, and worktree locks under the shared Git common
 directory. Independent issues acquire different locks and can run concurrently;
 duplicate ownership is rejected. A stale lock is reclaimed only when it belongs
 to the current host and its recorded process no longer exists.
+
+### GitHub Authentication Is Process-Local
+
+`gh auth switch` mutates the active account in GitHub CLI's shared user
+configuration. Two concurrent loops can therefore change the identity beneath
+each other's repository queries. Ralph automation must never call it.
+
+The orchestrator resolves the repository owner's stored token with
+`gh auth token --user <owner>` while ignoring inherited token overrides,
+verifies the resulting identity, and passes a separate environment copy with
+`GH_TOKEN` to every runner. A standalone runner performs the same lookup only
+when no orchestrator-provided `GH_TOKEN` exists. Token values are never written
+to repository files or logs. Since environment mutation is process-local, a
+parallel loop or interactive `gh auth switch` cannot change a running loop's
+identity.
 
 ## Natural Recovery
 

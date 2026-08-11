@@ -57,6 +57,11 @@ account. Do not log out either account or replace its stored credential. Git
 pushes use the repository's SSH configuration and do not require changing the
 active GitHub CLI account.
 
+Ralph automation is the exception to interactive account switching: concurrent
+processes must resolve the repository owner's stored token once, pass it through
+their own `GH_TOKEN` environment, and never run `gh auth switch`. The active
+GitHub CLI account is shared machine state and is unsafe for parallel loops.
+
 ## Ralph Loop
 
 The Ralph Loop completes one bounded story in a fresh GitHub Copilot CLI context,

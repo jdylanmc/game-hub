@@ -32,6 +32,10 @@ The plan's `orchestration` block is also durable coordination state. Do not
 broaden `changeScopes`, remove dependencies, or change priority merely to make
 the current issue eligible for parallel execution.
 
+The runner supplies a repository-owner `GH_TOKEN`. Use it for every GitHub CLI
+call and never run `gh auth switch`; the active account is shared machine state
+and another concurrent loop may be using it.
+
 ## Select One Story
 
 If every planned story passes but the draft pull request has a failing required

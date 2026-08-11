@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { execFile, execFileSync } from 'node:child_process';
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import test from 'node:test';
 import {
   deterministicWorktreePath,
@@ -12,8 +13,13 @@ import {
   verifyRemoteBranch,
 } from '../scripts/ralph-worktrees.mjs';
 import { RalphStatusReporter } from '../scripts/ralph-status-reporter.mjs';
+import {
+  createIsolatedGitHubEnvironment,
+  verifyGitHubIdentity,
+} from '../scripts/ralph-github-auth.mjs';
 
 const scratchRoot = path.resolve('.ralph-test-work');
+const execFileAsync = promisify(execFile);
 
 function command(commandName, args, cwd) {
   return execFileSync(commandName, args, {
@@ -280,4 +286,87 @@ test('blocker and completion transitions are deduplicated', () => {
     'blocker',
     'loop-completion',
   ]);
+});
+
+test('concurrent loops keep isolated GitHub identities despite global switches', async () => {
+  const binDirectory = path.join(scratchRoot, 'fake-gh-bin');
+  const globalIdentityPath = path.join(scratchRoot, 'global-gh-identity');
+  mkdirSync(binDirectory, { recursive: true });
+  writeFileSync(globalIdentityPath, 'global-user\n');
+  const fakeGhPath = path.join(binDirectory, 'gh');
+  writeFileSync(
+    fakeGhPath,
+    `#!/bin/sh
+if [ "$1" = "auth" ] && [ "$2" = "switch" ]; then
+  while [ "$#" -gt 0 ]; do
+    if [ "$1" = "--user" ]; then
+      printf '%s\\n' "$2" > "$FAKE_GH_GLOBAL_IDENTITY"
+      exit 0
+    fi
+    shift
+  done
+fi
+if [ "$1" = "api" ] && [ "$2" = "user" ]; then
+  if [ -n "$GH_TOKEN" ]; then
+    printf '%s\\n' "\${GH_TOKEN#token-}"
+  else
+    cat "$FAKE_GH_GLOBAL_IDENTITY"
+  fi
+  exit 0
+fi
+exit 2
+`,
+  );
+  chmodSync(fakeGhPath, 0o755);
+
+  const baseEnvironment = {
+    ...process.env,
+    PATH: `${binDirectory}:${process.env.PATH}`,
+    FAKE_GH_GLOBAL_IDENTITY: globalIdentityPath,
+  };
+  const tokenResolver = (owner) => `token-${owner}`;
+  const firstEnvironment = createIsolatedGitHubEnvironment('first-owner', {
+    baseEnvironment,
+    tokenResolver,
+  });
+  const secondEnvironment = createIsolatedGitHubEnvironment('second-owner', {
+    baseEnvironment,
+    tokenResolver,
+  });
+
+  assert.equal(
+    verifyGitHubIdentity('first-owner', firstEnvironment, scratchRoot),
+    'first-owner',
+  );
+  assert.equal(
+    verifyGitHubIdentity('second-owner', secondEnvironment, scratchRoot),
+    'second-owner',
+  );
+
+  const identityReads = Array.from({ length: 20 }, (_, index) =>
+    execFileAsync(fakeGhPath, ['api', 'user', '--jq', '.login'], {
+      env: index % 2 === 0 ? firstEnvironment : secondEnvironment,
+    }),
+  );
+  const globalSwitches = ['intruder-a', 'intruder-b', 'intruder-c'].map((user) =>
+    execFileAsync(fakeGhPath, [
+      'auth',
+      'switch',
+      '--hostname',
+      'github.com',
+      '--user',
+      user,
+    ], {
+      env: baseEnvironment,
+    }),
+  );
+  const results = await Promise.all([...identityReads, ...globalSwitches]);
+  for (const [index, result] of results.slice(0, identityReads.length).entries()) {
+    assert.equal(
+      result.stdout.trim(),
+      index % 2 === 0 ? 'first-owner' : 'second-owner',
+    );
+  }
+  assert.equal(firstEnvironment.GH_TOKEN, 'token-first-owner');
+  assert.equal(secondEnvironment.GH_TOKEN, 'token-second-owner');
 });

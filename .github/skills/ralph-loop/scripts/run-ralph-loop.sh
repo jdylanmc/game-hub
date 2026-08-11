@@ -223,16 +223,6 @@ cleanup() {
     rmdir "$lock_dir" 2>/dev/null || true
   done
 
-  if [[ "$GH_ACCOUNT_SWITCHED" == true && -n "$ORIGINAL_GH_ACCOUNT" ]]; then
-    gh auth switch \
-      --hostname github.com \
-      --user "$ORIGINAL_GH_ACCOUNT" >/dev/null 2>&1 || {
-        printf 'Ralph Loop warning: could not restore GitHub CLI account %s.\n' \
-          "$ORIGINAL_GH_ACCOUNT" >&2
-        status=1
-      }
-  fi
-
   exit "$status"
 }
 
@@ -278,8 +268,6 @@ MAX_ITERATIONS=10
 CONTINUOUS=false
 DRY_RUN=false
 LOCK_DIRS=()
-ORIGINAL_GH_ACCOUNT=""
-GH_ACCOUNT_SWITCHED=false
 PR_JSON=""
 PR_NUMBER=""
 PR_URL=""
@@ -389,18 +377,21 @@ ORIGIN_NAME_WITH_OWNER="$(remote_name_from_url "$ORIGIN_URL")" ||
 [[ "$ORIGIN_NAME_WITH_OWNER" == "$REPO_NAME_WITH_OWNER" ]] ||
   fail "Origin targets $ORIGIN_NAME_WITH_OWNER, but the plan targets $REPO_NAME_WITH_OWNER."
 
-ORIGINAL_GH_ACCOUNT="$(gh api user --jq '.login' 2>/dev/null)" ||
-  fail "GitHub CLI has no active authenticated account."
-if [[ "$ORIGINAL_GH_ACCOUNT" != "$REPO_OWNER" ]]; then
-  gh auth switch --hostname github.com --user "$REPO_OWNER" >/dev/null ||
-    fail "GitHub CLI is not authenticated as $REPO_OWNER."
-  GH_ACCOUNT_SWITCHED=true
+if [[ -z "${GH_TOKEN:-}" ]]; then
+  OWNER_GH_TOKEN="$(GH_TOKEN= GITHUB_TOKEN= gh auth token \
+    --hostname github.com \
+    --user "$REPO_OWNER" 2>/dev/null)" ||
+    fail "GitHub CLI has no stored credential for $REPO_OWNER."
+  [[ -n "$OWNER_GH_TOKEN" ]] ||
+    fail "GitHub CLI returned an empty credential for $REPO_OWNER."
+  export GH_TOKEN="$OWNER_GH_TOKEN"
+  unset OWNER_GH_TOKEN
 fi
 
 ACTIVE_GH_ACCOUNT="$(gh api user --jq '.login' 2>/dev/null)" ||
-  fail "Could not verify the active GitHub CLI account."
+  fail "Could not verify the isolated GitHub CLI credential."
 [[ "$ACTIVE_GH_ACCOUNT" == "$REPO_OWNER" ]] ||
-  fail "GitHub CLI account $ACTIVE_GH_ACCOUNT does not own $REPO_NAME_WITH_OWNER."
+  fail "Isolated GitHub credential belongs to $ACTIVE_GH_ACCOUNT, not $REPO_OWNER."
 
 ACTUAL_REPO="$(gh repo view "$REPO_NAME_WITH_OWNER" \
   --json nameWithOwner \

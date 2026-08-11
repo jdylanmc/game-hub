@@ -34,3 +34,15 @@ periodically as ralphs are working.
 - Status reporting emits on meaningful loop, story, publication, continuous
   integration, blocker, and completion transitions; unchanged polling is quiet
   except for a rate-limited heartbeat.
+- Concurrent loops bind GitHub identity through isolated process environment,
+  never through the shared active GitHub CLI account.
+
+## Concurrency Defect Addendum
+
+Issue #29 observed that concurrent `gh auth switch` calls mutate shared GitHub
+CLI state and caused a running Ralph loop's repository query to fail. Treat
+process-local GitHub identity as required issue #33 scope.
+
+The repository is now public by explicit user approval so issue #29 can enable
+branch protection. This visibility change does not relax Ralph's identity,
+draft-pull-request, or human-only merge safeguards.

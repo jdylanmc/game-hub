@@ -34,15 +34,20 @@ worktree.
 1. Resolve the repository root with `git rev-parse --show-toplevel`. Do not infer
    a repository from a sibling directory.
 2. Resolve `origin` and require it to identify `jdylanmc/game-hub`.
-3. Read the active GitHub CLI account with `gh api user --jq .login`.
-4. Switch to `jdylanmc` before any `gh repo`, `gh issue`, or `gh pr` operation:
+3. Resolve the repository owner's stored token without changing shared GitHub
+   CLI state:
 
    ```bash
-   gh auth switch --hostname github.com --user jdylanmc
+   GH_TOKEN="$(GH_TOKEN= GITHUB_TOKEN= gh auth token \
+     --hostname github.com --user jdylanmc)"
    ```
 
-5. Restore the original active account after setup or on any failure. The
-   bundled runner performs the same switch and restoration for unattended work.
+4. Use that token only in the current process environment and verify
+   `GH_TOKEN="$GH_TOKEN" gh api user --jq .login` returns `jdylanmc`.
+5. Never run `gh auth switch` from Ralph automation. It mutates shared global
+   state and races with concurrent loops. The orchestrator gives every child
+   runner its own environment copy, and standalone runners resolve the same
+   owner token without changing the user's active account.
 
 ## Phase 1: Select and Distill Issues
 
@@ -205,7 +210,8 @@ Do not describe an incomplete or failing pull request as ready.
 
 - Fail if the `jdylanmc` account is unavailable or `gh repo view
   jdylanmc/game-hub` fails.
-- Restore the original active account before asking the user to authenticate.
+- Do not fall back to `gh auth switch`; preserve global account state and ask
+  the user to restore the stored `jdylanmc` credential.
 
 ### Worktree is dirty
 

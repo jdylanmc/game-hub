@@ -11,6 +11,30 @@
 - Status polling is observational, not itself report-worthy. Reports are
   event-driven for state transitions, with one coalesced report per observation
   and a separate rate-limited heartbeat for unchanged long-running work.
+- GitHub CLI's active account is shared user configuration. Concurrent Ralph
+  processes must use verified `GH_TOKEN` environments and never mutate that
+  global selection.
+
+## 2026-08-11 — Concurrent GitHub identity defect
+
+- Issue #29 found a real race: a concurrent `gh auth switch` changed the active
+  account while another Ralph runner was querying its repository.
+- Added `US-005` and replaced orchestrator/runner account switching with
+  process-local repository-owner token binding. The orchestrator passes an
+  independent environment object to every child process.
+- The repository is now public by explicit user approval so issue #29 can
+  enable branch protection. Ralph's identity and publication invariants remain
+  unchanged.
+- Checks passed:
+  - no `gh auth switch` invocation remains in Ralph automation scripts
+  - `bash -n .github/skills/ralph-loop/scripts/run-ralph-loop.sh`
+  - Node syntax checks for the authentication and orchestration scripts
+  - `node --test .github/skills/ralph-loop/tests/ralph-parallel.test.mjs`
+    (9 tests, including concurrent identity isolation during simulated global
+    account switches)
+  - `yarn typecheck`
+  - `yarn build`
+  - `yarn build-storybook`
 
 ## 2026-08-11 — Live issue status-reporting update
 

@@ -167,6 +167,10 @@ must select the subscription explicitly before previewing or applying changes.
     loop, story, publication, continuous-integration, blocker, and completion
     transitions emit coalesced reports; unchanged polling is silent except for
     a longer periodic heartbeat.
+11. **Concurrent GitHub identity is process-local.** Ralph resolves the
+    repository owner's credential without changing GitHub CLI global state and
+    binds each orchestrator and child runner through its own `GH_TOKEN`
+    environment.
 
 ## Version Update Procedure
 

@@ -79,6 +79,25 @@
         "US-002",
         "US-003"
       ]
+    },
+    {
+      "id": "US-005",
+      "title": "Isolate GitHub identity for concurrent loops",
+      "description": "Replace shared GitHub CLI active-account switching with verified process-local authentication for the orchestrator and every child runner.",
+      "acceptanceCriteria": [
+        "Ralph automation never calls gh auth switch",
+        "The repository owner identity is verified before GitHub operations",
+        "Every child runner receives its own environment copy with the owner GH_TOKEN",
+        "Standalone runners bind the owner token without changing global GitHub CLI state",
+        "Focused concurrency tests prove loops cannot change each other's GitHub identity"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "The orchestrator and standalone runner resolve and verify the repository-owner credential without global account switching; concurrent fake-GitHub simulations prove process identities remain isolated.",
+      "dependencies": [
+        "US-001",
+        "US-002"
+      ]
     }
   ]
 }
