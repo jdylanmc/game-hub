@@ -8,19 +8,8 @@
   "continuousByBestJudgment": true,
   "orchestration": {
     "priority": 0,
-    "dependencies": [
-      29,
-      33
-    ],
-    "changeScopes": [
-      ".github",
-      "config",
-      "docs",
-      "infra",
-      "package.json",
-      "scripts",
-      "yarn.lock"
-    ]
+    "dependencies": [29, 33],
+    "changeScopes": [".github", "config", "docs", "infra", "package.json", "scripts", "yarn.lock"]
   },
   "stories": [
     {
@@ -53,9 +42,7 @@
       "priority": 2,
       "passes": true,
       "notes": "Delivered all 5 acceptance criteria: (1) Bicep template (infra/bicep/main.bicep) with GPT-4 Turbo, Key Vault, monitoring, parameterized for prod/test environments; prod.bicepparam (3 concurrent, $100 budget) and test.bicepparam (1 concurrent, $20 budget) configured; (2) Consumption-based GPT-4 Turbo v2024-04-09 deployed with configurable concurrency per environment; (3) GitHub Actions workflow uses OIDC via federated credentials (no stored long-lived secrets), least-privilege access to resource groups; (4) Budget alerting via metric thresholds (90K tokens/hour ≈ $0.90/hour), monthly budgets target $100 prod/$20 test, documentation (README.md, OIDC_SETUP.md) complete; (5) Bicep deployment is fully idempotent via declarative resource definitions and `az deployment group create` convergence. Files: infra/bicep/main.bicep (5990B), prod.bicepparam (345B), test.bicepparam (405B), deploy.sh (5966B), OIDC_SETUP.md (7773B), README.md (11199B), .github/workflows/deploy-adversarial-infrastructure.yml (9213B). All templates validated, deployment script tested for syntax.",
-      "dependencies": [
-        "US-001"
-      ]
+      "dependencies": ["US-001"]
     },
     {
       "id": "US-003",
@@ -70,9 +57,7 @@
       "priority": 3,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-001"
-      ]
+      "dependencies": ["US-001"]
     },
     {
       "id": "US-004",
@@ -88,11 +73,7 @@
       "priority": 4,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-001",
-        "US-002",
-        "US-003"
-      ]
+      "dependencies": ["US-001", "US-002", "US-003"]
     },
     {
       "id": "US-005",
@@ -108,9 +89,7 @@
       "priority": 5,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-004"
-      ]
+      "dependencies": ["US-004"]
     },
     {
       "id": "US-006",
@@ -125,9 +104,7 @@
       "priority": 6,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-004"
-      ]
+      "dependencies": ["US-004"]
     },
     {
       "id": "US-007",
@@ -135,6 +112,8 @@
       "description": "Run the reviewer from base-branch-controlled workflow code with keyless Azure access, restricted permissions, bounded concurrency, and no execution of untrusted pull-request code.",
       "acceptanceCriteria": [
         "Relevant pull-request changes trigger review and later relevant pushes rerun it",
+        "The adversarial workflow cannot start until the complete deterministic continuous-integration workflow succeeds for the same pull-request head commit",
+        "Deterministic gates are ordered from cheapest to most expensive so early failures avoid builds, simulations, and model cost",
         "Forked and malicious pull requests cannot access secrets, model credentials, write-capable tools, or unrestricted network destinations",
         "Workflow actions are immutably pinned and permissions, timeouts, concurrency, evidence retention, and failure behavior are policy-tested",
         "The reviewer never overrides or masks deterministic continuous integration failures",
@@ -143,12 +122,7 @@
       "priority": 7,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-002",
-        "US-003",
-        "US-004",
-        "US-006"
-      ]
+      "dependencies": ["US-002", "US-003", "US-004", "US-006"]
     },
     {
       "id": "US-008",
@@ -164,11 +138,7 @@
       "priority": 8,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-005",
-        "US-006",
-        "US-007"
-      ]
+      "dependencies": ["US-005", "US-006", "US-007"]
     },
     {
       "id": "US-009",
@@ -185,11 +155,7 @@
       "priority": 9,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-005",
-        "US-007",
-        "US-008"
-      ]
+      "dependencies": ["US-005", "US-007", "US-008"]
     }
   ]
 }

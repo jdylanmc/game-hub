@@ -14,6 +14,9 @@
 - Each agent owns a dedicated human-tunable prompt file. Prompt versions and
   hashes are recorded in every review result and calibrated independently from
   policy, schema, tools, and model versions.
+- Deterministic gates run from cheapest to most expensive. Model-backed agents
+  are downstream consumers and cannot start until every deterministic gate
+  succeeds for the exact pull-request head commit.
 
 ## 2026-08-11 - Planning
 
@@ -73,3 +76,11 @@
 2. **Network security hardening**: Current deployment uses public endpoints. Future PRs (US-009+) may add virtual networks, private endpoints, or IP allowlisting for additional isolation.
 3. **Deployment region**: Currently East US (supports Azure OpenAI). Alternative regions (westus3, etc.) possible if quota exhausted or latency becomes issue.
 
+## 2026-08-11 - Gate cost ordering
+
+- Reordered deterministic continuous integration so inexpensive formatting,
+  linting, policy, generation, type, audit, and test failures stop before
+  production builds, Storybook, and the expensive fail-closed simulation suite.
+- Added a hard issue and plan requirement that adversarial model workflows run
+  only after the complete deterministic workflow succeeds for the same head
+  commit.

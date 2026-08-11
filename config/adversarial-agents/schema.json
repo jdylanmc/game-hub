@@ -5,28 +5,19 @@
   "description": "Versioned structured finding schema for independent pull-request review agents.",
   "version": "1.0.0",
   "type": "object",
-  "required": [
-    "schemaVersion",
-    "findingVersion",
-    "verdict",
-    "findings"
-  ],
+  "required": ["schemaVersion", "findingVersion", "verdict", "findings"],
   "properties": {
     "schemaVersion": {
       "type": "string",
       "description": "The version of this schema. Must be a semantic version.",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "examples": [
-        "1.0.0"
-      ]
+      "examples": ["1.0.0"]
     },
     "findingVersion": {
       "type": "string",
       "description": "Unique identifier combining agent name and execution timestamp for deduplication and tracing.",
       "pattern": "^[a-z0-9]+(-[a-z0-9]+)*@\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
-      "examples": [
-        "unit-test-reviewer@2026-08-11T14:39:33Z"
-      ]
+      "examples": ["unit-test-reviewer@2026-08-11T14:39:33Z"]
     },
     "attribution": {
       "type": "object",
@@ -45,145 +36,101 @@
           "type": "string",
           "description": "Human-readable agent identifier matching the registry.",
           "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
-          "examples": [
-            "unit-test-reviewer"
-          ]
+          "examples": ["unit-test-reviewer"]
         },
         "agentVersion": {
           "type": "string",
           "description": "Semantic version of the agent implementation.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
-          "examples": [
-            "1.0.0"
-          ]
+          "examples": ["1.0.0"]
         },
         "modelDeployment": {
           "type": "string",
           "description": "Azure or cloud model deployment identifier, including region and SKU if applicable.",
-          "examples": [
-            "gpt-4-1-mini@eastus"
-          ]
+          "examples": ["gpt-4-1-mini@eastus"]
         },
         "promptVersion": {
           "type": "string",
           "description": "Semantic version of the agent prompt file.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
-          "examples": [
-            "1.2.3"
-          ]
+          "examples": ["1.2.3"]
         },
         "promptContentHash": {
           "type": "string",
           "description": "SHA-256 hash of the prompt file content for change detection and audit.",
           "pattern": "^[a-f0-9]{64}$",
-          "examples": [
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-          ]
+          "examples": ["e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"]
         },
         "policyVersion": {
           "type": "string",
           "description": "Semantic version of the verdict policy configuration.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
-          "examples": [
-            "1.0.0"
-          ]
+          "examples": ["1.0.0"]
         },
         "toolsVersion": {
           "type": "string",
           "description": "Semantic version of agent tools and integration points.",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
-          "examples": [
-            "1.0.0"
-          ]
+          "examples": ["1.0.0"]
         },
         "subscriptionId": {
           "type": "string",
           "description": "Azure subscription where the model is hosted.",
           "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
-          "examples": [
-            "11213dbd-39fe-46ba-87db-5f5e8c449aed"
-          ]
+          "examples": ["11213dbd-39fe-46ba-87db-5f5e8c449aed"]
         },
         "repositoryCommit": {
           "type": "string",
           "description": "Full commit SHA of the repository when the review was generated.",
           "pattern": "^[a-f0-9]{40}$",
-          "examples": [
-            "3d21ec53a331a6f037a91c368710b99387d012c1"
-          ]
+          "examples": ["3d21ec53a331a6f037a91c368710b99387d012c1"]
         },
         "timestamp": {
           "type": "string",
           "description": "ISO 8601 timestamp when the review was generated.",
           "format": "date-time",
-          "examples": [
-            "2026-08-11T14:39:33Z"
-          ]
+          "examples": ["2026-08-11T14:39:33Z"]
         }
       }
     },
     "verdict": {
       "type": "object",
       "description": "Overall verdict and pass/fail determination based on policy.",
-      "required": [
-        "decision",
-        "severity"
-      ],
+      "required": ["decision", "severity"],
       "properties": {
         "decision": {
           "type": "string",
           "description": "Pass or fail verdict based on high-confidence blocking findings.",
-          "enum": [
-            "PASS",
-            "FAIL",
-            "ERROR"
-          ],
-          "examples": [
-            "FAIL"
-          ]
+          "enum": ["PASS", "FAIL", "ERROR"],
+          "examples": ["FAIL"]
         },
         "severity": {
           "type": "string",
           "description": "Highest severity level across all findings, or ERROR if review execution failed.",
-          "enum": [
-            "INFO",
-            "ADVISORY",
-            "BLOCKING",
-            "ERROR"
-          ],
-          "examples": [
-            "BLOCKING"
-          ]
+          "enum": ["INFO", "ADVISORY", "BLOCKING", "ERROR"],
+          "examples": ["BLOCKING"]
         },
         "blockingFindingsCount": {
           "type": "integer",
           "description": "Number of blocking findings at or above the fail threshold.",
           "minimum": 0,
-          "examples": [
-            2
-          ]
+          "examples": [2]
         },
         "advisoryFindingsCount": {
           "type": "integer",
           "description": "Number of advisory findings below the fail threshold.",
           "minimum": 0,
-          "examples": [
-            3
-          ]
+          "examples": [3]
         },
         "errorMessage": {
           "type": "string",
           "description": "If decision is ERROR, the error message explaining why review could not complete.",
-          "examples": [
-            "Model invocation timeout after 30 seconds"
-          ]
+          "examples": ["Model invocation timeout after 30 seconds"]
         },
         "policyDecisionRationale": {
           "type": "string",
           "description": "Concise explanation of how policy converted findings into the verdict.",
-          "examples": [
-            "2 blocking findings exceed the policy threshold of 1"
-          ]
+          "examples": ["2 blocking findings exceed the policy threshold of 1"]
         }
       }
     },
@@ -192,29 +139,18 @@
       "description": "Array of identified issues, concerns, or observations.",
       "items": {
         "type": "object",
-        "required": [
-          "id",
-          "title",
-          "category",
-          "severity",
-          "confidence",
-          "description"
-        ],
+        "required": ["id", "title", "category", "severity", "confidence", "description"],
         "properties": {
           "id": {
             "type": "string",
             "description": "Unique identifier within this review for deduplication and linking.",
             "pattern": "^[A-Z0-9]+-\\d+$",
-            "examples": [
-              "TAUTOLOGY-001"
-            ]
+            "examples": ["TAUTOLOGY-001"]
           },
           "title": {
             "type": "string",
             "description": "Concise, actionable title for the finding.",
-            "examples": [
-              "Assertion is always true and cannot fail"
-            ]
+            "examples": ["Assertion is always true and cannot fail"]
           },
           "category": {
             "type": "string",
@@ -235,32 +171,19 @@
               "determinism-issue",
               "other"
             ],
-            "examples": [
-              "tautology"
-            ]
+            "examples": ["tautology"]
           },
           "severity": {
             "type": "string",
             "description": "Severity of the issue: BLOCKING requires fix before merge, ADVISORY is optional but encouraged.",
-            "enum": [
-              "BLOCKING",
-              "ADVISORY"
-            ],
-            "examples": [
-              "BLOCKING"
-            ]
+            "enum": ["BLOCKING", "ADVISORY"],
+            "examples": ["BLOCKING"]
           },
           "confidence": {
             "type": "string",
             "description": "Confidence in the finding: HIGH is ready to block, MEDIUM needs discussion, LOW is speculative.",
-            "enum": [
-              "HIGH",
-              "MEDIUM",
-              "LOW"
-            ],
-            "examples": [
-              "HIGH"
-            ]
+            "enum": ["HIGH", "MEDIUM", "LOW"],
+            "examples": ["HIGH"]
           },
           "description": {
             "type": "string",
@@ -272,49 +195,36 @@
           "citations": {
             "type": "object",
             "description": "Specific code locations supporting the finding.",
-            "required": [
-              "productionFiles",
-              "testFiles"
-            ],
+            "required": ["productionFiles", "testFiles"],
             "properties": {
               "productionFiles": {
                 "type": "array",
                 "description": "Production code files and line ranges related to this finding.",
                 "items": {
                   "type": "object",
-                  "required": [
-                    "path"
-                  ],
+                  "required": ["path"],
                   "properties": {
                     "path": {
                       "type": "string",
                       "description": "Relative file path from repository root.",
-                      "examples": [
-                        "src/components/ScoreForm.ts"
-                      ]
+                      "examples": ["src/components/ScoreForm.ts"]
                     },
                     "startLine": {
                       "type": "integer",
                       "description": "Starting line number (1-indexed).",
                       "minimum": 1,
-                      "examples": [
-                        45
-                      ]
+                      "examples": [45]
                     },
                     "endLine": {
                       "type": "integer",
                       "description": "Ending line number (1-indexed).",
                       "minimum": 1,
-                      "examples": [
-                        52
-                      ]
+                      "examples": [52]
                     },
                     "snippet": {
                       "type": "string",
                       "description": "Code snippet from the file for reference.",
-                      "examples": [
-                        "if (userId) {\n  return submitScore(gameId, score);\n}"
-                      ]
+                      "examples": ["if (userId) {\n  return submitScore(gameId, score);\n}"]
                     }
                   }
                 }
@@ -324,39 +234,29 @@
                 "description": "Test code files and line ranges where the gap exists.",
                 "items": {
                   "type": "object",
-                  "required": [
-                    "path"
-                  ],
+                  "required": ["path"],
                   "properties": {
                     "path": {
                       "type": "string",
                       "description": "Relative file path from repository root.",
-                      "examples": [
-                        "src/components/ScoreForm.test.ts"
-                      ]
+                      "examples": ["src/components/ScoreForm.test.ts"]
                     },
                     "startLine": {
                       "type": "integer",
                       "description": "Starting line number (1-indexed).",
                       "minimum": 1,
-                      "examples": [
-                        100
-                      ]
+                      "examples": [100]
                     },
                     "endLine": {
                       "type": "integer",
                       "description": "Ending line number (1-indexed).",
                       "minimum": 1,
-                      "examples": [
-                        110
-                      ]
+                      "examples": [110]
                     },
                     "snippet": {
                       "type": "string",
                       "description": "Test snippet for reference.",
-                      "examples": [
-                        "it('should submit score', () => {\n  expect(true).toBe(true);\n});"
-                      ]
+                      "examples": ["it('should submit score', () => {\n  expect(true).toBe(true);\n});"]
                     }
                   }
                 }
@@ -366,9 +266,7 @@
                 "description": "References to GitHub issue requirements or acceptance criteria not covered.",
                 "items": {
                   "type": "string",
-                  "examples": [
-                    "#30 acceptance criterion: 'Findings are concise and actionable'"
-                  ]
+                  "examples": ["#30 acceptance criterion: 'Findings are concise and actionable'"]
                 }
               }
             }
@@ -416,53 +314,37 @@
           "type": "integer",
           "description": "GitHub pull request number being reviewed.",
           "minimum": 1,
-          "examples": [
-            35
-          ]
+          "examples": [35]
         },
         "pullRequestCommit": {
           "type": "string",
           "description": "Commit SHA of the pull request head at review time.",
           "pattern": "^[a-f0-9]{40}$",
-          "examples": [
-            "3d21ec53a331a6f037a91c368710b99387d012c1"
-          ]
+          "examples": ["3d21ec53a331a6f037a91c368710b99387d012c1"]
         },
         "reviewDurationMs": {
           "type": "integer",
           "description": "Time taken to perform the review in milliseconds.",
           "minimum": 0,
-          "examples": [
-            45000
-          ]
+          "examples": [45000]
         },
         "tokensUsed": {
           "type": "integer",
           "description": "Total tokens (input + output) consumed by the model.",
           "minimum": 0,
-          "examples": [
-            8500
-          ]
+          "examples": [8500]
         },
         "estimatedCost": {
           "type": "number",
           "description": "Estimated cost in USD for this review.",
           "minimum": 0,
-          "examples": [
-            0.0085
-          ]
+          "examples": [0.0085]
         },
         "contextCollectionStatus": {
           "type": "string",
           "description": "Status of context collection: complete, partial, or error.",
-          "enum": [
-            "complete",
-            "partial",
-            "error"
-          ],
-          "examples": [
-            "complete"
-          ]
+          "enum": ["complete", "partial", "error"],
+          "examples": ["complete"]
         },
         "contextLimitations": {
           "type": "array",
@@ -470,9 +352,7 @@
           "items": {
             "type": "string"
           },
-          "examples": [
-            "Issue requirements document exceeded size limit and was truncated"
-          ]
+          "examples": ["Issue requirements document exceeded size limit and was truncated"]
         }
       }
     }

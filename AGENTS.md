@@ -49,6 +49,13 @@ SHAs, preserve least-privilege permissions and fork safety, and retain the
 workflow's logs, test results, coverage, production build, and Storybook
 evidence.
 
+Order deterministic gates from cheapest to most expensive so formatting,
+linting, policy, generation, type, and test failures stop work before builds,
+Storybook, fail-closed simulations, or model-backed review. Adversarial-agent
+workflows must depend on the complete deterministic workflow succeeding; they
+must not consume model capacity while any deterministic gate is missing,
+pending, canceled, or failing.
+
 `yarn policy:check` rejects unapproved lint suppressions and weakened workflow
 invariants. Record an exceptional suppression with a specific rationale in
 `config/lint-suppressions.json`. `yarn bundle:check` enforces the reviewed

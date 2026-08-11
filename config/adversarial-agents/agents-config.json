@@ -12,9 +12,7 @@
       "modelVersion": "2025-01",
       "toolsVersion": "1.0.0",
       "description": "Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns.",
-      "targetScopes": [
-        "tests"
-      ],
+      "targetScopes": ["tests"],
       "contactEmail": "dylan@microsoft.com",
       "verdictRules": {
         "blockingThreshold": 1,

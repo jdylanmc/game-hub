@@ -15,82 +15,57 @@
       "description": "List of configured adversarial review agents.",
       "items": {
         "type": "object",
-        "required": [
-          "name",
-          "version",
-          "enabled",
-          "promptFile",
-          "promptVersion",
-          "description"
-        ],
+        "required": ["name", "version", "enabled", "promptFile", "promptVersion", "description"],
         "properties": {
           "name": {
             "type": "string",
             "description": "Unique agent identifier (kebab-case).",
             "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
-            "examples": [
-              "unit-test-reviewer"
-            ]
+            "examples": ["unit-test-reviewer"]
           },
           "version": {
             "type": "string",
             "description": "Semantic version of the agent implementation.",
             "pattern": "^\\d+\\.\\d+\\.\\d+$",
-            "examples": [
-              "1.0.0"
-            ]
+            "examples": ["1.0.0"]
           },
           "enabled": {
             "type": "boolean",
             "description": "Whether this agent is active in CI.",
-            "examples": [
-              true
-            ]
+            "examples": [true]
           },
           "description": {
             "type": "string",
             "description": "Human-readable description of what this agent checks.",
-            "examples": [
-              "Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns."
-            ]
+            "examples": ["Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns."]
           },
           "promptFile": {
             "type": "string",
             "description": "Relative path to the human-editable prompt file from repository root.",
             "pattern": "^\\.github/adversarial-agents/[a-z0-9]+(-[a-z0-9]+)*/prompt\\.md$",
-            "examples": [
-              ".github/adversarial-agents/unit-test-reviewer/prompt.md"
-            ]
+            "examples": [".github/adversarial-agents/unit-test-reviewer/prompt.md"]
           },
           "promptVersion": {
             "type": "string",
             "description": "Current semantic version of the prompt. Updated when the prompt file changes.",
             "pattern": "^\\d+\\.\\d+\\.\\d+$",
-            "examples": [
-              "1.0.0"
-            ]
+            "examples": ["1.0.0"]
           },
           "modelDeployment": {
             "type": "string",
             "description": "Azure or cloud model deployment identifier.",
-            "examples": [
-              "gpt-4-1-mini@eastus"
-            ]
+            "examples": ["gpt-4-1-mini@eastus"]
           },
           "modelVersion": {
             "type": "string",
             "description": "Semantic version or release date of the model, for compatibility tracking.",
-            "examples": [
-              "2025-01"
-            ]
+            "examples": ["2025-01"]
           },
           "toolsVersion": {
             "type": "string",
             "description": "Semantic version of agent tools and integrations.",
             "pattern": "^\\d+\\.\\d+\\.\\d+$",
-            "examples": [
-              "1.0.0"
-            ]
+            "examples": ["1.0.0"]
           },
           "executionConfig": {
             "type": "object",
@@ -99,32 +74,24 @@
               "timeoutSeconds": {
                 "type": "integer",
                 "minimum": 1,
-                "examples": [
-                  60
-                ]
+                "examples": [60]
               },
               "retryAttempts": {
                 "type": "integer",
                 "minimum": 0,
-                "examples": [
-                  2
-                ]
+                "examples": [2]
               },
               "maxTokens": {
                 "type": "integer",
                 "minimum": 1000,
-                "examples": [
-                  8000
-                ]
+                "examples": [8000]
               },
               "temperatureFraction": {
                 "type": "number",
                 "minimum": 0,
                 "maximum": 2,
                 "description": "LLM temperature for reproducibility tuning. 0 = deterministic, 1 = default, > 1 = exploratory.",
-                "examples": [
-                  0.3
-                ]
+                "examples": [0.3]
               }
             }
           },
@@ -133,17 +100,9 @@
             "description": "What parts of the repository this agent reviews (e.g., test files, production code).",
             "items": {
               "type": "string",
-              "enum": [
-                "tests",
-                "production",
-                "all"
-              ]
+              "enum": ["tests", "production", "all"]
             },
-            "examples": [
-              [
-                "tests"
-              ]
-            ]
+            "examples": [["tests"]]
           },
           "excludePatterns": {
             "type": "array",
@@ -151,20 +110,13 @@
             "items": {
               "type": "string"
             },
-            "examples": [
-              [
-                "**/fixtures/**",
-                "**/node_modules/**"
-              ]
-            ]
+            "examples": [["**/fixtures/**", "**/node_modules/**"]]
           },
           "contactEmail": {
             "type": "string",
             "description": "Owner contact for questions, false positives, or tuning requests.",
             "format": "email",
-            "examples": [
-              "dylan@microsoft.com"
-            ]
+            "examples": ["dylan@microsoft.com"]
           },
           "verdictRules": {
             "type": "object",
@@ -174,16 +126,12 @@
                 "type": "integer",
                 "description": "Number of HIGH-confidence findings that trigger a BLOCKING verdict.",
                 "minimum": 1,
-                "examples": [
-                  1
-                ]
+                "examples": [1]
               },
               "allowHighConfidenceOnly": {
                 "type": "boolean",
                 "description": "If true, only HIGH-confidence findings can cause a FAIL.",
-                "examples": [
-                  true
-                ]
+                "examples": [true]
               }
             }
           }
@@ -200,9 +148,7 @@
           "modelVersion": "2025-01",
           "toolsVersion": "1.0.0",
           "description": "Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns.",
-          "targetScopes": [
-            "tests"
-          ],
+          "targetScopes": ["tests"],
           "verdictRules": {
             "blockingThreshold": 1,
             "allowHighConfidenceOnly": true
@@ -214,9 +160,7 @@
       "type": "string",
       "description": "Default Azure subscription where agents are deployed.",
       "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
-      "examples": [
-        "11213dbd-39fe-46ba-87db-5f5e8c449aed"
-      ]
+      "examples": ["11213dbd-39fe-46ba-87db-5f5e8c449aed"]
     },
     "requirementsMet": {
       "type": "object",

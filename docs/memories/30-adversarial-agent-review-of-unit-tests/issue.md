@@ -55,6 +55,10 @@ agent's versioned quality policy.
 - Never override deterministic lint, test, type, build, security, coverage, or
   generation failures.
 - Re-run after relevant code or test changes.
+- Run only after the complete deterministic continuous-integration workflow
+  succeeds. Formatting, linting, policy, generation, type checking, security
+  audit, tests, builds, and other non-model gates must fail fast before any
+  adversarial model capacity is consumed.
 - Publish a required check with concise annotations and a retained JSON
   artifact rather than comment spam.
 - Provide an auditable, time-limited exception process.

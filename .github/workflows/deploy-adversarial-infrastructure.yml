@@ -21,7 +21,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write    # Required for OIDC token generation
+  id-token: write # Required for OIDC token generation
   actions: read
 
 jobs:
@@ -90,12 +90,12 @@ jobs:
         id: deploy
         run: |
           set -euo pipefail
-          
+
           PARAM_FILE="infra/${ENVIRONMENT}.bicepparam"
-          
+
           echo "Starting deployment to $ENVIRONMENT..."
           echo "Parameter file: $PARAM_FILE"
-          
+
           # Deploy with detailed output
           DEPLOYMENT_OUTPUT=$(az deployment group create \
             --resource-group "game-hub-adversarial-agents-${ENVIRONMENT}" \
@@ -104,62 +104,62 @@ jobs:
             --deployment-name "adversarial-agents-$(date +%s)" \
             --query "properties.outputs" \
             -o json)
-          
+
           # Extract outputs
           OPENAI_ENDPOINT=$(echo "$DEPLOYMENT_OUTPUT" | jq -r '.openaiEndpoint.value')
           KEYVAULT_NAME=$(echo "$DEPLOYMENT_OUTPUT" | jq -r '.keyVaultName.value')
           MODEL_DEPLOYMENT=$(echo "$DEPLOYMENT_OUTPUT" | jq -r '.modelDeploymentId.value')
-          
+
           # Set outputs for subsequent steps
           echo "openai-endpoint=$OPENAI_ENDPOINT" >> $GITHUB_OUTPUT
           echo "keyvault-name=$KEYVAULT_NAME" >> $GITHUB_OUTPUT
           echo "model-deployment-id=$MODEL_DEPLOYMENT" >> $GITHUB_OUTPUT
-          
+
           echo "✓ Deployment completed successfully"
 
       - name: Retrieve OpenAI Credentials
         id: credentials
         run: |
           set -euo pipefail
-          
+
           KEYVAULT_NAME="${{ steps.deploy.outputs.keyvault-name }}"
-          
+
           # Retrieve secrets from Key Vault
           OPENAI_ENDPOINT=$(az keyvault secret show \
             --vault-name "$KEYVAULT_NAME" \
             --name openai-endpoint \
             --query value -o tsv)
-          
+
           OPENAI_KEY=$(az keyvault secret show \
             --vault-name "$KEYVAULT_NAME" \
             --name openai-key \
             --query value -o tsv)
-          
+
           # Output without exposing in logs
           echo "::add-mask::$OPENAI_KEY"
           echo "openai-endpoint=$OPENAI_ENDPOINT" >> $GITHUB_OUTPUT
           echo "openai-key=$OPENAI_KEY" >> $GITHUB_OUTPUT
-          
+
           echo "✓ Credentials retrieved from Key Vault"
 
       - name: Configure GitHub Repository Secrets
         if: github.ref == 'refs/heads/main'
         run: |
           echo "Configuring GitHub repository secrets..."
-          
+
           # Use GitHub CLI to set secrets (requires gh auth)
           # Note: This step requires the GH_TOKEN to have repo:write access
           gh secret set ADVERSARIAL_OPENAI_ENDPOINT \
             --body "${{ steps.deploy.outputs.openai-endpoint }}" \
             || echo "⚠ Could not set ADVERSARIAL_OPENAI_ENDPOINT (may already be set)"
-          
+
           gh secret set ADVERSARIAL_OPENAI_DEPLOYMENT_ID \
             --body "${{ steps.deploy.outputs.model-deployment-id }}" \
             || echo "⚠ Could not set ADVERSARIAL_OPENAI_DEPLOYMENT_ID (may already be set)"
-          
+
           # Note: API key is NOT set as a repository secret
           # It's retrieved from Key Vault at runtime for better security
-          
+
           echo "✓ Repository secrets configured"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -168,27 +168,27 @@ jobs:
       - name: Verify Deployment
         run: |
           set -euo pipefail
-          
+
           RESOURCE_GROUP="game-hub-adversarial-agents-${ENVIRONMENT}"
-          
+
           echo "Verifying deployed resources in $RESOURCE_GROUP..."
-          
+
           # List deployed resources
           az resource list \
             --resource-group "$RESOURCE_GROUP" \
             --query "[].{Name:name, Type:type, Status:provisioningState}" \
             -o table
-          
+
           # Verify OpenAI deployment
           OPENAI_RESOURCE=$(az cognitiveservices account list \
             --resource-group "$RESOURCE_GROUP" \
             --query "[0]" -o json)
-          
+
           if [ -z "$OPENAI_RESOURCE" ]; then
             echo "✗ OpenAI resource not found"
             exit 1
           fi
-          
+
           echo "✓ OpenAI service verified"
           echo "  Endpoint: $(echo "$OPENAI_RESOURCE" | jq -r '.properties.endpoint')"
           echo "  Status: $(echo "$OPENAI_RESOURCE" | jq -r '.properties.statuses[0]')"
@@ -198,24 +198,24 @@ jobs:
         run: |
           cat > /tmp/deployment-summary.md << 'EOF'
           # Adversarial Infrastructure Deployment Report
-          
+
           **Environment**: ${{ env.ENVIRONMENT }}
           **Status**: ${{ job.status == 'success' && '✓ Success' || '✗ Failed' }}
           **Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
-          
+
           ## Outputs
-          
+
           - **OpenAI Endpoint**: ${{ steps.deploy.outputs.openai-endpoint }}
           - **Key Vault**: ${{ steps.deploy.outputs.keyvault-name }}
           - **Model Deployment**: ${{ steps.deploy.outputs.model-deployment-id }}
-          
+
           ## Next Steps
-          
+
           1. Verify resources in Azure portal: https://portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}
           2. Test OpenAI API connectivity
           3. Configure GitHub Actions workflow for review automation (US-007)
           EOF
-          
+
           cat /tmp/deployment-summary.md
 
       - name: Upload Deployment Artifacts
@@ -240,7 +240,7 @@ jobs:
           VALIDATION_STATUS="${{ needs.validate.result }}"
           DEPLOY_STATUS="${{ needs.deploy.result }}"
           OVERALL_STATUS="${{ job.status }}"
-          
+
           echo "════════════════════════════════════════════════════════════════"
           echo "Adversarial Infrastructure Deployment Complete"
           echo "════════════════════════════════════════════════════════════════"
@@ -249,7 +249,7 @@ jobs:
           echo "Deployment: $DEPLOY_STATUS"
           echo "Overall: $OVERALL_STATUS"
           echo "════════════════════════════════════════════════════════════════"
-          
+
           if [ "$OVERALL_STATUS" != "success" ]; then
             exit 1
           fi

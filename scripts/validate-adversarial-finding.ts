@@ -2,7 +2,7 @@
 
 /**
  * Adversarial Agent Finding Validator
- * 
+ *
  * Validates JSON findings output from adversarial agents against the schema.
  * Enforces:
  * - Schema version compliance
@@ -10,7 +10,7 @@
  * - Field type and format correctness
  * - Citation completeness and actionability
  * - Policy compliance (verdict rules)
- * 
+ *
  * Exit codes:
  * - 0: Valid
  * - 1: Invalid JSON or missing required fields
@@ -80,14 +80,14 @@ class AdversarialFindingValidator {
         code: 1,
         field: 'schemaVersion',
         message: 'schemaVersion is required',
-        severity: 'error'
+        severity: 'error',
       });
     } else if (findingJSON.schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
       errors.push({
         code: 2,
         field: 'schemaVersion',
         message: `Unsupported schema version: ${findingJSON.schemaVersion}. Expected ${SUPPORTED_SCHEMA_VERSION}`,
-        severity: 'error'
+        severity: 'error',
       });
     }
 
@@ -99,7 +99,7 @@ class AdversarialFindingValidator {
           code: 1,
           field,
           message: `Required field "${field}" is missing`,
-          severity: 'error'
+          severity: 'error',
         });
       }
     }
@@ -112,14 +112,14 @@ class AdversarialFindingValidator {
           code: 1,
           field: 'verdict.decision',
           message: 'verdict.decision is required',
-          severity: 'error'
+          severity: 'error',
         });
       } else if (!['PASS', 'FAIL', 'ERROR'].includes(verdict.decision)) {
         errors.push({
           code: 2,
           field: 'verdict.decision',
           message: `verdict.decision must be one of: PASS, FAIL, ERROR. Got: ${verdict.decision}`,
-          severity: 'error'
+          severity: 'error',
         });
       }
 
@@ -128,14 +128,14 @@ class AdversarialFindingValidator {
           code: 1,
           field: 'verdict.severity',
           message: 'verdict.severity is required',
-          severity: 'error'
+          severity: 'error',
         });
       } else if (!['INFO', 'ADVISORY', 'BLOCKING', 'ERROR'].includes(verdict.severity)) {
         errors.push({
           code: 2,
           field: 'verdict.severity',
           message: `verdict.severity must be one of: INFO, ADVISORY, BLOCKING, ERROR. Got: ${verdict.severity}`,
-          severity: 'error'
+          severity: 'error',
         });
       }
 
@@ -146,7 +146,7 @@ class AdversarialFindingValidator {
             code: 3,
             field: 'verdict',
             message: 'FAIL verdict requires at least one blocking finding. Got blockingFindingsCount: 0',
-            severity: 'error'
+            severity: 'error',
           });
         }
       }
@@ -175,7 +175,7 @@ class AdversarialFindingValidator {
             code: 2,
             field: 'verdict.blockingFindingsCount',
             message: `blockingFindingsCount mismatch: declared ${findingJSON.verdict.blockingFindingsCount}, found ${blockingCount}`,
-            severity: 'warning'
+            severity: 'warning',
           });
         }
         if (findingJSON.verdict.advisoryFindingsCount !== advisoryCount) {
@@ -183,7 +183,7 @@ class AdversarialFindingValidator {
             code: 2,
             field: 'verdict.advisoryFindingsCount',
             message: `advisoryFindingsCount mismatch: declared ${findingJSON.verdict.advisoryFindingsCount}, found ${advisoryCount}`,
-            severity: 'warning'
+            severity: 'warning',
           });
         }
       }
@@ -192,21 +192,29 @@ class AdversarialFindingValidator {
         code: 1,
         field: 'findings',
         message: 'findings must be an array',
-        severity: 'error'
+        severity: 'error',
       });
     }
 
     // 5. Validate attribution
     if (findingJSON.attribution) {
       const attr = findingJSON.attribution;
-      const attrRequired = ['agentName', 'agentVersion', 'modelDeployment', 'promptVersion', 'promptContentHash', 'policyVersion', 'toolsVersion'];
+      const attrRequired = [
+        'agentName',
+        'agentVersion',
+        'modelDeployment',
+        'promptVersion',
+        'promptContentHash',
+        'policyVersion',
+        'toolsVersion',
+      ];
       for (const field of attrRequired) {
         if (!(field in attr)) {
           errors.push({
             code: 1,
             field: `attribution.${field}`,
             message: `Required attribution field "${field}" is missing`,
-            severity: 'error'
+            severity: 'error',
           });
         }
       }
@@ -217,7 +225,7 @@ class AdversarialFindingValidator {
           code: 2,
           field: 'attribution.promptVersion',
           message: `Invalid semantic version: ${attr.promptVersion}`,
-          severity: 'error'
+          severity: 'error',
         });
       }
 
@@ -227,18 +235,21 @@ class AdversarialFindingValidator {
           code: 2,
           field: 'attribution.promptContentHash',
           message: 'promptContentHash must be a 64-character hex string (SHA-256)',
-          severity: 'error'
+          severity: 'error',
         });
       }
     }
 
     // 6. Validate findingVersion format
-    if (findingJSON.findingVersion && !/^[a-z0-9]+(-[a-z0-9]+)*@\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(findingJSON.findingVersion)) {
+    if (
+      findingJSON.findingVersion &&
+      !/^[a-z0-9]+(-[a-z0-9]+)*@\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(findingJSON.findingVersion)
+    ) {
       errors.push({
         code: 2,
         field: 'findingVersion',
         message: `Invalid findingVersion format: ${findingJSON.findingVersion}. Expected format: agent-name@YYYY-MM-DDTHH:MM:SSZ`,
-        severity: 'error'
+        severity: 'error',
       });
     }
 
@@ -250,7 +261,7 @@ class AdversarialFindingValidator {
       agentName: findingJSON.attribution?.agentName || 'unknown',
       findingCount: Array.isArray(findingJSON.findings) ? findingJSON.findings.length : 0,
       blockingCount: findingJSON.verdict?.blockingFindingsCount || 0,
-      advisoryCount: findingJSON.verdict?.advisoryFindingsCount || 0
+      advisoryCount: findingJSON.verdict?.advisoryFindingsCount || 0,
     };
   }
 
@@ -270,23 +281,34 @@ class AdversarialFindingValidator {
           code: 1,
           field: `${findingPrefix}.${field}`,
           message: `Required field "${field}" is missing`,
-          severity: 'error'
+          severity: 'error',
         });
       }
     }
 
     // Validate category
     const validCategories = [
-      'tautology', 'mock-evasion', 'missing-error-case', 'missing-branch', 'race-condition',
-      'snapshot-only', 'duplicate-implementation', 'weak-assertion', 'focused-test',
-      'missing-edge-case', 'authorization-bypass', 'cleanup-leak', 'determinism-issue', 'other'
+      'tautology',
+      'mock-evasion',
+      'missing-error-case',
+      'missing-branch',
+      'race-condition',
+      'snapshot-only',
+      'duplicate-implementation',
+      'weak-assertion',
+      'focused-test',
+      'missing-edge-case',
+      'authorization-bypass',
+      'cleanup-leak',
+      'determinism-issue',
+      'other',
     ];
     if (finding.category && !validCategories.includes(finding.category)) {
       errors.push({
         code: 2,
         field: `${findingPrefix}.category`,
         message: `Invalid category: ${finding.category}`,
-        severity: 'error'
+        severity: 'error',
       });
     }
 
@@ -296,7 +318,7 @@ class AdversarialFindingValidator {
         code: 2,
         field: `${findingPrefix}.severity`,
         message: `Invalid severity: ${finding.severity}. Must be BLOCKING or ADVISORY`,
-        severity: 'error'
+        severity: 'error',
       });
     }
 
@@ -305,7 +327,7 @@ class AdversarialFindingValidator {
         code: 2,
         field: `${findingPrefix}.confidence`,
         message: `Invalid confidence: ${finding.confidence}. Must be HIGH, MEDIUM, or LOW`,
-        severity: 'error'
+        severity: 'error',
       });
     }
 
@@ -315,7 +337,7 @@ class AdversarialFindingValidator {
         code: 3,
         field: `${findingPrefix}.citations`,
         message: 'Finding must have citations (specific file paths and line numbers)',
-        severity: 'error'
+        severity: 'error',
       });
     } else {
       // Validate citations structure
@@ -328,7 +350,7 @@ class AdversarialFindingValidator {
               code: 3,
               field: `${findingPrefix}.citations.testFiles[${i}]`,
               message: 'Citation must have a path',
-              severity: 'error'
+              severity: 'error',
             });
           }
           if (!file.startLine || !file.endLine) {
@@ -336,7 +358,7 @@ class AdversarialFindingValidator {
               code: 3,
               field: `${findingPrefix}.citations.testFiles[${i}]`,
               message: 'Citation must have startLine and endLine',
-              severity: 'error'
+              severity: 'error',
             });
           }
         }
@@ -348,7 +370,7 @@ class AdversarialFindingValidator {
         code: 3,
         field: `${findingPrefix}.missingScenario`,
         message: 'missingScenario must be provided and non-empty',
-        severity: 'error'
+        severity: 'error',
       });
     }
 
@@ -357,7 +379,7 @@ class AdversarialFindingValidator {
         code: 3,
         field: `${findingPrefix}.expectedFailureSignal`,
         message: 'expectedFailureSignal must be provided and non-empty',
-        severity: 'error'
+        severity: 'error',
       });
     }
 
@@ -366,7 +388,7 @@ class AdversarialFindingValidator {
         code: 3,
         field: `${findingPrefix}.suggestedTest`,
         message: 'suggestedTest must be provided and non-empty',
-        severity: 'error'
+        severity: 'error',
       });
     }
 
@@ -424,7 +446,7 @@ async function main() {
   console.log(JSON.stringify(result, null, 2));
 
   // Exit with code based on validation
-  if (result.errors.some(e => e.code === 3)) {
+  if (result.errors.some((e) => e.code === 3)) {
     process.exit(3); // Policy violation
   } else if (result.errors.length > 0) {
     process.exit(2); // Invalid format
@@ -435,7 +457,7 @@ async function main() {
   process.exit(0); // Success
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error(`Fatal error: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });

@@ -14,35 +14,26 @@
     "failThresholds": {
       "type": "object",
       "description": "Thresholds that trigger a FAIL verdict.",
-      "required": [
-        "blockingFindingsMinimum",
-        "advisoryFindingsMaximumWhenBlocking"
-      ],
+      "required": ["blockingFindingsMinimum", "advisoryFindingsMaximumWhenBlocking"],
       "properties": {
         "blockingFindingsMinimum": {
           "type": "integer",
           "description": "Any finding with severity=BLOCKING and confidence=HIGH will trigger FAIL if count >= this threshold.",
           "minimum": 0,
           "const": 1,
-          "examples": [
-            1
-          ]
+          "examples": [1]
         },
         "advisoryFindingsMaximumWhenBlocking": {
           "type": "integer",
           "description": "When blockingFindingsMinimum is met, advisory findings are still counted but do not independently trigger FAIL.",
           "minimum": 0,
-          "examples": [
-            10
-          ]
+          "examples": [10]
         },
         "errorIsFailure": {
           "type": "boolean",
           "description": "If true, an ERROR verdict (review could not complete) triggers FAIL.",
           "const": true,
-          "examples": [
-            true
-          ]
+          "examples": [true]
         }
       }
     },
@@ -53,46 +44,28 @@
         "type": "string",
         "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
       },
-      "examples": [
-        [
-          "unit-test-reviewer",
-          "contract-reviewer"
-        ]
-      ]
+      "examples": [["unit-test-reviewer", "contract-reviewer"]]
     },
     "agentQuorum": {
       "type": "integer",
       "description": "Minimum number of independent agents required to have run before accepting the verdict. 0 disables this check.",
       "minimum": 0,
       "const": 0,
-      "examples": [
-        0
-      ]
+      "examples": [0]
     },
     "verdictCombination": {
       "type": "string",
       "description": "How multiple agent verdicts are combined: ANY (single FAIL triggers overall FAIL), ALL (all must FAIL).",
-      "enum": [
-        "ANY",
-        "ALL"
-      ],
+      "enum": ["ANY", "ALL"],
       "const": "ANY",
-      "examples": [
-        "ANY"
-      ]
+      "examples": ["ANY"]
     },
     "evaluationMode": {
       "type": "string",
       "description": "STRICT (enforce policy immediately), ADVISORY (log but don't block), or DISABLED.",
-      "enum": [
-        "STRICT",
-        "ADVISORY",
-        "DISABLED"
-      ],
+      "enum": ["STRICT", "ADVISORY", "DISABLED"],
       "const": "STRICT",
-      "examples": [
-        "STRICT"
-      ]
+      "examples": ["STRICT"]
     },
     "requiredFinding": {
       "type": "object",
@@ -100,19 +73,12 @@
       "properties": {
         "minimumSeverity": {
           "type": "string",
-          "enum": [
-            "ADVISORY",
-            "BLOCKING"
-          ],
+          "enum": ["ADVISORY", "BLOCKING"],
           "const": "BLOCKING"
         },
         "minimumConfidence": {
           "type": "string",
-          "enum": [
-            "LOW",
-            "MEDIUM",
-            "HIGH"
-          ],
+          "enum": ["LOW", "MEDIUM", "HIGH"],
           "const": "HIGH"
         }
       }
@@ -126,17 +92,13 @@
           "enabled": {
             "type": "boolean",
             "description": "Whether this category is actively monitored.",
-            "examples": [
-              true
-            ]
+            "examples": [true]
           },
           "alertOnCount": {
             "type": "integer",
             "description": "Alert operators if this category appears more than N times in a single review.",
             "minimum": 0,
-            "examples": [
-              3
-            ]
+            "examples": [3]
           }
         }
       },
@@ -159,12 +121,7 @@
       "items": {
         "type": "string"
       },
-      "examples": [
-        [
-          "**/fixtures/**",
-          "**/generated/**"
-        ]
-      ]
+      "examples": [["**/fixtures/**", "**/generated/**"]]
     },
     "executionDefaults": {
       "type": "object",
@@ -175,27 +132,21 @@
           "description": "Agent execution timeout in seconds.",
           "minimum": 1,
           "const": 60,
-          "examples": [
-            60
-          ]
+          "examples": [60]
         },
         "retryAttempts": {
           "type": "integer",
           "description": "Number of retries on transient failure.",
           "minimum": 0,
           "const": 2,
-          "examples": [
-            2
-          ]
+          "examples": [2]
         },
         "maxTokens": {
           "type": "integer",
           "description": "Maximum tokens the model can use for a single review.",
           "minimum": 1000,
           "const": 8000,
-          "examples": [
-            8000
-          ]
+          "examples": [8000]
         }
       }
     },
@@ -207,17 +158,13 @@
           "type": "boolean",
           "description": "Post a PR comment when verdict is FAIL.",
           "const": true,
-          "examples": [
-            true
-          ]
+          "examples": [true]
         },
         "failureCheckNamePrefix": {
           "type": "string",
           "description": "GitHub Checks API name prefix for this gate.",
           "const": "Adversarial Review",
-          "examples": [
-            "Adversarial Review"
-          ]
+          "examples": ["Adversarial Review"]
         }
       }
     }
