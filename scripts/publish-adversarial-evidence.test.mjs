@@ -4,9 +4,11 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   decodeMetadata,
+  findingFingerprint,
   publishAdversarialEvidence,
   validateEvidenceManifest,
 } from './publish-adversarial-evidence.ts';
+import { exceptionIntegrity } from './apply-adversarial-exceptions.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputRoot = path.join(repoRoot, '.test-artifacts', 'adversarial-publisher');
@@ -154,6 +156,38 @@ function options(transport, result = reviewResult([finding()]), outputName = 'de
   };
 }
 
+function exceptionBundle(result) {
+  const unsigned = {
+    exceptionVersion: '1.0.0',
+    exceptionId: 'EXC-20260811-ABC123',
+    owner: { githubLogin: 'owner-user' },
+    rationale: 'A bounded follow-up is tracked while this exact finding remains visible.',
+    issue: { repository, number: 30, url: 'https://github.com/jdylanmc/game-hub/issues/30' },
+    createdAt: '2026-08-11T19:35:00.000Z',
+    expiresAt: '2026-08-18T19:40:00.000Z',
+    affected: {
+      agentName: 'unit-test-reviewer',
+      agentVersion: '1.0.0',
+      repository,
+      headSha,
+      runFingerprint: exceptionIntegrity(result),
+      findingFingerprint: findingFingerprint(result.findings[0]),
+    },
+    auditEvidence: {
+      approvedBy: 'approver-user',
+      approvedAt: '2026-08-11T19:40:00.000Z',
+      approvalUrl: 'https://github.com/jdylanmc/game-hub/issues/30#issuecomment-123456789',
+      approvalRecordSha256: 'b'.repeat(64),
+    },
+  };
+  return {
+    version: '1.0.0',
+    maximumValidityHours: 168,
+    maximumExceptionsPerRun: 3,
+    exceptions: [{ ...unsigned, integritySha256: exceptionIntegrity(unsigned) }],
+  };
+}
+
 async function readJson(filePath) {
   return JSON.parse(await fs.readFile(filePath, 'utf8'));
 }
@@ -167,6 +201,23 @@ afterEach(async () => {
 });
 
 describe('publishAdversarialEvidence', () => {
+  it('publishes an exact exception as a warning and neutral check while retaining immutable audit evidence', async () => {
+    const transport = new FakeGitHubTransport();
+    const result = reviewResult([finding()]);
+    const publication = await publishAdversarialEvidence({
+      ...options(transport, result, 'exception'),
+      exceptionBundle: exceptionBundle(result),
+    });
+    const artifact = await readJson(publication.artifactPath);
+
+    expect(publication.conclusion).toBe('neutral');
+    expect(transport.createCalls[0].request.output.annotations[0].annotation_level).toBe('warning');
+    expect(artifact.result).toEqual(result);
+    expect(artifact.exceptions.applications).toHaveLength(1);
+    expect(artifact.exceptions.unexceptedBlockingFindingFingerprints).toEqual([]);
+    expect((await validateEvidenceManifest(repoRoot, publication.manifestPath)).valid).toBe(true);
+  });
+
   it('creates and then updates exactly one check run for the agent and head SHA', async () => {
     const transport = new FakeGitHubTransport();
     const first = await publishAdversarialEvidence(options(transport));

@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
 
 const SUPPORTED_SCHEMA_VERSION = '1.0.0';
 const FINDING_CATEGORIES = new Set([
@@ -60,11 +61,14 @@ class AdversarialFindingValidator {
   private readonly schema: JsonObject;
   private readonly policy: JsonObject;
   private readonly registry: JsonObject;
+  private readonly agentName: string;
 
-  constructor(repoRoot = '.') {
+  constructor(repoRoot = '.', agentName = 'unit-test-reviewer') {
     this.repoRoot = repoRoot;
-    this.schema = this.loadJson(path.join(repoRoot, 'config/adversarial-agents/schema.json'));
-    this.policy = this.loadJson(path.join(repoRoot, 'config/adversarial-agents/policy.json'));
+    this.agentName = agentName;
+    const registration = loadAgentRegistration(repoRoot, agentName);
+    this.schema = this.loadJson(path.join(repoRoot, registration.schemaFile));
+    this.policy = this.loadJson(path.join(repoRoot, registration.policyFile));
     this.registry = this.loadJson(path.join(repoRoot, 'config/adversarial-agents/agents-config.json'));
   }
 
@@ -197,6 +201,8 @@ class AdversarialFindingValidator {
 
     if (typeof attribution.agentName !== 'string' || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(attribution.agentName)) {
       this.addError(errors, 2, 'attribution.agentName', 'agentName must be kebab-case');
+    } else if (attribution.agentName !== this.agentName) {
+      this.addError(errors, 3, 'attribution.agentName', 'agentName does not match the selected independent agent');
     }
     for (const field of ['agentVersion', 'promptVersion', 'policyVersion', 'toolsVersion']) {
       if (typeof attribution[field] !== 'string' || !/^\d+\.\d+\.\d+$/.test(attribution[field])) {

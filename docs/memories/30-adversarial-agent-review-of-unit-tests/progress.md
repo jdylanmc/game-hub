@@ -17,6 +17,10 @@
 - Deterministic gates run from cheapest to most expensive. Model-backed agents
   are downstream consumers and cannot start until every deterministic gate
   succeeds for the exact pull-request head commit.
+- Exceptions are exact, short-lived protected-base records. They never rewrite
+  reviewer output and can affect only one agent, run, head, and finding.
+- Each registered reviewer owns hashed prompt/schema/policy/runtime/calibration
+  inputs plus a unique check and state namespace; shared identity is rejected.
 
 ## 2026-08-11 - Planning
 
@@ -352,3 +356,40 @@
   calibration report, protected environment variables, environment-scoped
   federated identity, narrow Azure role assignment, deployed model, and live
   GitHub/Azure verification. Branch protection remains unchanged.
+
+## 2026-08-11 - Iteration 9: US-008 completion
+
+- Added a strict versioned exception schema and protected empty registry.
+  Exceptions require an owner, rationale, exact issue URL, short expiry, exact
+  agent/version/repository/head/run/finding attribution, independent approver,
+  immutable issue-comment evidence, approval-record hash, and full-record
+  integrity hash.
+- Added deterministic exception validation/application. Malformed, expired,
+  future-excessive, wildcard, unrelated, cross-agent, cross-SHA, tampered,
+  self-approved, duplicate/replayed, or noncurrent exceptions fail closed.
+- Publisher integration preserves the complete original reviewer result,
+  records immutable exception/application fingerprints and audit evidence, and
+  renders only the exact excepted blocking finding as a warning. Any
+  unexcepted blocking finding or reviewer ERROR still fails the agent check.
+- Added a strict independent-agent registry schema and content-hash validator.
+  Each agent requires unique prompt, schema, policy, engine configuration,
+  benchmark corpus, promotion policy, active calibration path, check name, and
+  state namespace, plus its own bounded concurrency. Runtime, output
+  validation, publication, and artifact validation bind to the selected
+  registered agent.
+- Updated the protected-base workflow to use the committed exception registry,
+  retain the publication result, and enforce the exception-aware published
+  conclusion without weakening exact-head deterministic CI gating.
+- Added operator guidance for transient-only retry boundaries, quota/cost
+  handling, model incidents, prompt rollback, exception administration,
+  independent agent registration, and local reproduction commands.
+- Added 19 deterministic tests for exception validity/failure modes,
+  publisher behavior, configuration tampering, and independent-agent
+  isolation. The complete cheapest-to-most-expensive suite passed: immutable
+  install, formatting, lint, policy, generation, typecheck, security audit, 129
+  tests with coverage, production build, bundle budgets, Storybook, and 11
+  fail-closed continuous-integration probes.
+- US-008 is passed. US-009 remains unadvanced. Live Azure deployment and
+  calibration, protected environment configuration, federated identity,
+  end-to-end model/check verification, required-check branch protection, and
+  Ralph enforcement remain US-009 prerequisites.

@@ -32,6 +32,20 @@ const publisherConfig = JSON.parse(
   await fs.readFile(path.join(root, 'config/adversarial-agents/github-publisher.json'), 'utf8'),
 );
 const publisher = await fs.readFile(path.join(root, 'scripts/publish-adversarial-evidence.ts'), 'utf8');
+const exceptionSchema = JSON.parse(
+  await fs.readFile(path.join(root, 'config/adversarial-agents/exception-schema.json'), 'utf8'),
+);
+const exceptionRegistry = JSON.parse(
+  await fs.readFile(path.join(root, 'config/adversarial-agents/exceptions.json'), 'utf8'),
+);
+const exceptionEvaluator = await fs.readFile(path.join(root, 'scripts/apply-adversarial-exceptions.ts'), 'utf8');
+const agentRegistrySchema = JSON.parse(
+  await fs.readFile(path.join(root, 'config/adversarial-agents/agent-registry-schema.json'), 'utf8'),
+);
+const agentRegistryValidator = await fs.readFile(
+  path.join(root, 'scripts/validate-adversarial-agent-registry.ts'),
+  'utf8',
+);
 const workflowDirectory = path.join(root, '.github/workflows');
 const workflowSources = await Promise.all(
   (await fs.readdir(workflowDirectory))
@@ -347,8 +361,15 @@ if (
 if (packageJson.scripts?.['publish:adversarial'] !== 'node scripts/publish-adversarial-evidence.ts') {
   violations.push('Missing canonical adversarial evidence publication command.');
 }
+if (
+  packageJson.scripts?.['exceptions:validate'] !==
+    'node scripts/apply-adversarial-exceptions.ts --exceptions config/adversarial-agents/exceptions.json' ||
+  packageJson.scripts?.['agents:validate'] !== 'node scripts/validate-adversarial-agent-registry.ts .'
+) {
+  violations.push('Missing canonical exception or independent-agent validation command.');
+}
 const requiredPublisherFragments = [
-  'new AdversarialFindingValidator(options.repoRoot).validate(sanitizedResult)',
+  'String(selectedAttribution.agentName',
   'attribution.repositoryCommit !== options.headSha',
   'summary.pullRequestCommit !== options.headSha',
   "'Multiple check runs already exist for this agent and head SHA'",
@@ -359,6 +380,9 @@ const requiredPublisherFragments = [
   "'[REDACTED:SENSITIVE_CONTENT]'",
   'validateEvidenceManifest',
   'validatePromotionReport(repoRoot, calibrationReport)',
+  'evaluateAdversarialExceptions',
+  'exceptionEvaluation',
+  'loadAgentRegistration(options.repoRoot, agentName)',
 ];
 for (const fragment of requiredPublisherFragments) {
   if (!publisher.includes(fragment)) {
@@ -367,6 +391,56 @@ for (const fragment of requiredPublisherFragments) {
 }
 if (verdictPolicy.properties?.notificationSettings?.properties?.commentOnFail?.const !== false) {
   violations.push('Adversarial review must publish checks without pull-request comment spam.');
+}
+
+const strictObjectSchemas = (value) => {
+  if (!value || typeof value !== 'object') return [];
+  const failures = [];
+  if (value.type === 'object' && value.additionalProperties !== false) failures.push(value);
+  for (const nested of Object.values(value)) failures.push(...strictObjectSchemas(nested));
+  return failures;
+};
+if (
+  exceptionSchema.version !== '1.0.0' ||
+  strictObjectSchemas(exceptionSchema).length > 0 ||
+  exceptionRegistry.version !== '1.0.0' ||
+  exceptionRegistry.maximumValidityHours !== 168 ||
+  exceptionRegistry.maximumExceptionsPerRun !== 3 ||
+  !Array.isArray(exceptionRegistry.exceptions)
+) {
+  violations.push('Exception contract or protected registry limits are invalid or not strict.');
+}
+for (const fragment of [
+  'integritySha256',
+  'approvalRecordSha256',
+  'runFingerprint',
+  'findingFingerprint',
+  'maximumValidityHours',
+  'unexceptedBlockingFindingFingerprints',
+  'Exception is duplicated or replayed',
+]) {
+  if (!exceptionEvaluator.includes(fragment)) {
+    violations.push(`Missing exception fail-closed invariant: ${fragment}`);
+  }
+}
+if (agentRegistrySchema.version !== '1.0.0' || strictObjectSchemas(agentRegistrySchema).length > 0) {
+  violations.push('Independent-agent registry schema must be strict and versioned.');
+}
+for (const fragment of [
+  'promptContentHash',
+  'policyContentHash',
+  'engineConfigContentHash',
+  'benchmarkCorpusContentHash',
+  'promotionPolicyContentHash',
+  'activeCalibrationReportFile',
+  'checkName',
+  'stateNamespace',
+  'maxConcurrentReviews',
+  'must not share or impersonate',
+]) {
+  if (!agentRegistryValidator.includes(fragment)) {
+    violations.push(`Missing independent-agent isolation invariant: ${fragment}`);
+  }
 }
 
 if (violations.length > 0) {

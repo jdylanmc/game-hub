@@ -136,8 +136,8 @@
         "No shared state allows one reviewer to suppress, rewrite, or impersonate another"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a strict versioned exception contract and protected registry requiring exact owner, rationale, issue, expiry, agent/version, repository, head SHA, run/finding fingerprints, independent approval evidence, and integrity hashes. Exception evaluation fails closed for malformed, expired, future-excessive, wildcard, unrelated, cross-agent, cross-SHA, tampered, duplicate/replayed, self-approved, or noncurrent findings; it preserves the original reviewer result and records immutable application evidence. Publication maps only exact exceptions to neutral warnings while all unexcepted blocking findings still fail. Added strict hashed independent-agent registration for prompt, schema, policy, engine, benchmark, promotion policy, calibration, check, state namespace, and per-agent concurrency, with runtime/validator/publisher selection bound to the registered agent. Added operator guidance for retries, quota/cost, incidents, rollback, exceptions, registration, and local reproduction. Added 19 new deterministic exception/isolation tests; all 129 tests and the complete deterministic suite pass. No live deployment, repository settings, branch protection, or US-009 work was performed.",
       "dependencies": ["US-005", "US-006", "US-007"]
     },
     {

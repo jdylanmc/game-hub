@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { stableStringify } from './collect-adversarial-context.ts';
 import { validatePromotionReport } from './evaluate-adversarial-reviewer.ts';
 import { AdversarialFindingValidator } from './validate-adversarial-finding.ts';
+import { evaluateAdversarialExceptions, type ExceptionEvaluation } from './apply-adversarial-exceptions.ts';
+import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
 
 type JsonObject = Record<string, unknown>;
 
@@ -115,6 +117,7 @@ interface PublishOptions {
   outputDirectory: string;
   transport: GitHubChecksTransport;
   previousManifest?: unknown;
+  exceptionBundle?: unknown;
   now?: () => Date;
 }
 
@@ -311,14 +314,14 @@ function primaryCitation(finding: JsonObject): JsonObject {
   return primary;
 }
 
-function findingAnnotation(finding: JsonObject, config: PublisherConfig): CheckAnnotation {
+function findingAnnotation(finding: JsonObject, config: PublisherConfig, excepted: boolean): CheckAnnotation {
   const citation = primaryCitation(finding);
   const blocking = finding.severity === 'BLOCKING' && finding.confidence === 'HIGH';
   return {
     path: String(citation.path),
     start_line: Number(citation.startLine),
     end_line: Number(citation.endLine),
-    annotation_level: blocking ? 'failure' : 'warning',
+    annotation_level: blocking && !excepted ? 'failure' : 'warning',
     title: String(finding.title).slice(0, config.limits.maxAnnotationTitleCharacters),
     message: utf8Truncate(
       `${String(finding.description)} Suggested test: ${String(finding.suggestedTest)}`,
@@ -372,17 +375,20 @@ function decodeMetadata(text: unknown): PublishedCheckMetadata | undefined {
   }
 }
 
-function conclusionFor(result: JsonObject): 'success' | 'neutral' | 'failure' {
+function conclusionFor(result: JsonObject, exceptions: ExceptionEvaluation): 'success' | 'neutral' | 'failure' {
   const verdict = isObject(result.verdict) ? result.verdict : {};
-  if (verdict.decision === 'FAIL' || verdict.decision === 'ERROR') return 'failure';
-  return verdict.severity === 'ADVISORY' ? 'neutral' : 'success';
+  if (verdict.decision === 'ERROR' || exceptions.unexceptedBlockingFindingFingerprints.length > 0) {
+    return 'failure';
+  }
+  return verdict.severity === 'ADVISORY' || exceptions.applications.length > 0 ? 'neutral' : 'success';
 }
 
-function checkSummary(result: JsonObject, findingCount: number): string {
+function checkSummary(result: JsonObject, findingCount: number, exceptions: ExceptionEvaluation): string {
   const verdict = isObject(result.verdict) ? result.verdict : {};
   return [
     `Decision: **${String(verdict.decision)}** (${String(verdict.severity)}).`,
     `${findingCount} unique actionable finding(s).`,
+    `${exceptions.applications.length} exact, audited exception(s) applied; ${exceptions.unexceptedBlockingFindingFingerprints.length} blocking finding(s) remain.`,
     String(verdict.policyDecisionRationale),
     'The retained JSON artifact is the authoritative complete evidence.',
   ].join(' ');
@@ -464,6 +470,7 @@ async function writeEvidenceBundle(options: {
   publishedAt: Date;
   calibration: CalibrationAttribution;
   sanitizedResult: JsonObject;
+  exceptionEvaluation: ExceptionEvaluation;
   redactionCount: number;
 }): Promise<{ artifactPath: string; manifestPath: string; manifest: EvidenceManifest }> {
   const outputDirectory = await prepareOutputDirectory(options.repoRoot, options.outputDirectory);
@@ -508,6 +515,7 @@ async function writeEvidenceBundle(options: {
       supersedesRunFingerprint: options.supersedesRunFingerprint,
       supersededFindingFingerprints: options.supersededFindingFingerprints,
     },
+    exceptions: options.exceptionEvaluation,
     result: options.sanitizedResult,
   };
   const artifactContent = `${stableStringify(artifact, 2)}\n`;
@@ -579,13 +587,21 @@ async function validateEvidenceManifest(
   if (!artifact || !isObject(artifact.result)) {
     reasons.push('Evidence artifact structure is invalid.');
   } else {
-    const validation = new AdversarialFindingValidator(repoRoot).validate(artifact.result);
-    if (!validation.valid) reasons.push('Evidence artifact result is not valid reviewer output.');
+    const resultAttribution = isObject(artifact.result.attribution) ? artifact.result.attribution : {};
+    try {
+      const validation = new AdversarialFindingValidator(repoRoot, String(resultAttribution.agentName ?? '')).validate(
+        artifact.result,
+      );
+      if (!validation.valid) reasons.push('Evidence artifact result is not valid reviewer output.');
+    } catch {
+      reasons.push('Evidence artifact agent registration is invalid.');
+    }
     if (stableStringify(artifact.retention) !== stableStringify(manifest.retention)) {
       reasons.push('Evidence retention metadata does not match its manifest.');
     }
     const attribution = isObject(artifact.attribution) ? artifact.attribution : {};
     const retention = isObject(artifact.retention) ? artifact.retention : {};
+    const exceptions = isObject(artifact.exceptions) ? artifact.exceptions : {};
     const expectedManifestValues: Array<[string, unknown]> = [
       ['repository', attribution.repository],
       ['issueNumber', attribution.issueNumber],
@@ -609,6 +625,22 @@ async function validateEvidenceManifest(
       !Number.isFinite(Date.parse(retention.expiresAt))
     ) {
       reasons.push('Evidence artifact retention or version metadata is invalid.');
+    }
+    if (
+      exceptions.version !== '1.0.0' ||
+      exceptions.agentName !== attribution.agentName ||
+      exceptions.agentVersion !== attribution.agentVersion ||
+      exceptions.repository !== attribution.repository ||
+      exceptions.headSha !== attribution.headSha ||
+      exceptions.runFingerprint !== attribution.runFingerprint ||
+      !Array.isArray(exceptions.applications) ||
+      !Array.isArray(exceptions.applicationFingerprints) ||
+      !Array.isArray(exceptions.exceptedFindingFingerprints) ||
+      !Array.isArray(exceptions.unexceptedBlockingFindingFingerprints) ||
+      new Set(exceptions.applicationFingerprints).size !== exceptions.applicationFingerprints.length ||
+      new Set(exceptions.exceptedFindingFingerprints).size !== exceptions.exceptedFindingFingerprints.length
+    ) {
+      reasons.push('Evidence exception attribution or audit metadata is invalid.');
     }
     if (
       expectedManifestValues.some(
@@ -643,7 +675,11 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
   const sanitized = redactSensitiveContent(options.result);
   if (!isObject(sanitized.value)) throw new Error('Reviewer output is missing');
   const sanitizedResult = sanitized.value;
-  const validation = new AdversarialFindingValidator(options.repoRoot).validate(sanitizedResult);
+  const selectedAttribution = isObject(sanitizedResult.attribution) ? sanitizedResult.attribution : {};
+  const validation = new AdversarialFindingValidator(
+    options.repoRoot,
+    String(selectedAttribution.agentName ?? ''),
+  ).validate(sanitizedResult);
   if (!validation.valid) {
     throw new Error(`Reviewer output is invalid: ${validation.errors.map((error) => error.field).join(', ')}`);
   }
@@ -657,21 +693,41 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
     throw new Error('Reviewer output does not match the requested pull-request head SHA');
   }
   const agentName = String(attribution.agentName);
-  const checkName = `${config.checkNamePrefix} / ${agentName}`;
+  const registration = loadAgentRegistration(options.repoRoot, agentName);
+  const checkName = registration.checkName;
+  if (checkName !== `${config.checkNamePrefix} / ${agentName}`) {
+    throw new Error('Agent check registration does not match the publisher namespace');
+  }
   const checkExternalId = sha256(`${config.version}\n${options.repository}\n${agentName}\n${options.headSha}`);
   const uniqueFindings = deduplicateFindings(Array.isArray(sanitizedResult.findings) ? sanitizedResult.findings : []);
   if (uniqueFindings.length > config.limits.maxAnnotationsTotal) {
     throw new Error('Validated findings exceed the reviewed GitHub annotation limit');
   }
   const runFingerprint = sha256(stableStringify(sanitizedResult));
-  const findingFingerprints = uniqueFindings.map(({ fingerprint }) => fingerprint);
-  const annotationsByFingerprint = new Map(
-    uniqueFindings.map(({ finding, fingerprint }) => [fingerprint, findingAnnotation(finding, config)]),
-  );
   const publishedAt = options.now?.() ?? new Date();
   if (!Number.isFinite(publishedAt.getTime()) || publishedAt.getTime() < Date.parse(String(attribution.timestamp))) {
     throw new Error('Publication timestamp is invalid or precedes the reviewed result');
   }
+  const exceptionBundle =
+    options.exceptionBundle ??
+    parseJsonObject(path.join(options.repoRoot, 'config/adversarial-agents/exceptions.json'));
+  const exceptionEvaluation = evaluateAdversarialExceptions({
+    repoRoot: options.repoRoot,
+    repository: options.repository,
+    issueNumber: options.issueNumber,
+    headSha: options.headSha,
+    result: sanitizedResult,
+    bundle: exceptionBundle,
+    now: () => publishedAt,
+  });
+  const exceptedFingerprints = new Set(exceptionEvaluation.exceptedFindingFingerprints);
+  const findingFingerprints = uniqueFindings.map(({ fingerprint }) => fingerprint);
+  const annotationsByFingerprint = new Map(
+    uniqueFindings.map(({ finding, fingerprint }) => [
+      fingerprint,
+      findingAnnotation(finding, config, exceptedFingerprints.has(fingerprint)),
+    ]),
+  );
   await prepareOutputDirectory(options.repoRoot, options.outputDirectory);
   const existingRuns = await options.transport.listCheckRuns(options.repository, options.headSha, checkName);
   if (existingRuns.length > 1) {
@@ -712,7 +768,7 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
   for (let index = 0; index < annotations.length; index += config.limits.maxAnnotationsPerRequest) {
     annotationBatches.push(annotations.slice(index, index + config.limits.maxAnnotationsPerRequest));
   }
-  const conclusion = conclusionFor(sanitizedResult);
+  const conclusion = conclusionFor(sanitizedResult, exceptionEvaluation);
   const metadata: PublishedCheckMetadata = {
     version: '1.0.0',
     runFingerprint,
@@ -726,7 +782,10 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
         : conclusion === 'neutral'
           ? 'Adversarial review has advisory findings'
           : 'Adversarial review passed',
-    summary: utf8Truncate(checkSummary(sanitizedResult, uniqueFindings.length), config.limits.maxCheckSummaryBytes),
+    summary: utf8Truncate(
+      checkSummary(sanitizedResult, uniqueFindings.length, exceptionEvaluation),
+      config.limits.maxCheckSummaryBytes,
+    ),
     text: utf8Truncate(
       [
         `Issue: #${options.issueNumber}`,
@@ -734,6 +793,7 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
         `Run fingerprint: \`${runFingerprint}\``,
         priorRunFingerprint ? `Supersedes run: \`${priorRunFingerprint}\`` : 'Supersedes run: none',
         `${supersededFindingFingerprints.length} prior finding(s) superseded.`,
+        `${exceptionEvaluation.applicationFingerprints.length} audited exception application(s).`,
         encodeMetadata(metadata),
       ].join('\n\n'),
       config.limits.maxCheckTextBytes,
@@ -795,6 +855,7 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
     publishedAt,
     calibration: options.calibration,
     sanitizedResult,
+    exceptionEvaluation,
     redactionCount: sanitized.redactions,
   });
   const bundleValidation = await validateEvidenceManifest(options.repoRoot, bundle.manifestPath);
@@ -922,6 +983,9 @@ async function main(): Promise<void> {
     if (!args[required]) throw new Error(`Missing --${required}`);
   }
   const result = parseJsonObject(path.resolve(args.result));
+  const exceptionBundle = args.exceptions
+    ? parseJsonObject(path.resolve(args.exceptions))
+    : parseJsonObject(path.join(repoRoot, 'config/adversarial-agents/exceptions.json'));
   const calibrationReport = parseJsonObject(path.resolve(args['calibration-report']));
   const calibrationValidation = validatePromotionReport(repoRoot, calibrationReport);
   if (!calibrationValidation.promotable) {
@@ -949,6 +1013,7 @@ async function main(): Promise<void> {
     outputDirectory: path.resolve(args['output-dir']),
     transport: new GitHubRestChecksTransport(token, { apiVersion: config.githubApiVersion }),
     previousManifest: args['previous-manifest'] ? parseJsonObject(path.resolve(args['previous-manifest'])) : undefined,
+    exceptionBundle,
   });
   console.log(stableStringify(publication, 2));
 }

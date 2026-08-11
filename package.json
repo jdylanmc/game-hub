@@ -26,6 +26,8 @@
     "context:collect": "node scripts/collect-adversarial-context.ts",
     "review:adversarial": "node scripts/review-adversarial-context.ts",
     "publish:adversarial": "node scripts/publish-adversarial-evidence.ts",
+    "exceptions:validate": "node scripts/apply-adversarial-exceptions.ts --exceptions config/adversarial-agents/exceptions.json",
+    "agents:validate": "node scripts/validate-adversarial-agent-registry.ts .",
     "workflow:prepare-adversarial": "node scripts/prepare-adversarial-workflow.ts",
     "policy:adversarial-workflow": "node scripts/check-adversarial-workflow-policy.mjs",
     "calibrate:adversarial": "node scripts/evaluate-adversarial-reviewer.ts",

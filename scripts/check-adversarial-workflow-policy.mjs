@@ -45,10 +45,13 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson) {
     'yarn review:adversarial',
     'test -s reviewer-result.json',
     'yarn publish:adversarial',
+    '--exceptions config/adversarial-agents/exceptions.json',
+    '> publication-result.json',
     'if-no-files-found: error',
     'retention-days: 90',
     'node scripts/validate-adversarial-finding.ts reviewer-result.json',
-    "if (result.verdict.decision !== 'PASS') process.exit(1);",
+    "if (publication.conclusion === 'failure') process.exit(1);",
+    "if (!['success', 'neutral'].includes(publication.conclusion)) process.exit(1);",
   ];
   for (const fragment of requiredFragments) {
     if (!workflow.includes(fragment)) violations.push(`Missing adversarial workflow invariant: ${fragment}`);

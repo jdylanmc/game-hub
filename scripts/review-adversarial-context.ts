@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AdversarialFindingValidator } from './validate-adversarial-finding.ts';
+import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
 import { stableStringify } from './collect-adversarial-context.ts';
 
 const ENGINE_VERSION = '1.0.0';
@@ -46,6 +47,9 @@ interface AgentConfig {
   promptContentHash: string;
   modelDeployment: string;
   toolsVersion: string;
+  executionConfig: {
+    maxConcurrentReviews: number;
+  };
 }
 
 interface TransportMessage {
@@ -203,7 +207,10 @@ function loadJson(filePath: string): JsonObject {
   return value;
 }
 
-function loadRuntime(repoRoot: string): {
+function loadRuntime(
+  repoRoot: string,
+  agentName = 'unit-test-reviewer',
+): {
   engineConfig: ReviewerEngineConfig;
   agentConfig: AgentConfig;
   responseSchema: JsonObject;
@@ -212,24 +219,17 @@ function loadRuntime(repoRoot: string): {
   reviewerPrompt: string;
   systemPolicy: string;
 } {
-  const engineConfig = loadJson(
-    path.join(repoRoot, 'config/adversarial-agents/reviewer-engine.json'),
-  ) as unknown as ReviewerEngineConfig;
-  const registry = loadJson(path.join(repoRoot, 'config/adversarial-agents/agents-config.json'));
-  const policy = loadJson(path.join(repoRoot, 'config/adversarial-agents/policy.json'));
-  const responseSchema = loadJson(path.join(repoRoot, 'config/adversarial-agents/schema.json'));
+  const registration = loadAgentRegistration(repoRoot, agentName);
+  const engineConfig = loadJson(path.join(repoRoot, registration.engineConfigFile)) as unknown as ReviewerEngineConfig;
+  const policy = loadJson(path.join(repoRoot, registration.policyFile));
+  const responseSchema = loadJson(path.join(repoRoot, registration.schemaFile));
   const policyProperties = isObject(policy.properties) ? policy.properties : {};
   const failThresholds = isObject(policyProperties.failThresholds) ? policyProperties.failThresholds : {};
   const failThresholdProperties = isObject(failThresholds.properties) ? failThresholds.properties : {};
   const blockingThreshold = isObject(failThresholdProperties.blockingFindingsMinimum)
     ? Number(failThresholdProperties.blockingFindingsMinimum.const)
     : Number.NaN;
-  const agents = Array.isArray(registry.agents) ? registry.agents : [];
-  const agent = agents.find(
-    (candidate): candidate is JsonObject => isObject(candidate) && candidate.name === 'unit-test-reviewer',
-  );
-  if (!agent) throw new Error('unit-test-reviewer is not registered');
-  const agentConfig = agent as unknown as AgentConfig;
+  const agentConfig = registration as AgentConfig;
   const reviewerPrompt = fs.readFileSync(path.join(repoRoot, agentConfig.promptFile), 'utf8');
   const systemPolicy = fs.readFileSync(path.join(repoRoot, engineConfig.systemPolicyFile), 'utf8');
   if (sha256(reviewerPrompt) !== agentConfig.promptContentHash) {
@@ -241,6 +241,7 @@ function loadRuntime(repoRoot: string): {
     engineConfig.systemPolicyVersion !== '1.0.0' ||
     engineConfig.allowedTools.length !== 0 ||
     engineConfig.limits.maxConcurrentReviews > 3 ||
+    engineConfig.limits.maxConcurrentReviews !== agentConfig.executionConfig.maxConcurrentReviews ||
     !Number.isInteger(blockingThreshold) ||
     blockingThreshold < 1
   ) {
@@ -480,6 +481,7 @@ class AdversarialReviewerEngine {
     clock?: ReviewerClock;
     semaphore?: ReviewSemaphore;
     limitsOverride?: Partial<ReviewerEngineConfig['limits']>;
+    agentName?: string;
   };
 
   constructor(options: {
@@ -490,10 +492,12 @@ class AdversarialReviewerEngine {
     clock?: ReviewerClock;
     semaphore?: ReviewSemaphore;
     limitsOverride?: Partial<ReviewerEngineConfig['limits']>;
+    agentName?: string;
   }) {
     this.options = options;
-    this.validator = new AdversarialFindingValidator(options.repoRoot);
-    const runtime = loadRuntime(options.repoRoot);
+    const agentName = options.agentName ?? 'unit-test-reviewer';
+    this.validator = new AdversarialFindingValidator(options.repoRoot, agentName);
+    const runtime = loadRuntime(options.repoRoot, agentName);
     if (options.limitsOverride) {
       for (const [key, value] of Object.entries(options.limitsOverride)) {
         if (
@@ -518,7 +522,7 @@ class AdversarialReviewerEngine {
   }
 
   private async reviewWithPermit(packet: unknown): Promise<ReviewResult> {
-    const runtime = loadRuntime(this.options.repoRoot);
+    const runtime = loadRuntime(this.options.repoRoot, this.options.agentName);
     runtime.engineConfig.limits = {
       ...runtime.engineConfig.limits,
       ...this.options.limitsOverride,
@@ -728,7 +732,8 @@ function createReviewerFromEnvironment(
   if (environment.AZURE_OPENAI_API_KEY || environment.OPENAI_API_KEY) {
     throw new Error('API key environment variables are forbidden; use Microsoft Entra ID');
   }
-  const runtime = loadRuntime(repoRoot);
+  const agentName = environment.ADVERSARIAL_AGENT_NAME ?? 'unit-test-reviewer';
+  const runtime = loadRuntime(repoRoot, agentName);
   const endpoint = validateEndpoint(
     environment.AZURE_OPENAI_ENDPOINT ?? '',
     environment.AZURE_OPENAI_DEPLOYMENT_ID ?? '',
@@ -739,6 +744,7 @@ function createReviewerFromEnvironment(
     repoRoot,
     endpoint,
     deploymentId: environment.AZURE_OPENAI_DEPLOYMENT_ID ?? '',
+    agentName,
     transport: new AzureOpenAITransport(credential),
   });
 }

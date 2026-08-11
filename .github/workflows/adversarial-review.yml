@@ -89,8 +89,9 @@ jobs:
       cancel-in-progress: false
     env:
       AZURE_CORE_OUTPUT: none
+      ADVERSARIAL_AGENT_NAME: unit-test-reviewer
       AZURE_OPENAI_DEPLOYMENT_ID: game-hub-unit-test-reviewer
-      ACTIVE_CALIBRATION_REPORT: config/adversarial-agents/active-calibration.json
+      ACTIVE_CALIBRATION_REPORT: config/adversarial-agents/active-calibration-unit-test-reviewer.json
 
     steps:
       - name: Check out protected base workflow code
@@ -241,7 +242,9 @@ jobs:
             --issue "$ISSUE_NUMBER" \
             --head "$HEAD_SHA" \
             --calibration-report "$ACTIVE_CALIBRATION_REPORT" \
-            --output-dir adversarial-review-evidence
+            --exceptions config/adversarial-agents/exceptions.json \
+            --output-dir adversarial-review-evidence \
+            > publication-result.json
 
       - name: Retain adversarial review evidence
         if: always()
@@ -254,6 +257,7 @@ jobs:
             reviewer-result.json
             workflow-input.json
             prepublish-workflow-input.json
+            publication-result.json
           if-no-files-found: error
           retention-days: 90
 
@@ -264,11 +268,14 @@ jobs:
         run: |
           set -euo pipefail
           test -s reviewer-result.json
+          test -s publication-result.json
           node scripts/validate-adversarial-finding.ts reviewer-result.json
           node - "$EXPECTED_HEAD_SHA" <<'NODE'
           const fs = require('node:fs');
           const expectedHead = process.argv[2];
           const result = JSON.parse(fs.readFileSync('reviewer-result.json', 'utf8'));
+          const publication = JSON.parse(fs.readFileSync('publication-result.json', 'utf8'));
           if (result.attribution.repositoryCommit !== expectedHead) process.exit(1);
-          if (result.verdict.decision !== 'PASS') process.exit(1);
+          if (publication.conclusion === 'failure') process.exit(1);
+          if (!['success', 'neutral'].includes(publication.conclusion)) process.exit(1);
           NODE
