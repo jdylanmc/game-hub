@@ -7,9 +7,9 @@
       "enabled": true,
       "promptFile": ".github/adversarial-agents/unit-test-reviewer/prompt.md",
       "promptVersion": "1.0.0",
-      "promptContentHash": "8043aabd4090fae03973eb6e93316c065a0eac7f994d6bcc9aafd35205fd5519",
-      "modelDeployment": "gpt-4-1-mini@eastus",
-      "modelVersion": "2025-01",
+      "promptContentHash": "6d36a3aa7798b5a56342befc1bfc2edc3d051b45a91183ff7f2ec4628ed26a9c",
+      "modelDeployment": "gpt-4.1-mini@2025-04-14/eastus/GlobalStandard",
+      "modelVersion": "2025-04-14",
       "toolsVersion": "1.0.0",
       "description": "Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns.",
       "targetScopes": ["tests"],
@@ -17,6 +17,9 @@
       "verdictRules": {
         "blockingThreshold": 1,
         "allowHighConfidenceOnly": true
+      },
+      "executionConfig": {
+        "maxConcurrentReviews": 3
       }
     }
   ],

@@ -1,11 +1,13 @@
 using './bicep/main.bicep'
 
-// Test/staging environment parameters
-// Lower concurrency and budget for validation deployments
+// Test environment parameters
 param resourceGroupName = 'game-hub-adversarial-agents-test'
 param location = 'eastus'
 param environment = 'test'
-param maxConcurrentReviews = 1
 param monthlyBudgetUsd = 20
+param budgetContactEmails = [
+  'dylan@microsoft.com'
+]
+param reviewerPrincipalId = ''
 param resourceNamePrefix = 'game-hub-adversarial'
 param modelDeploymentId = 'game-hub-unit-test-reviewer'

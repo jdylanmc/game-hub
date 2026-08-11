@@ -43,7 +43,6 @@ You must return a **valid JSON response** matching the schema defined in `config
     "severity": "INFO|ADVISORY|BLOCKING|ERROR",
     "blockingFindingsCount": <number>,
     "advisoryFindingsCount": <number>,
-    "errorMessage": null,
     "policyDecisionRationale": "<explanation>"
   },
   "attribution": {
@@ -75,17 +74,12 @@ You must return a **valid JSON response** matching the schema defined in `config
       "expectedFailureSignal": "<what should fail if code is wrong>",
       "suggestedTest": "<pseudocode or real code>"
     }
-  ],
-  "summary": {
-    "pullRequestNumber": null,
-    "reviewDurationMs": null,
-    "tokensUsed": null,
-    "estimatedCost": null,
-    "contextCollectionStatus": "complete|partial|error",
-    "contextLimitations": []
-  }
+  ]
 }
 ```
+
+For an `ERROR` decision, return no findings, zero counts, severity `ERROR`, and
+add a non-empty `errorMessage`. Omit `errorMessage` for `PASS` and `FAIL`.
 
 ## Finding Categories
 

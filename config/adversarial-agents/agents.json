@@ -54,12 +54,12 @@
           "modelDeployment": {
             "type": "string",
             "description": "Azure or cloud model deployment identifier.",
-            "examples": ["gpt-4-1-mini@eastus"]
+            "examples": ["gpt-4.1-mini@2025-04-14/eastus/GlobalStandard"]
           },
           "modelVersion": {
             "type": "string",
             "description": "Semantic version or release date of the model, for compatibility tracking.",
-            "examples": ["2025-01"]
+            "examples": ["2025-04-14"]
           },
           "toolsVersion": {
             "type": "string",
@@ -85,6 +85,12 @@
                 "type": "integer",
                 "minimum": 1000,
                 "examples": [8000]
+              },
+              "maxConcurrentReviews": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3,
+                "examples": [3]
               },
               "temperatureFraction": {
                 "type": "number",
@@ -144,8 +150,8 @@
           "enabled": true,
           "promptFile": ".github/adversarial-agents/unit-test-reviewer/prompt.md",
           "promptVersion": "1.0.0",
-          "modelDeployment": "gpt-4-1-mini@eastus",
-          "modelVersion": "2025-01",
+          "modelDeployment": "gpt-4.1-mini@2025-04-14/eastus/GlobalStandard",
+          "modelVersion": "2025-04-14",
           "toolsVersion": "1.0.0",
           "description": "Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns.",
           "targetScopes": ["tests"],

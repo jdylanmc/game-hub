@@ -4,7 +4,10 @@ using './bicep/main.bicep'
 param resourceGroupName = 'game-hub-adversarial-agents-prod'
 param location = 'eastus'
 param environment = 'prod'
-param maxConcurrentReviews = 3
-param monthlyBudgetUsd = 100
+param monthlyBudgetUsd = 99
+param budgetContactEmails = [
+  'dylan@microsoft.com'
+]
+param reviewerPrincipalId = ''
 param resourceNamePrefix = 'game-hub-adversarial'
 param modelDeploymentId = 'game-hub-unit-test-reviewer'

@@ -1,4 +1,4 @@
-name: Deploy Adversarial Infrastructure
+name: Deploy adversarial infrastructure
 
 on:
   workflow_dispatch:
@@ -6,250 +6,94 @@ on:
       environment:
         required: true
         type: choice
-        description: 'Target environment for deployment'
+        description: Protected Azure environment
         options:
           - test
           - prod
         default: test
-  push:
-    branches:
-      - main
-      - ralph/issue-30-*
-    paths:
-      - 'infra/**'
-      - '.github/workflows/deploy-adversarial-infrastructure.yml'
 
 permissions:
   contents: read
-  id-token: write # Required for OIDC token generation
-  actions: read
+  id-token: write
+
+concurrency:
+  group: adversarial-infrastructure-${{ inputs.environment }}
+  cancel-in-progress: false
 
 jobs:
-  validate:
-    name: Validate Infrastructure Configuration
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@a5ac7e51b41094f51f23ee3b2513765983cb6fe1
-
-      - name: Install Azure CLI
-        run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-
-      - name: Install Bicep CLI
-        run: |
-          az bicep install
-
-      - name: Validate Bicep Template
-        run: |
-          az bicep build-params --file infra/prod.bicepparam --outdir ./
-          az bicep build-params --file infra/test.bicepparam --outdir ./
-          echo "✓ Bicep templates validated"
-
-      - name: Validate Parameter Files
-        run: |
-          for env in prod test; do
-            echo "Validating $env parameters..."
-            az deployment group what-if \
-              --template-file infra/bicep/main.bicep \
-              --parameters infra/${env}.bicepparam \
-              --no-pretty-print > /dev/null || exit 1
-          done
-          echo "✓ Parameter files validated"
-
   deploy:
-    name: Deploy to ${{ inputs.environment || 'test' }}
-    runs-on: ubuntu-latest
-    needs: validate
-    environment: ${{ inputs.environment || 'test' }}
+    name: Deploy ${{ inputs.environment }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
     env:
-      ENVIRONMENT: ${{ inputs.environment || 'test' }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: '11213dbd-39fe-46ba-87db-5f5e8c449aed'
+      ENVIRONMENT: ${{ inputs.environment }}
 
     steps:
-      - uses: actions/checkout@a5ac7e51b41094f51f23ee3b2513765983cb6fe1
-
-      - name: Azure Login (OIDC)
-        uses: azure/login@8c334037b6c8d7f4d0f361a10005b3ee1630da93
+      - name: Check out protected main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          enable-AzPSSession: false
+          persist-credentials: false
 
-      - name: Set Subscription
-        run: |
-          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-          echo "Authenticated to Azure subscription:"
-          az account show --query "{Name:name, Subscription:id, Tenant:tenantId}" -o table
-
-      - name: Install Bicep CLI
-        run: az bicep install
-
-      - name: Deploy Infrastructure
-        id: deploy
-        run: |
-          set -euo pipefail
-
-          PARAM_FILE="infra/${ENVIRONMENT}.bicepparam"
-
-          echo "Starting deployment to $ENVIRONMENT..."
-          echo "Parameter file: $PARAM_FILE"
-
-          # Deploy with detailed output
-          DEPLOYMENT_OUTPUT=$(az deployment group create \
-            --resource-group "game-hub-adversarial-agents-${ENVIRONMENT}" \
-            --template-file "infra/bicep/main.bicep" \
-            --parameters "$PARAM_FILE" \
-            --deployment-name "adversarial-agents-$(date +%s)" \
-            --query "properties.outputs" \
-            -o json)
-
-          # Extract outputs
-          OPENAI_ENDPOINT=$(echo "$DEPLOYMENT_OUTPUT" | jq -r '.openaiEndpoint.value')
-          KEYVAULT_NAME=$(echo "$DEPLOYMENT_OUTPUT" | jq -r '.keyVaultName.value')
-          MODEL_DEPLOYMENT=$(echo "$DEPLOYMENT_OUTPUT" | jq -r '.modelDeploymentId.value')
-
-          # Set outputs for subsequent steps
-          echo "openai-endpoint=$OPENAI_ENDPOINT" >> $GITHUB_OUTPUT
-          echo "keyvault-name=$KEYVAULT_NAME" >> $GITHUB_OUTPUT
-          echo "model-deployment-id=$MODEL_DEPLOYMENT" >> $GITHUB_OUTPUT
-
-          echo "✓ Deployment completed successfully"
-
-      - name: Retrieve OpenAI Credentials
-        id: credentials
-        run: |
-          set -euo pipefail
-
-          KEYVAULT_NAME="${{ steps.deploy.outputs.keyvault-name }}"
-
-          # Retrieve secrets from Key Vault
-          OPENAI_ENDPOINT=$(az keyvault secret show \
-            --vault-name "$KEYVAULT_NAME" \
-            --name openai-endpoint \
-            --query value -o tsv)
-
-          OPENAI_KEY=$(az keyvault secret show \
-            --vault-name "$KEYVAULT_NAME" \
-            --name openai-key \
-            --query value -o tsv)
-
-          # Output without exposing in logs
-          echo "::add-mask::$OPENAI_KEY"
-          echo "openai-endpoint=$OPENAI_ENDPOINT" >> $GITHUB_OUTPUT
-          echo "openai-key=$OPENAI_KEY" >> $GITHUB_OUTPUT
-
-          echo "✓ Credentials retrieved from Key Vault"
-
-      - name: Configure GitHub Repository Secrets
-        if: github.ref == 'refs/heads/main'
-        run: |
-          echo "Configuring GitHub repository secrets..."
-
-          # Use GitHub CLI to set secrets (requires gh auth)
-          # Note: This step requires the GH_TOKEN to have repo:write access
-          gh secret set ADVERSARIAL_OPENAI_ENDPOINT \
-            --body "${{ steps.deploy.outputs.openai-endpoint }}" \
-            || echo "⚠ Could not set ADVERSARIAL_OPENAI_ENDPOINT (may already be set)"
-
-          gh secret set ADVERSARIAL_OPENAI_DEPLOYMENT_ID \
-            --body "${{ steps.deploy.outputs.model-deployment-id }}" \
-            || echo "⚠ Could not set ADVERSARIAL_OPENAI_DEPLOYMENT_ID (may already be set)"
-
-          # Note: API key is NOT set as a repository secret
-          # It's retrieved from Key Vault at runtime for better security
-
-          echo "✓ Repository secrets configured"
+      - name: Verify protected ref and environment configuration
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-
-      - name: Verify Deployment
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_REVIEWER_PRINCIPAL_ID: ${{ vars.AZURE_REVIEWER_PRINCIPAL_ID }}
         run: |
           set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$AZURE_CLIENT_ID"
+          test -n "$AZURE_TENANT_ID"
+          test -n "$AZURE_REVIEWER_PRINCIPAL_ID"
 
-          RESOURCE_GROUP="game-hub-adversarial-agents-${ENVIRONMENT}"
-
-          echo "Verifying deployed resources in $RESOURCE_GROUP..."
-
-          # List deployed resources
-          az resource list \
-            --resource-group "$RESOURCE_GROUP" \
-            --query "[].{Name:name, Type:type, Status:provisioningState}" \
-            -o table
-
-          # Verify OpenAI deployment
-          OPENAI_RESOURCE=$(az cognitiveservices account list \
-            --resource-group "$RESOURCE_GROUP" \
-            --query "[0]" -o json)
-
-          if [ -z "$OPENAI_RESOURCE" ]; then
-            echo "✗ OpenAI resource not found"
-            exit 1
-          fi
-
-          echo "✓ OpenAI service verified"
-          echo "  Endpoint: $(echo "$OPENAI_RESOURCE" | jq -r '.properties.endpoint')"
-          echo "  Status: $(echo "$OPENAI_RESOURCE" | jq -r '.properties.statuses[0]')"
-
-      - name: Post Deployment Report
-        if: always()
-        run: |
-          cat > /tmp/deployment-summary.md << 'EOF'
-          # Adversarial Infrastructure Deployment Report
-
-          **Environment**: ${{ env.ENVIRONMENT }}
-          **Status**: ${{ job.status == 'success' && '✓ Success' || '✗ Failed' }}
-          **Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
-
-          ## Outputs
-
-          - **OpenAI Endpoint**: ${{ steps.deploy.outputs.openai-endpoint }}
-          - **Key Vault**: ${{ steps.deploy.outputs.keyvault-name }}
-          - **Model Deployment**: ${{ steps.deploy.outputs.model-deployment-id }}
-
-          ## Next Steps
-
-          1. Verify resources in Azure portal: https://portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          2. Test OpenAI API connectivity
-          3. Configure GitHub Actions workflow for review automation (US-007)
-          EOF
-
-          cat /tmp/deployment-summary.md
-
-      - name: Upload Deployment Artifacts
-        if: always()
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+      - name: Sign in to Azure with OpenID Connect
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
         with:
-          name: deployment-bicep-${{ env.ENVIRONMENT }}
-          path: |
-            infra/
-            *.json
-            *.parameters.json
-          retention-days: 30
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: 11213dbd-39fe-46ba-87db-5f5e8c449aed
 
-  notify:
-    name: Notify Deployment Status
-    runs-on: ubuntu-latest
-    needs: [validate, deploy]
-    if: always()
-    steps:
-      - name: Report Results
+      - name: Install pinned Bicep CLI
+        run: az bicep install --version v0.42.1
+
+      - name: Build every parameter file
         run: |
-          VALIDATION_STATUS="${{ needs.validate.result }}"
-          DEPLOY_STATUS="${{ needs.deploy.result }}"
-          OVERALL_STATUS="${{ job.status }}"
+          set -euo pipefail
+          for parameter_file in infra/*.bicepparam; do
+            az bicep build-params --file "$parameter_file" --stdout > /dev/null
+          done
 
-          echo "════════════════════════════════════════════════════════════════"
-          echo "Adversarial Infrastructure Deployment Complete"
-          echo "════════════════════════════════════════════════════════════════"
-          echo "Environment: ${{ inputs.environment || 'test' }}"
-          echo "Validation: $VALIDATION_STATUS"
-          echo "Deployment: $DEPLOY_STATUS"
-          echo "Overall: $OVERALL_STATUS"
-          echo "════════════════════════════════════════════════════════════════"
+      - name: Preview subscription deployment
+        env:
+          AZURE_REVIEWER_PRINCIPAL_ID: ${{ vars.AZURE_REVIEWER_PRINCIPAL_ID }}
+        run: |
+          az deployment sub what-if \
+            --name "adversarial-${ENVIRONMENT}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --location eastus \
+            --template-file infra/bicep/main.bicep \
+            --parameters "infra/${ENVIRONMENT}.bicepparam" \
+            --parameters reviewerPrincipalId="$AZURE_REVIEWER_PRINCIPAL_ID" \
+            --no-pretty-print
 
-          if [ "$OVERALL_STATUS" != "success" ]; then
-            exit 1
-          fi
+      - name: Deploy subscription infrastructure
+        env:
+          AZURE_REVIEWER_PRINCIPAL_ID: ${{ vars.AZURE_REVIEWER_PRINCIPAL_ID }}
+        run: |
+          az deployment sub create \
+            --name "adversarial-${ENVIRONMENT}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --location eastus \
+            --template-file infra/bicep/main.bicep \
+            --parameters "infra/${ENVIRONMENT}.bicepparam" \
+            --parameters reviewerPrincipalId="$AZURE_REVIEWER_PRINCIPAL_ID"
+
+      - name: Retain deployment definitions
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: adversarial-infrastructure-${{ inputs.environment }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: infra/
+          if-no-files-found: error
+          retention-days: 30

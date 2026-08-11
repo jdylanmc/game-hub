@@ -70,12 +70,6 @@
   - **Federated credential subjects**: Exact subject matching required per deployment context (main branch, PRs, environments); mismatch causes "Invalid federated credential" errors.
   - **Cost alerting**: Metric alert threshold set at 90,000 tokens/hour (~$0.90/hour at current pricing) for early warning before monthly budget.
 
-## Unanswered Questions Pending US-003+
-
-1. **RBAC role for GitHub Actions**: Should use custom RBAC role (more restrictive, limited to resource groups) vs. Contributor role (simpler, broader). Contributor selected for initial deployment; can be tightened post-validation.
-2. **Network security hardening**: Current deployment uses public endpoints. Future PRs (US-009+) may add virtual networks, private endpoints, or IP allowlisting for additional isolation.
-3. **Deployment region**: Currently East US (supports Azure OpenAI). Alternative regions (westus3, etc.) possible if quota exhausted or latency becomes issue.
-
 ## 2026-08-11 - Gate cost ordering
 
 - Reordered deterministic continuous integration so inexpensive formatting,
@@ -98,3 +92,40 @@
 - Published the blocking findings on draft pull request #35. No merge is
   permitted until a new head commit fixes the findings and receives a fresh
   adversarial review.
+
+## 2026-08-11 - US-001 and US-002 adversarial remediation
+
+- Made the finding contract strict at every applicable object boundary.
+  Attribution, exact citations, missing scenario, expected failure signal, and
+  suggested test are required. Supplied verdicts and counts must equal values
+  derived from validated findings and policy.
+- Added six validator tests, including PASS-with-blocking, count mismatch,
+  incomplete attribution, missing actionability, and undeclared-property cases.
+- Queried the target subscription model registry. East US supports
+  `gpt-4.1-mini` version `2025-04-14` with `GlobalStandard`; Bicep and registry
+  attribution now use that exact tuple.
+- Replaced the invalid action references with upstream-verified immutable SHAs:
+  `actions/checkout` v4.4.0, `azure/login` v3.0.1, and
+  `actions/upload-artifact` v4.6.2.
+- Converted infrastructure to a subscription-scoped resource-group deployment
+  with a resource-group module. Both prod and test parameter files passed
+  `az deployment sub validate` in subscription
+  `11213dbd-39fe-46ba-87db-5f5e8c449aed`.
+- Disabled Azure OpenAI local authentication, removed Key Vault/API-key and
+  `listKeys` paths, added a declarative Cognitive Services OpenAI User
+  assignment for the reviewer, and added a narrow declarative deployment role
+  bootstrap for US-009.
+- Made deployment manual-only, protected-main-only, and protected-environment
+  scoped. No feature-branch or pull-request federated credential is documented.
+- Added a real $99/month production Azure Consumption budget with actual and
+  forecast email alerts. Production runtime concurrency is fixed at three and
+  policy-tested; the US-004 engine must consume that configuration.
+- Verified deterministic continuous integration remains ordered cheapest to
+  most expensive, with model-backed review still prohibited until the complete
+  exact-head deterministic workflow succeeds.
+- Passed formatting, lint, policy, 29 tests with coverage, generation,
+  typecheck, production build, bundle budgets, Storybook, all Bicep builds and
+  parameter validations, and 11 fail-closed continuous-integration probes.
+- US-001 and US-002 are passed. US-003 and later stories were not advanced.
+  Live identity creation, environment protection, deployment, and end-to-end
+  model invocation remain US-009 work.

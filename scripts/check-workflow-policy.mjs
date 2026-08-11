@@ -48,19 +48,28 @@ const requiredCommands = [
   'yarn format:check 2>&1 | tee continuous-integration-evidence/format.log',
   'yarn lint 2>&1 | tee continuous-integration-evidence/lint.log',
   'yarn policy:check 2>&1 | tee continuous-integration-evidence/policy.log',
-  'yarn test:ci-fail-closed 2>&1 | tee continuous-integration-evidence/fail-closed.log',
-  'yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log',
-  'yarn test:coverage 2>&1 | tee continuous-integration-evidence/test.log',
   'yarn generate:check 2>&1 | tee continuous-integration-evidence/generation.log',
   'yarn typecheck 2>&1 | tee continuous-integration-evidence/typecheck.log',
+  'yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log',
+  'yarn test:coverage 2>&1 | tee continuous-integration-evidence/test.log',
   'yarn build 2>&1 | tee continuous-integration-evidence/build.log',
   'yarn bundle:check 2>&1 | tee continuous-integration-evidence/bundle.log',
   'yarn build-storybook 2>&1 | tee continuous-integration-evidence/storybook.log',
+  'yarn test:ci-fail-closed 2>&1 | tee continuous-integration-evidence/fail-closed.log',
 ];
 
 for (const command of requiredCommands) {
   if (!workflow.includes(`run: ${command}`)) {
     violations.push(`Missing mandatory command: ${command}`);
+  }
+
+  const commandPositions = requiredCommands.map((command) => workflow.indexOf(`run: ${command}`));
+  for (let index = 1; index < commandPositions.length; index += 1) {
+    if (commandPositions[index] <= commandPositions[index - 1]) {
+      violations.push(
+        `Mandatory deterministic commands are not ordered cheapest-to-most-expensive near: ${requiredCommands[index]}`,
+      );
+    }
   }
 }
 

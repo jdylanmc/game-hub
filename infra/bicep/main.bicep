@@ -1,42 +1,41 @@
-// Adversarial Agent Infrastructure
-// Deploys Azure OpenAI Service with GPT-4.1 mini for game-hub pull request review
-// Uses consumption capacity with bounded concurrency and cost monitoring
+targetScope = 'subscription'
 
 @minLength(1)
 @maxLength(64)
-@description('Name of the resource group (lowercase alphanumeric only)')
+@description('Resource group for the environment.')
 param resourceGroupName string
 
-@description('Azure location for resources (must support Azure OpenAI Service)')
+@description('Azure region that supports the approved model.')
 param location string = 'eastus'
 
-@description('Environment: dev, staging, or prod')
-@allowed(['dev', 'staging', 'prod'])
-param environment string = 'prod'
+@allowed([
+  'test'
+  'prod'
+])
+@description('Deployment environment.')
+param environment string
 
-@description('Maximum concurrent reviews allowed')
 @minValue(1)
-@maxValue(10)
-param maxConcurrentReviews int = 3
+@maxValue(99)
+@description('Monthly Azure Consumption budget in US dollars.')
+param monthlyBudgetUsd int
 
-@description('Monthly budget alert threshold in USD')
-@minValue(1)
-@maxValue(1000)
-param monthlyBudgetUsd int = 100
+@minLength(1)
+@description('Email recipients for actual and forecast budget alerts.')
+param budgetContactEmails array
 
-@description('Resource naming prefix')
+@description('Object ID of the protected-environment identity used for model inference. Leave empty only for build validation.')
+param reviewerPrincipalId string = ''
+
+@description('Resource naming prefix.')
 param resourceNamePrefix string = 'game-hub-adversarial'
 
-// Consumption model requires explicit deployment mapping
-@description('Deployment ID for GPT-4.1 mini model')
+@description('Azure OpenAI deployment name.')
 param modelDeploymentId string = 'game-hub-unit-test-reviewer'
 
-// Determine naming based on environment
-var resourceSuffix = environment == 'prod' ? '' : '-${environment}'
-var aoaiName = '${resourceNamePrefix}-openai${resourceSuffix}'
-var keyVaultName = '${resourceNamePrefix}-kv${resourceSuffix}'
+@description('Budget start date. Defaults to the first day of the deployment month.')
+param budgetStartDate string = utcNow('yyyy-MM-01')
 
-// Tags for resource management and cost tracking
 var commonTags = {
   project: 'game-hub'
   component: 'adversarial-agents'
@@ -45,154 +44,80 @@ var commonTags = {
   managedBy: 'bicep'
 }
 
-// ========== Resource Group ==========
-resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
+resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-11-01' = {
   name: resourceGroupName
   location: location
   tags: commonTags
 }
 
-// ========== Azure OpenAI Service ==========
-// Consumption-based deployment allows on-demand API usage without quota pre-allocation
-resource aoai 'Microsoft.CognitiveServices/accounts@2023-10-01-preview' = {
-  scope: rg
-  name: aoaiName
-  location: location
-  kind: 'OpenAI'
-  sku: {
-    name: 'S0'
-  }
-  tags: commonTags
-  properties: {
-    // Consumption model: charges per 1K tokens without pre-purchased quotas
-    deploymentType: 'User Assigned'
-    publicNetworkAccess: 'Enabled'
-    networkAcls: {
-      defaultAction: 'Allow'
-    }
+module inference './resources.bicep' = {
+  name: 'adversarial-inference-${environment}'
+  scope: resourceGroup
+  params: {
+    environment: environment
+    location: location
+    modelDeploymentId: modelDeploymentId
+    resourceNamePrefix: resourceNamePrefix
+    reviewerPrincipalId: reviewerPrincipalId
+    tags: commonTags
   }
 }
 
-// Deployment of GPT-4.1 mini model on consumption capacity
-// Each concurrent review request is charged per token used
-resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-10-01-preview' = {
-  parent: aoai
-  name: modelDeploymentId
+resource budget 'Microsoft.Consumption/budgets@2024-08-01' = {
+  name: '${resourceNamePrefix}-${environment}-monthly'
   properties: {
-    model: {
-      // GPT-4 Turbo with Vision (4.1 equivalent for reasoning + multimodal)
-      // Use gpt-4-turbo for best unit-test analysis capability
-      format: 'OpenAI'
-      name: 'gpt-4-turbo'
-      version: 'turbo-2024-04-09'
+    amount: monthlyBudgetUsd
+    category: 'Cost'
+    timeGrain: 'Monthly'
+    timePeriod: {
+      startDate: budgetStartDate
+      endDate: '2036-12-31'
     }
-    // Consumption deployment: no rate limit pre-allocation, charges per API call
-    deploymentType: 'Text'
-    scaleSettings: {
-      scaleType: 'Standard'
-      capacity: 0  // Consumption model ignores pre-allocated capacity
-    }
-  }
-}
-
-// ========== Azure Key Vault for Secrets ==========
-// Stores API endpoints and keys for secure rotation
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  scope: rg
-  name: replace(keyVaultName, '-', '')  // Key Vault names cannot contain hyphens
-  location: location
-  tags: commonTags
-  properties: {
-    tenantId: subscription().tenantId
-    sku: {
-      family: 'A'
-      name: 'standard'
-    }
-    enableRbacAuthorization: true
-    enableSoftDelete: true
-    softDeleteRetentionInDays: 7
-    enablePurgeProtection: true
-    accessPolicies: []
-    networkAcls: {
-      bypass: 'AzureServices'
-      defaultAction: 'Allow'
-    }
-  }
-}
-
-// Store OpenAI endpoint for GitHub Actions
-resource kvSecretEndpoint 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: keyVault
-  name: 'openai-endpoint'
-  properties: {
-    value: aoai.properties.endpoint
-  }
-}
-
-// Store OpenAI API key for GitHub Actions
-resource kvSecretKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: keyVault
-  name: 'openai-key'
-  properties: {
-    value: listKeys(aoai.id, '2023-10-01-preview').key1
-  }
-}
-
-// ========== Monitoring and Budgets ==========
-// Alert on consumption to prevent runaway costs
-resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
-  scope: rg
-  name: '${resourceNamePrefix}-alerts${resourceSuffix}'
-  location: 'global'
-  tags: commonTags
-  properties: {
-    enabled: true
-    groupShortName: 'aadv-alerts'
-    // Add email/webhook receivers in deployment or manually in portal
-  }
-}
-
-// Metric alert for OpenAI API usage
-// Triggers when normalized tokens exceed threshold (prevents overspend)
-resource usageAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
-  scope: rg
-  name: '${resourceNamePrefix}-usage-alert${resourceSuffix}'
-  location: 'global'
-  tags: commonTags
-  properties: {
-    description: 'Alert when OpenAI token consumption exceeds safe threshold'
-    enabled: true
-    scopes: [aoai.id]
-    evaluationFrequency: 'PT5M'
-    windowSize: 'PT1H'
-    criteria: {
-      'odata.type': 'Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria'
-      allOf: [
-        {
-          name: 'Token consumption'
-          metricName: 'Tokens Used'
-          operator: 'GreaterThan'
-          threshold: 90000  // ~$0.90 per hour at current rates
-          timeAggregation: 'Total'
-          criterionType: 'StaticThresholdCriterion'
-        }
-      ]
-    }
-    actions: [
-      {
-        actionGroupId: actionGroup.id
+    filter: {
+      dimensions: {
+        name: 'ResourceGroupName'
+        operator: 'In'
+        values: [
+          resourceGroupName
+        ]
       }
-    ]
+    }
+    notifications: {
+      Actual80Percent: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 80
+        thresholdType: 'Actual'
+        contactEmails: budgetContactEmails
+        contactGroups: []
+        contactRoles: []
+      }
+      Forecast100Percent: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 100
+        thresholdType: 'Forecasted'
+        contactEmails: budgetContactEmails
+        contactGroups: []
+        contactRoles: []
+      }
+      Actual100Percent: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 100
+        thresholdType: 'Actual'
+        contactEmails: budgetContactEmails
+        contactGroups: []
+        contactRoles: []
+      }
+    }
   }
 }
 
-// ========== Outputs for GitHub Actions Integration ==========
-output resourceGroupId string = rg.id
-output resourceGroupName string = rg.name
-output openaiEndpoint string = aoai.properties.endpoint
-output openaiApiVersion string = '2024-02-15-preview'
-output modelDeploymentId string = modelDeploymentId
-output keyVaultId string = keyVault.id
-output keyVaultName string = keyVault.name
-output maxConcurrentReviews int = maxConcurrentReviews
-output monthlyBudgetUsd int = monthlyBudgetUsd
+output resourceGroupName string = resourceGroup.name
+output openaiEndpoint string = inference.outputs.openaiEndpoint
+output modelDeploymentId string = inference.outputs.modelDeploymentId
+output modelName string = inference.outputs.modelName
+output modelVersion string = inference.outputs.modelVersion
+output modelSku string = inference.outputs.modelSku
+output budgetName string = budget.name

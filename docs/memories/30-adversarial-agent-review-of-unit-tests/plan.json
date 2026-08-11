@@ -24,8 +24,8 @@
         "The contract supports registering additional independent adversarial agents without coupling their prompts or verdicts"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "Adversarial review of head dfe60d5 reopened this story: the schema does not strictly require attribution and actionable fields or reject undeclared properties, and the validator can accept PASS with policy-blocking findings. Derive verdict/counts from validated findings and enforce strict schema requirements before marking complete.",
+      "passes": true,
+      "notes": "Remediated after adversarial review: schema 1.0.0 now requires complete attribution, actionable finding fields, exact citations, derived counts, and rejects undeclared properties. The validator rejects verdict/count mismatches including PASS with a validated high-confidence blocking finding; six targeted tests cover the blocking cases.",
       "dependencies": []
     },
     {
@@ -40,8 +40,8 @@
         "Reapplying the deployment converges without duplicate resources"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Adversarial review of head dfe60d5 reopened this story: action SHAs are invalid; the wrong model is deployed; Bicep scope/environment inputs are undeployable; concurrency and budget are not enforced; feature-branch deployment is privileged; static API keys and broad roles violate keyless least privilege. Replace with verified actions, GPT-4.1 mini, subscription-scoped modular Bicep, real budget/concurrency controls, protected deployment, and Entra ID inference.",
+      "passes": true,
+      "notes": "Remediated after adversarial review: verified immutable action SHAs; exact subscription-supported gpt-4.1-mini 2025-04-14 GlobalStandard attribution; subscription-scoped modular Bicep; validated prod/test parameter deployments; checked max-three runtime configuration; $99 production Azure Consumption budget with alerts; manual protected-main deployment; Microsoft Entra ID inference with local auth disabled and declarative narrow roles. Live identity bootstrap and deployment remain intentionally deferred to US-009.",
       "dependencies": ["US-001"]
     },
     {
