@@ -1,0 +1,194 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 30,
+  "issueTitle": "Adversarial Agent Review of Unit Tests",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/30",
+  "branchName": "ralph/issue-30-adversarial-agent-review-of-unit-tests",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 0,
+    "dependencies": [
+      29,
+      33
+    ],
+    "changeScopes": [
+      ".github",
+      "config",
+      "docs",
+      "infra",
+      "package.json",
+      "scripts",
+      "yarn.lock"
+    ]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Define the adversarial agent contract",
+      "description": "Define the reusable versioned prompt, policy, model, tools, verdict, finding schema, attribution, and fail-closed interface for independent pull-request review agents.",
+      "acceptanceCriteria": [
+        "A strict versioned JSON schema defines verdict, blocking and advisory severity, confidence, category, citations, missing scenario, expected failure signal, suggested test, and run attribution",
+        "Prompt, policy, model, and tool configuration are versioned independently",
+        "Invalid, incomplete, or unactionable structured results fail validation",
+        "The contract supports registering additional independent adversarial agents without coupling their prompts or verdicts"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "",
+      "dependencies": []
+    },
+    {
+      "id": "US-002",
+      "title": "Provision secure Azure inference",
+      "description": "Provision the Azure-hosted GPT-4.1 mini reviewer and keyless GitHub identity through idempotent Bicep with bounded consumption and operational cost controls.",
+      "acceptanceCriteria": [
+        "Bicep and environment parameter files deploy the model and supporting identities into subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed without committed secrets",
+        "The deployment uses GPT-4.1 mini consumption capacity and supports at most three concurrent reviews initially",
+        "GitHub Actions uses OpenID Connect and least-privilege Azure roles",
+        "Budget, alerting, quotas, and documentation target less than $100 per month",
+        "Reapplying the deployment converges without duplicate resources"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-001"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Collect bounded untrusted review context",
+      "description": "Build a deterministic context collector for issue requirements, pull-request metadata, diffs, contracts, manifests, generators, workflows, validation configuration, and relevant tests without executing pull-request code.",
+      "acceptanceCriteria": [
+        "Context selection is deterministic, size-bounded, attributable, and reproducible locally",
+        "Fork and pull-request content is treated as untrusted data and cannot supply instructions or executable workflow code",
+        "Production and test evidence retains file and line information for citations",
+        "Missing or truncated mandatory context is explicit and can block review"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-001"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Implement the Azure reviewer engine",
+      "description": "Call Azure GPT-4.1 mini with prompt-injection isolation, bounded execution, strict schema validation, finding deduplication, verdict policy, and fail-closed error handling.",
+      "acceptanceCriteria": [
+        "The reviewer authenticates without static model credentials and invokes the configured Azure deployment",
+        "Prompt-injection content is delimited as untrusted evidence and cannot alter system policy or tool boundaries",
+        "Timeout, network, model, schema, missing-output, and policy failures produce a blocking error verdict",
+        "Review limits cover context, tools, network destinations, tokens, time, concurrency, retries, and cost",
+        "Structured output is deterministic enough for policy evaluation and local reproduction"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-001",
+        "US-002",
+        "US-003"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Build calibration and evaluation",
+      "description": "Create versioned weak and strong review benchmarks, score reviewer quality and cost, and gate promotion on explicit measured thresholds.",
+      "acceptanceCriteria": [
+        "Benchmarks cover tautologies, ineffective mocks, absent errors, races, duplicate scores, collision boundaries, archive traversal, authorization bypass, and cleanup leaks",
+        "Evaluation reports detection, false positives, missed critical scenarios, reviewer agreement, cost, and latency",
+        "Strong examples are not incorrectly blocked beyond the configured threshold",
+        "The check cannot become required unless the versioned promotion policy passes",
+        "Model, prompt, tool, framework, or architecture changes invalidate or rerun calibration"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-004"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "Publish actionable GitHub evidence",
+      "description": "Publish concise check annotations and a retained structured artifact tied to the exact review inputs and configuration without comment spam.",
+      "acceptanceCriteria": [
+        "Each review creates or updates one check run on the pull-request head commit",
+        "Blocking and advisory findings include concise actionable annotations with exact citations",
+        "The complete validated JSON result is retained with explicit retention and no sensitive content",
+        "Repeated runs deduplicate superseded findings and remain attributable to issue, commit, model, prompt, tools, and policy"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-004"
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "Add the fork-safe GitHub Actions pipeline",
+      "description": "Run the reviewer from base-branch-controlled workflow code with keyless Azure access, restricted permissions, bounded concurrency, and no execution of untrusted pull-request code.",
+      "acceptanceCriteria": [
+        "Relevant pull-request changes trigger review and later relevant pushes rerun it",
+        "Forked and malicious pull requests cannot access secrets, model credentials, write-capable tools, or unrestricted network destinations",
+        "Workflow actions are immutably pinned and permissions, timeouts, concurrency, evidence retention, and failure behavior are policy-tested",
+        "The reviewer never overrides or masks deterministic continuous integration failures",
+        "Three reviews can execute concurrently without shared mutable state"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-002",
+        "US-003",
+        "US-004",
+        "US-006"
+      ]
+    },
+    {
+      "id": "US-008",
+      "title": "Add exceptions scaling and operations",
+      "description": "Document and implement auditable time-limited exceptions, operational diagnostics, local reproduction, and horizontally scalable independent agent registration.",
+      "acceptanceCriteria": [
+        "Exceptions require an owner, rationale, issue reference, expiry, affected finding fingerprint, and audit evidence",
+        "Expired, malformed, overly broad, or unrelated exceptions fail closed",
+        "Operational guidance covers transient retry boundaries, quota, cost, model incidents, prompt rollback, and local reproduction",
+        "Additional adversarial agents can be registered with independent prompts, policies, checks, calibration, and concurrency limits",
+        "No shared state allows one reviewer to suppress, rewrite, or impersonate another"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-005",
+        "US-006",
+        "US-007"
+      ]
+    },
+    {
+      "id": "US-009",
+      "title": "Calibrate deploy and enforce the gate",
+      "description": "Deploy the Azure resources, run calibration, integrate policy and fail-closed tests, connect Ralph, and require the adversarial review check after promotion thresholds pass.",
+      "acceptanceCriteria": [
+        "Azure deployment, model invocation, GitHub check publication, and retained evidence are verified end to end",
+        "Calibration passes the versioned promotion policy before blocking enforcement is enabled",
+        "Repository policy and fail-closed proofs reject missing, weakened, canceled, timed-out, malformed, or bypassed adversarial reviews",
+        "Main branch protection requires the promoted adversarial review check alongside continuous integration",
+        "Ralph treats adversarial findings as blocking pull-request failures and iterates until resolved",
+        "Every issue acceptance criterion is reconciled to implementation and live evidence"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-005",
+        "US-007",
+        "US-008"
+      ]
+    }
+  ]
+}
