@@ -14,6 +14,13 @@ yarn dev
 
 The main site always runs at `http://localhost:1337`.
 
+## Documentation
+
+- [Game Hub Architecture](docs/architecture.md) defines system boundaries,
+  pinned versions, and upstream documentation.
+- [Ralph Loop](docs/ralph-loop.md) defines the fresh-context autonomous
+  development workflow.
+
 ## Commands
 
 ```bash
@@ -75,9 +82,9 @@ Each game workspace owns:
 - the root `package.json` does **not** declare `three`
 
 This keeps game implementation details out of the host dependency graph while
-still letting Yarn deduplicate compatible versions in `node_modules`. Modern
-Three.js ships its own TypeScript declarations, so no separate `@types/three`
-package is required.
+still letting Yarn deduplicate compatible versions in `node_modules`. The root
+currently carries `@types/three` for shared build typing; runtime Three.js
+ownership remains with each game workspace.
 
 ## Runtime manifest schema
 

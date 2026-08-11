@@ -9,3 +9,4 @@ storybook-static
 !.yarn/versions
 *.local
 *.tsbuildinfo
+docs/memories/**/iterations/*.log
