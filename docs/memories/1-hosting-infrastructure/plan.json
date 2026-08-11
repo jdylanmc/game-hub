@@ -1,0 +1,178 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 1,
+  "issueTitle": "Hosting Infrastructure",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/1",
+  "branchName": "ralph/issue-1-hosting-infrastructure",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 1,
+    "dependencies": [
+      30
+    ],
+    "changeScopes": [
+      "infra",
+      ".github/workflows",
+      "docs",
+      "public/staticwebapp.config.json",
+      "api",
+      "packages/api",
+      "config",
+      "src/config"
+    ]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Document the architecture and cost topology",
+      "description": "Resolve and document a cost-aware baseline topology for the static frontend, containerized API, registry, blob assets, content delivery, authentication readiness, public ingress protection, environments, and Azure subscription.",
+      "acceptanceCriteria": [
+        "The design maps every issue requirement to a named Azure service and documents the boundaries between the static frontend, API, assets, authentication, and public ingress",
+        "The design records cost, scaling, regional, environment, and operational tradeoffs without claiming deployment evidence",
+        "The deployment target explicitly names subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Create modular Bicep and environment parameters",
+      "description": "Introduce the idempotent Bicep entry point, reusable modules, explicit environment parameter files, naming conventions, regions, tags, and deployment outputs needed by later resource stories.",
+      "acceptanceCriteria": [
+        "Bicep is organized into bounded modules with a documented deployment entry point",
+        "Development and production-ready environment values are explicit in committed parameter or configuration files without secret values",
+        "Repeated deployment with the same parameters is designed to converge without duplicate resources or portal-only setup",
+        "The Bicep command-line interface version and explicit subscription selection are pinned or documented for automation"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-001"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Provision Azure Static Web Apps frontend hosting",
+      "description": "Add the Azure Static Web Apps module, environment configuration, deployment outputs, and frontend deployment contract for the existing Vite dist output.",
+      "acceptanceCriteria": [
+        "Bicep declares Azure Static Web Apps frontend hosting with environment-aware naming and configuration",
+        "Outputs expose the public frontend endpoint and non-secret deployment configuration",
+        "Documentation explains how the existing dist output is deployed without asserting that a live endpoint was created"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-002"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Provision Azure Container Apps API and Azure Container Registry",
+      "description": "Add Azure Container Registry and Azure Container Apps modules for a future Docker-based API, including stable endpoint outputs, image configuration, scaling defaults, and environment parameters.",
+      "acceptanceCriteria": [
+        "Bicep declares an Azure Container Registry and an Azure Container Apps environment and application boundary",
+        "The API image reference, ingress, scaling, and environment settings are configurable without committed secrets",
+        "Outputs expose the stable API endpoint and registry information required by deployment automation"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-002"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Provision blob assets and content delivery",
+      "description": "Add blob storage containers and a cost-aware content delivery layer for game assets, user-facing media, and other static assets, with explicit caching and endpoint outputs.",
+      "acceptanceCriteria": [
+        "Bicep declares blob storage and separates the required asset categories through documented containers or prefixes",
+        "A content delivery endpoint fronts blob-hosted assets with an explicit baseline caching policy",
+        "Outputs and documentation identify the upload targets and public content endpoint without claiming live upload evidence"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-002"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "Make the topology authentication-ready",
+      "description": "Define the infrastructure configuration and application-facing outputs needed to enable website authentication later without redesigning the frontend, API, or ingress topology.",
+      "acceptanceCriteria": [
+        "The selected authentication integration point and trust boundaries are documented",
+        "Bicep exposes non-secret authentication configuration placeholders and outputs needed by the frontend and API",
+        "Enabling authentication does not require replacing the selected frontend, API, asset, or public ingress boundaries"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-003",
+        "US-004"
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "Protect public ingress from bots and abuse",
+      "description": "Add the public ingress layer and environment-aware web application firewall, bot protection, and rate-limiting policy that fronts the appropriate public endpoints.",
+      "acceptanceCriteria": [
+        "The public ingress topology identifies which frontend, API, and asset endpoints are protected",
+        "Bicep declares baseline web application firewall, bot protection, and rate-limiting configuration",
+        "Protection settings are explicit, environment-aware, and documented with cost and operational tradeoffs"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-003",
+        "US-004",
+        "US-005"
+      ]
+    },
+    {
+      "id": "US-008",
+      "title": "Add identities, secrets, observability, and cost controls",
+      "description": "Complete the baseline with managed identities, secure configuration references, logs and metrics, resource tags, scaling limits, retention settings, and budget-conscious defaults.",
+      "acceptanceCriteria": [
+        "Workload access uses managed identities and least-privilege role assignments where supported",
+        "Secret values are absent from committed files and the secure runtime injection mechanism is documented",
+        "Diagnostics, retention, scaling limits, tags, and cost-aware defaults are explicit and environment-aware",
+        "Required operational and application deployment outputs are exposed without revealing secrets"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-003",
+        "US-004",
+        "US-005",
+        "US-006",
+        "US-007"
+      ]
+    },
+    {
+      "id": "US-009",
+      "title": "Document deployment and end-to-end verification",
+      "description": "Add repeatable preview, deployment, application publication, asset upload, and end-to-end verification procedures for the complete baseline stack without deploying from the Ralph iteration.",
+      "acceptanceCriteria": [
+        "Documentation selects subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed explicitly and describes preview and idempotent deployment commands",
+        "Continuous deployment workflows validate and deploy the Bicep and publish the frontend, API image, and assets using approved secret injection",
+        "The verification procedure covers frontend reachability, frontend-to-API access, authentication readiness, asset content delivery, ingress protection, outputs, and repeat deployment",
+        "Repository checks validate templates, configuration, and documentation without inventing live Azure acceptance evidence"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-008"
+      ]
+    }
+  ]
+}
