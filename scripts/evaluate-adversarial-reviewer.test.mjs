@@ -108,6 +108,19 @@ describe('adversarial benchmark corpus', () => {
     });
     expect(first.reportSha256).toBe(reportHash(first));
   });
+
+  it('measures agreement against the modal result without run-order bias', async () => {
+    const report = await fixtureReport();
+    const original = report.caseResults[0].runs[0];
+    const alternate = { ...original, resultFingerprint: 'b'.repeat(64) };
+    report.caseResults[0].runs = [alternate, original, original];
+    const first = computeMetrics(loadCorpus(repoRoot), report.caseResults).reviewerAgreementRate;
+    report.caseResults[0].runs.reverse();
+    const reversed = computeMetrics(loadCorpus(repoRoot), report.caseResults).reviewerAgreementRate;
+
+    expect(first).toBe(0.972973);
+    expect(reversed).toBe(first);
+  });
 });
 
 describe('calibration promotion gate', () => {
@@ -214,12 +227,14 @@ describe('calibration promotion gate', () => {
 
   it('rejects reviewer disagreement, excessive cost, latency, and errors', async () => {
     const report = await passingAzureReport();
-    const run = report.caseResults[0].runs[1];
-    run.error = true;
-    run.decision = 'ERROR';
-    run.severity = 'ERROR';
-    run.blockingCategories = [];
-    refreshRunFingerprint(run);
+    for (const result of report.caseResults.slice(0, 2)) {
+      const run = result.runs[1];
+      run.error = true;
+      run.decision = 'ERROR';
+      run.severity = 'ERROR';
+      run.blockingCategories = [];
+      refreshRunFingerprint(run);
+    }
     for (const result of report.caseResults) {
       for (const measuredRun of result.runs) {
         measuredRun.estimatedCostUsd = 0.2;
@@ -260,12 +275,12 @@ describe('calibration promotion gate', () => {
       modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
       modelVersion: '2025-04-14',
       promptVersion: '1.0.3',
-      toolsVersion: '1.0.0',
+      toolsVersion: '1.0.1',
       testFramework: 'vitest@4.1.10',
       schemaVersion: '1.0.0',
       policyVersion: '1.0.0',
       systemPolicyVersion: '1.0.0',
-      reviewerEngineConfigVersion: '1.0.0',
+      reviewerEngineConfigVersion: '1.0.1',
       benchmarkCorpusVersion: '1.0.4',
     });
     expect(fingerprint.components.systemPolicyContentHash).toMatch(/^[0-9a-f]{64}$/);

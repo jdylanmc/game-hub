@@ -1,14 +1,14 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "limits": {
-    "maxPacketBytes": 1048576,
-    "maxEvidenceBytes": 262144,
+    "maxPacketBytes": 2097152,
+    "maxEvidenceBytes": 786432,
     "maxMetadataBytes": 32768,
     "maxFileBytes": 32768,
     "maxPatchBytes": 65536,
     "diffContextLines": 3
   },
-  "productionRoots": ["src/", "games/", "packages/"],
+  "productionRoots": ["src/", "games/", "packages/", "scripts/"],
   "testPatterns": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.js", "**/*.test.mjs", "**/*.spec.ts", "**/*.spec.tsx"],
   "sections": {
     "contracts": {
@@ -43,7 +43,7 @@
     "validationConfig": {
       "mandatory": true,
       "maxFiles": 60,
-      "maxBytes": 98304,
+      "maxBytes": 196608,
       "patterns": [
         "config/**",
         "package.json",
@@ -56,7 +56,7 @@
     "relevantTests": {
       "mandatory": true,
       "maxFiles": 100,
-      "maxBytes": 131072,
+      "maxBytes": 524288,
       "patterns": [
         "src/**/*.test.ts",
         "src/**/*.test.tsx",

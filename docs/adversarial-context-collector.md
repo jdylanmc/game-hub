@@ -61,10 +61,12 @@ configuration SHA-256 hashes.
 `config/adversarial-agents/context-collector.json` versions:
 
 - total evidence, metadata, file, patch, and diff-context limits;
-- a hard one-megabyte serialized packet limit;
+- a hard two-megabyte serialized packet limit and a 768 KiB evidence budget,
+  sized to remain below the reviewed model token and cost ceilings;
 - mandatory contracts, manifests, generators, workflows, validation
   configuration, and existing-test patterns;
-- production and test classification.
+- production and test classification, including repository tooling under
+  `scripts/` as production behavior.
 
 Text diffs include parsed hunks with old and new line numbers. Repository files
 include their path and included line range. Renames, deletions, binary content,

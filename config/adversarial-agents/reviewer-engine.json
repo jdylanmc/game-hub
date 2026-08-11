@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "apiVersion": "2025-04-01-preview",
   "credentialScope": "https://cognitiveservices.azure.com/.default",
   "expectedDeploymentId": "game-hub-unit-test-reviewer",
@@ -8,11 +8,11 @@
   "systemPolicyFile": ".github/adversarial-agents/system-policy.md",
   "systemPolicyContentHash": "01ec5d3c5ea7fac5afe35d87a61051b3ebc25d7d7a880b6aeee236adb26c5386",
   "limits": {
-    "maxContextBytes": 1048576,
-    "maxInputTokens": 240000,
+    "maxContextBytes": 2097152,
+    "maxInputTokens": 500000,
     "maxOutputTokens": 8000,
     "maxOutputBytes": 131072,
-    "timeoutMs": 60000,
+    "timeoutMs": 120000,
     "maxRetries": 2,
     "retryBaseDelayMs": 250,
     "maxConcurrentReviews": 3,

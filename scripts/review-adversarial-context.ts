@@ -9,7 +9,7 @@ import { AdversarialFindingValidator } from './validate-adversarial-finding.ts';
 import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
 import { stableStringify } from './collect-adversarial-context.ts';
 
-const ENGINE_VERSION = '1.0.0';
+const ENGINE_VERSION = '1.0.1';
 
 type JsonObject = Record<string, unknown>;
 

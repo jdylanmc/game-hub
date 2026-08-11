@@ -277,11 +277,12 @@ function computeMetrics(corpus: BenchmarkCorpus, caseResults: CalibrationCaseRes
   let agreementComparisons = 0;
   let agreements = 0;
   for (const result of caseResults) {
-    const reference = result.runs[0]?.resultFingerprint;
-    for (const run of result.runs.slice(1)) {
-      agreementComparisons += 1;
-      if (run.resultFingerprint === reference) agreements += 1;
+    const fingerprintCounts = new Map<string, number>();
+    for (const run of result.runs) {
+      fingerprintCounts.set(run.resultFingerprint, (fingerprintCounts.get(run.resultFingerprint) ?? 0) + 1);
     }
+    agreementComparisons += result.runs.length;
+    agreements += Math.max(0, ...fingerprintCounts.values());
   }
   const runs = caseResults.flatMap((result) => result.runs);
   const totalCost = runs.reduce((sum, run) => sum + run.estimatedCostUsd, 0);

@@ -127,9 +127,9 @@ for (const section of requiredContextSections) {
   }
 }
 if (
-  collectorConfig.version !== '1.0.0' ||
-  collectorConfig.limits?.maxPacketBytes > 1048576 ||
-  collectorConfig.limits?.maxEvidenceBytes > 262144 ||
+  collectorConfig.version !== '1.0.1' ||
+  collectorConfig.limits?.maxPacketBytes > 2097152 ||
+  collectorConfig.limits?.maxEvidenceBytes > 786432 ||
   collectorConfig.limits?.maxFileBytes > 32768 ||
   collectorConfig.limits?.maxPatchBytes > 65536
 ) {
@@ -174,7 +174,7 @@ if (
   violations.push('Reviewer must use the pinned Azure Identity client and canonical command.');
 }
 if (
-  reviewerConfig.version !== '1.0.0' ||
+  reviewerConfig.version !== '1.0.1' ||
   reviewerConfig.expectedDeploymentId !== 'game-hub-unit-test-reviewer' ||
   reviewerConfig.credentialScope !== 'https://cognitiveservices.azure.com/.default' ||
   JSON.stringify(reviewerConfig.allowedEndpointSuffixes) !== JSON.stringify(['.openai.azure.com']) ||

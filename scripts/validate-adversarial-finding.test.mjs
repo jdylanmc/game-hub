@@ -20,7 +20,7 @@ function resultWithFinding() {
       promptVersion: '1.0.3',
       promptContentHash: promptHash,
       policyVersion: '1.0.0',
-      toolsVersion: '1.0.0',
+      toolsVersion: '1.0.1',
       subscriptionId: '11213dbd-39fe-46ba-87db-5f5e8c449aed',
       repositoryCommit: 'a'.repeat(40),
       timestamp: '2026-08-11T19:00:00Z',

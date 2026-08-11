@@ -6,7 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const COLLECTOR_VERSION = '1.0.0';
+const COLLECTOR_VERSION = '1.0.1';
 const PACKET_SCHEMA_VERSION = '1.0.0';
 
 type JsonObject = Record<string, unknown>;
@@ -444,7 +444,9 @@ function collectChanges(
       config.limits.maxPatchBytes,
     );
     const rawPatch = patchResult.output;
-    const binary = rawPatch.includes(0) || rawPatch.toString('utf8').includes('Binary files ');
+    const patchText = rawPatch.toString('utf8');
+    const binary =
+      rawPatch.includes(0) || /^Binary files .+ differ$/m.test(patchText) || /^GIT binary patch$/m.test(patchText);
     const requestedBytes = rawPatch.length;
     const allowedBytes = consume(requestedBytes, `${category}Diff`, filePath);
     const included = truncateUtf8(rawPatch, allowedBytes);

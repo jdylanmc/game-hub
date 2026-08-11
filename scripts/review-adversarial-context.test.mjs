@@ -358,7 +358,7 @@ describe('AdversarialReviewerEngine', () => {
       promptVersion: '1.0.3',
       promptContentHash: '9d5667c8233da813b06adc93eba7daf832339653b44c617a006df51b21697c68',
       policyVersion: '1.0.0',
-      toolsVersion: '1.0.0',
+      toolsVersion: '1.0.1',
       subscriptionId: '11213dbd-39fe-46ba-87db-5f5e8c449aed',
       repositoryCommit: headSha,
       timestamp: '2026-08-11T19:30:00Z',

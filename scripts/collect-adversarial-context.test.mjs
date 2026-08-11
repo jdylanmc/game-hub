@@ -150,6 +150,19 @@ describe('adversarial context collector', () => {
     );
   });
 
+  it('does not misclassify source text that mentions Git binary markers', () => {
+    const fixture = createRepository((repo) => {
+      write(repo, 'scripts/reviewer.ts', "export const marker = 'Binary files input and output differ';\n");
+      write(repo, 'scripts/reviewer.test.mjs', 'expect(marker).toContain("Binary files");\n');
+    });
+    const packet = collect(fixture);
+
+    expect(packet.status).toBe('READY');
+    expect(packet.changes.production[0]).toEqual(
+      expect.objectContaining({ newPath: 'scripts/reviewer.ts', binary: false, truncated: false }),
+    );
+  });
+
   it('blocks large mandatory files and patches with explicit truncation evidence', () => {
     const fixture = createRepository((repo) => {
       write(repo, 'src/feature.ts', `${'export const value = 1;\n'.repeat(100)}`);
@@ -227,6 +240,30 @@ describe('adversarial context collector', () => {
         expect.objectContaining({ kind: 'addition', oldLine: null, newLine: 1 }),
       ]),
     );
+  });
+
+  it('treats changed reviewer scripts as production evidence', () => {
+    const fixture = createRepository((repo) => {
+      write(repo, 'scripts/reviewer.ts', 'export const review = () => "PASS";\n');
+      write(repo, 'scripts/reviewer.test.mjs', 'expect(review()).toBe("PASS");\n');
+    });
+    const packet = collect(fixture);
+
+    expect(packet.status).toBe('READY');
+    expect(packet.changes.production).toEqual([
+      expect.objectContaining({
+        newPath: 'scripts/reviewer.ts',
+        category: 'production',
+        truncated: false,
+      }),
+    ]);
+    expect(packet.changes.tests).toEqual([
+      expect.objectContaining({
+        newPath: 'scripts/reviewer.test.mjs',
+        category: 'test',
+        truncated: false,
+      }),
+    ]);
   });
 
   it('blocks when mandatory repository context is missing', () => {
