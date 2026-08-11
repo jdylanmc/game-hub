@@ -10,3 +10,5 @@ storybook-static
 *.local
 *.tsbuildinfo
 docs/memories/**/iterations/*.log
+.ralph-test-work/
+.ralph-orchestration*.json

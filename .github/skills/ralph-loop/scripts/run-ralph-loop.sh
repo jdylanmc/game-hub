@@ -36,6 +36,16 @@ validate_plan() {
     (.branchName | type == "string" and length > 0) and
     (.baseBranch | type == "string" and length > 0) and
     (.continuousByBestJudgment | type == "boolean") and
+    ((.orchestration // {}) |
+      type == "object" and
+      ((.priority // 100) | type == "number") and
+      ((.dependencies // []) |
+        type == "array" and
+        all(.[]; type == "number" and . > 0 and floor == .)) and
+      ((.changeScopes // ["."]) |
+        type == "array" and
+        length > 0 and
+        all(.[]; type == "string" and length > 0))) and
     (.stories |
       type == "array" and
       length > 0 and
@@ -207,10 +217,11 @@ cleanup() {
   local status=$?
   trap - EXIT
 
-  if [[ "$LOCK_ACQUIRED" == true ]]; then
-    rm -f "$LOCK_DIR/pid" "$LOCK_DIR/host" "$LOCK_DIR/started-at"
-    rmdir "$LOCK_DIR" 2>/dev/null || true
-  fi
+  local lock_dir
+  for lock_dir in "${LOCK_DIRS[@]}"; do
+    rm -f "$lock_dir/pid" "$lock_dir/host" "$lock_dir/started-at" "$lock_dir/identity"
+    rmdir "$lock_dir" 2>/dev/null || true
+  done
 
   if [[ "$GH_ACCOUNT_SWITCHED" == true && -n "$ORIGINAL_GH_ACCOUNT" ]]; then
     gh auth switch \
@@ -225,12 +236,48 @@ cleanup() {
   exit "$status"
 }
 
+acquire_lock() {
+  local lock_name="$1"
+  local lock_identity="$2"
+  local lock_dir="$LOCK_ROOT/$lock_name.lock"
+  local lock_host=""
+  local lock_pid=""
+  local current_host
+  current_host="$(hostname)"
+
+  if ! mkdir "$lock_dir" 2>/dev/null; then
+    lock_host="$(cat "$lock_dir/host" 2>/dev/null || true)"
+    lock_pid="$(cat "$lock_dir/pid" 2>/dev/null || true)"
+
+    if [[ "$lock_host" == "$current_host" &&
+          "$lock_pid" =~ ^[1-9][0-9]*$ ]] &&
+        ! kill -0 "$lock_pid" 2>/dev/null; then
+      rm -f \
+        "$lock_dir/pid" \
+        "$lock_dir/host" \
+        "$lock_dir/started-at" \
+        "$lock_dir/identity"
+      rmdir "$lock_dir" 2>/dev/null ||
+        fail "A stale Ralph lock could not be removed: $lock_dir"
+      mkdir "$lock_dir" ||
+        fail "Could not acquire $lock_identity after removing stale state."
+    else
+      fail "Another Ralph Loop owns $lock_identity (host=${lock_host:-unknown}, pid=${lock_pid:-unknown})."
+    fi
+  fi
+
+  LOCK_DIRS+=("$lock_dir")
+  printf '%s\n' "$$" > "$lock_dir/pid"
+  hostname > "$lock_dir/host"
+  date -Iseconds > "$lock_dir/started-at"
+  printf '%s\n' "$lock_identity" > "$lock_dir/identity"
+}
+
 MEMORY_DIR=""
 MAX_ITERATIONS=10
 CONTINUOUS=false
 DRY_RUN=false
-LOCK_ACQUIRED=false
-LOCK_DIR=""
+LOCK_DIRS=()
 ORIGINAL_GH_ACCOUNT=""
 GH_ACCOUNT_SWITCHED=false
 PR_JSON=""
@@ -391,6 +438,13 @@ CURRENT_BRANCH="$(git branch --show-current)"
 [[ -z "$(git status --porcelain)" ]] ||
   fail "The worktree must be clean before starting."
 
+COMMON_DIR="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+PRIMARY_WORKTREE="$(dirname "$COMMON_DIR")"
+EXPECTED_WORKTREE_ROOT="$(dirname "$PRIMARY_WORKTREE")/$(basename "$PRIMARY_WORKTREE")-worktrees"
+EXPECTED_WORKTREE="$EXPECTED_WORKTREE_ROOT/issue-$ISSUE_NUMBER"
+[[ "$REPO_ROOT" == "$EXPECTED_WORKTREE" ]] ||
+  fail "Issue #$ISSUE_NUMBER must run in deterministic worktree $EXPECTED_WORKTREE, not $REPO_ROOT."
+
 while IFS= read -r workspace_manifest; do
   workspace_dir="$(dirname "$workspace_manifest")"
   [[ -f "$workspace_dir/AGENTS.md" ]] ||
@@ -400,28 +454,13 @@ done < <(find games packages -mindepth 2 -maxdepth 2 -name package.json -print |
 fetch_and_verify_remote_state
 load_pull_request
 
-LOCK_DIR="$(git rev-parse --git-path ralph-loop.lock)"
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  lock_host="$(cat "$LOCK_DIR/host" 2>/dev/null || true)"
-  lock_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
-  current_host="$(hostname)"
-
-  if [[ "$lock_host" == "$current_host" &&
-        "$lock_pid" =~ ^[1-9][0-9]*$ ]] &&
-      ! kill -0 "$lock_pid" 2>/dev/null; then
-    rm -f "$LOCK_DIR/pid" "$LOCK_DIR/host" "$LOCK_DIR/started-at"
-    rmdir "$LOCK_DIR" 2>/dev/null ||
-      fail "A stale Ralph lock could not be removed: $LOCK_DIR"
-    mkdir "$LOCK_DIR" ||
-      fail "Could not acquire the Ralph lock after removing stale state."
-  else
-    fail "Another Ralph Loop owns $LOCK_DIR (host=${lock_host:-unknown}, pid=${lock_pid:-unknown})."
-  fi
-fi
-LOCK_ACQUIRED=true
-printf '%s\n' "$$" > "$LOCK_DIR/pid"
-hostname > "$LOCK_DIR/host"
-date -Iseconds > "$LOCK_DIR/started-at"
+LOCK_ROOT="$COMMON_DIR/ralph-locks"
+mkdir -p "$LOCK_ROOT"
+BRANCH_LOCK_KEY="$(printf '%s' "$BRANCH_NAME" | git hash-object --stdin)"
+WORKTREE_LOCK_KEY="$(printf '%s' "$REPO_ROOT" | git hash-object --stdin)"
+acquire_lock "issue-$ISSUE_NUMBER" "issue #$ISSUE_NUMBER"
+acquire_lock "branch-$BRANCH_LOCK_KEY" "branch $BRANCH_NAME"
+acquire_lock "worktree-$WORKTREE_LOCK_KEY" "worktree $REPO_ROOT"
 
 mkdir -p "$ITERATIONS_DIR"
 git check-ignore -q "$ITERATIONS_DIR/.ralph-log-test.log" ||

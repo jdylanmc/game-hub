@@ -1,0 +1,19 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "baseBranch": "main",
+  "maxParallel": 2,
+  "maxIterations": 10,
+  "statusIntervalSeconds": 300,
+  "loops": [
+    {
+      "issueNumber": 40,
+      "branchName": "ralph/issue-40-first-independent-game",
+      "memoryDir": "docs/memories/40-first-independent-game"
+    },
+    {
+      "issueNumber": 41,
+      "branchName": "ralph/issue-41-second-independent-game",
+      "memoryDir": "docs/memories/41-second-independent-game"
+    }
+  ]
+}

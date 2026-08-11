@@ -1,8 +1,9 @@
 # Ralph Loop
 
 The Game Hub Ralph Loop runs one bounded unit of issue work in each fresh GitHub
-Copilot CLI context. It stores durable state in the repository so long-running
-development can continue without depending on conversation history.
+Copilot CLI context. Every issue runs on its own branch in its own deterministic
+Git worktree. A coordination process can therefore run independent issue loops
+concurrently without sharing uncommitted files or branch state.
 
 > **Audience:** Use this concept when preparing or supervising local autonomous
 > development for Game Hub.
@@ -45,6 +46,60 @@ Each iteration follows the same cycle:
 
 The local runner starts a new `copilot --prompt` process for every iteration. It
 does not resume a prior Copilot session.
+
+## Worktree Topology and Lifecycle
+
+The primary checkout is not an issue execution workspace. Each issue uses:
+
+```text
+<repository-parent>/
+├── game-hub/
+└── game-hub-worktrees/
+    ├── issue-40/  # ralph/issue-40-...
+    └── issue-41/  # ralph/issue-41-...
+```
+
+The path is determined only by the primary repository name and issue number, so
+the first iteration and every resume resolve to the same location. The
+preparation script creates a missing branch from current `origin/main`, resumes
+a matching clean worktree, and stops on branch ownership, path ownership,
+dirty-state, or remote-divergence conflicts.
+
+Worktree removal is always explicit and human initiated. Automation never
+deletes a dirty worktree or one whose work may be unmerged. This protects local
+evidence and prevents a cleanup policy from becoming an implicit merge policy.
+
+## Parallel Orchestration
+
+Each `plan.json` may include:
+
+```json
+{
+  "orchestration": {
+    "priority": 1,
+    "dependencies": [39],
+    "changeScopes": ["games/new-game"]
+  }
+}
+```
+
+Dependencies are GitHub Issue numbers. A dependency is satisfied only when the
+issue is closed by a pull request merged to the configured base branch. Change
+scopes are conservative repository-relative file or directory prefixes. Equal
+or prefix-related scopes overlap.
+
+The orchestrator loads each plan from its deterministic worktree, rejects
+duplicate issue, branch, or worktree ownership, and distills the proposed set
+into:
+
+- **eligible:** all dependencies merged, sorted by priority then issue number;
+- **blocked:** one or more dependencies are not merged;
+- **unsafe:** two eligible loops claim overlapping change scopes.
+
+Only eligible, non-overlapping loops launch, up to `maxParallel`. The
+orchestrator reports eligibility, starts, finishes, failures, and periodic
+running/queued state. A failed child stops new launches but does not terminate
+or discard already-running worktrees.
 
 ## GitHub Issues Define Scope
 
@@ -122,9 +177,15 @@ failed attempts in the issue memory.
    stops on branch divergence or pull request collisions.
 10. **GitHub API calls use the repository owner account.** The runner switches
     to `jdylanmc` and restores the account that was active at startup.
+11. **Issue worktrees are deterministic and exclusive.** A loop runs only at
+    `<repository>-worktrees/issue-<number>`.
+12. **Parallel eligibility is explicit.** Unmerged dependencies block work and
+    overlapping eligible change scopes stop orchestration.
 
-The runner enforces branch, clean-worktree, workspace guidance, tool, and memory
-preconditions before launching Copilot.
+The runner stores issue, branch, and worktree locks under the shared Git common
+directory. Independent issues acquire different locks and can run concurrently;
+duplicate ownership is rejected. A stale lock is reclaimed only when it belongs
+to the current host and its recorded process no longer exists.
 
 ## Natural Recovery
 
@@ -184,6 +245,30 @@ After the skill creates and commits the issue memory, it runs:
 
 Pass `--continuous` only after the user explicitly delegates unattended
 continuation for the selected issue.
+
+Prepare an issue worktree before writing its memory:
+
+```bash
+node .github/skills/ralph-loop/scripts/prepare-ralph-worktree.mjs \
+  --issue 27 --branch ralph/issue-27-repository-wide-code-linting
+```
+
+Run a reviewed parallel set with a manifest modeled on
+`.github/skills/ralph-loop/references/orchestration-manifest.example.json`:
+
+```bash
+node .github/skills/ralph-loop/scripts/orchestrate-ralph-loops.mjs \
+  --manifest .ralph-orchestration.json --max-parallel 2
+```
+
+Keep machine-local orchestration manifests uncommitted when they contain
+transient scheduling state.
+
+Run the focused orchestration simulations with:
+
+```bash
+node --test .github/skills/ralph-loop/tests/ralph-parallel.test.mjs
+```
 
 ## See Also
 

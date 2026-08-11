@@ -60,15 +60,23 @@ active GitHub CLI account.
 ## Ralph Loop
 
 The Ralph Loop completes one bounded story in a fresh GitHub Copilot CLI context,
-persists its state, and starts another context only when work remains. GitHub
-Issues define product scope. The selected issue, a story plan, progress, and
-iteration logs live under `docs/memories/<issue>-<slug>/`.
+persists its state, and starts another context only when work remains. Every
+issue owns the branch `ralph/issue-<number>-<slug>` and deterministic sibling
+worktree `<repository>-worktrees/issue-<number>`, including its first iteration.
+GitHub Issues define product scope. The selected issue, a story plan, progress,
+and iteration logs live under `docs/memories/<issue>-<slug>/` in that worktree.
+
+The Ralph orchestrator may run clean, dependency-free issue worktrees in
+parallel only when their declared repository-relative change scopes do not
+overlap. Never edit another issue's worktree, automatically remove a dirty or
+unmerged worktree, or reuse an issue branch for another loop.
 
 Follow [Ralph Loop](docs/ralph-loop.md) for the full model and safety rules.
 
 ### Iteration Rules
 
-1. Read the selected GitHub Issue, this file, `docs/architecture.md`, the
+1. Confirm the current path is the issue's deterministic worktree, then read
+   the selected GitHub Issue, this file, `docs/architecture.md`, the
    nearest workspace `AGENTS.md`, the issue memory, and recent Git history.
 2. Select one story that fits in one context window.
 3. Implement and verify that story.
