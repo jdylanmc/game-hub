@@ -173,3 +173,25 @@
   and expected diagnostic evidence so an unrelated infrastructure or setup
   failure cannot masquerade as proof of a working gate.
 - No blockers. US-007 is the next eligible story.
+
+## 2026-08-11 - US-007 complete
+
+- Added `yarn ralph:prioritize` to inspect open Ralph pull requests before new
+  issue ranking and route the oldest blocking pull request to its bound issue
+  memory.
+- Treated failed and absent check rollups as blocking, while leaving passing and
+  in-progress checks alone. The preflight rejects missing issue markers,
+  non-draft pull requests, and absent or ambiguous repository, issue, branch, or
+  base-branch memory identity.
+- Updated the Ralph skill and root guidance so new issue selection runs the
+  deterministic preflight and stops rather than guessing when ownership cannot
+  be established.
+- Files changed: Ralph selection and operating documentation, root agent
+  guidance, root package commands, the prioritization script and tests, and this
+  issue memory.
+- Checks passed: targeted Prettier and ESLint, 4 prioritization tests, live
+  `yarn ralph:prioritize`, and the complete `yarn validate` contract.
+- Reusable discovery: pull request recovery should derive issue ownership from
+  the committed Ralph marker, then validate every immutable plan identity field
+  before resuming memory.
+- No blockers. US-008 is the next eligible story.

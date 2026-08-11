@@ -103,8 +103,8 @@
         "The workflow stops safely when failure ownership or memory identity cannot be established"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a deterministic Ralph prioritization preflight that checks open Ralph pull requests before issue ranking, treats failed or absent checks as blocking, and requires exactly one matching repository, issue, branch, base branch, draft pull request, and memory identity.",
       "dependencies": ["US-004"]
     },
     {

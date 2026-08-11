@@ -97,6 +97,10 @@ persists its state, and starts another context only when work remains. GitHub
 Issues define product scope. The selected issue, a story plan, progress, and
 iteration logs live under `docs/memories/<issue>-<slug>/`.
 
+Before ranking an unassigned issue, run `yarn ralph:prioritize`. A blocking open
+Ralph pull request must map to exactly one matching issue memory; missing or
+ambiguous identity stops selection rather than falling through to new work.
+
 Follow [Ralph Loop](docs/ralph-loop.md) for the full model and safety rules.
 
 ### Iteration Rules

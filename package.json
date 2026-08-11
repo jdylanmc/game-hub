@@ -23,6 +23,7 @@
     "policy:workflow": "node scripts/check-workflow-policy.mjs",
     "policy:check": "yarn lint:suppressions && yarn policy:workflow",
     "security:audit": "yarn npm audit --all --recursive --severity high",
+    "ralph:prioritize": "node scripts/find-failing-ralph-pr.mjs jdylanmc/game-hub",
     "test:ci-fail-closed": "node scripts/prove-ci-fail-closed.mjs",
     "test:integrity": "node scripts/check-test-integrity.mjs",
     "test": "yarn test:coverage",
