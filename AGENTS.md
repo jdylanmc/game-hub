@@ -34,6 +34,12 @@ yarn build-storybook
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
 
+## Test Integrity
+
+Keep at least one deterministic test under each of `src/`, `games/`, and
+`packages/`. Do not commit focused, skipped, todo, or quarantined tests; the root
+test command rejects those states and enforces coverage thresholds.
+
 ## GitHub CLI Account
 
 GitHub CLI stores both `dylanmccurry_microsoft` and `jdylanmc` credentials for

@@ -68,3 +68,23 @@
   `yarn test`, `yarn test:coverage`, `yarn typecheck`, `yarn build`, and
   `yarn build-storybook`.
 - No blockers. US-002 is the next eligible story.
+
+## 2026-08-11 - US-002 complete
+
+- Added deterministic tests for host catalog validation and state, the
+  GameStageStatus component, the typed game-contract lifecycle, and FloppyBird
+  host-integration metadata.
+- Added a fail-closed test-integrity command requiring tests under `src/`,
+  `games/`, and `packages/` while rejecting focused, skipped, todo, and
+  quarantined tests. Vitest now rejects empty suites and focused tests.
+- Enforced initial host coverage thresholds of 85% for lines, functions, and
+  statements and 75% for branches. The completed suite reports 96.61% lines,
+  100% functions, 96.72% statements, and 92.59% branches.
+- Files changed: root test configuration and guidance, the integrity script,
+  host/component/contract/game test files, test setup, and this issue memory.
+- Checks passed: `yarn validate`, including immutable install, format, lint,
+  coverage, typecheck, production build, and Storybook build.
+- Reusable discovery: every repository test suite must retain representative
+  tests in the host, game, and shared-package boundaries so suite loss fails
+  before Vitest runs.
+- No blockers. US-003 is the next eligible story.

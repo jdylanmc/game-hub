@@ -31,8 +31,8 @@
         "Focused, skipped, quarantined, or unexpectedly absent tests fail validation"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added deterministic host catalog and component tests, a typed game-contract lifecycle test, and FloppyBird manifest integration coverage. Root tests now require suites under src, games, and packages; reject focused, skipped, todo, and quarantined tests; disallow empty/only suites in Vitest; and enforce 85% line/function/statement plus 75% branch coverage over the initial host coverage surface.",
       "dependencies": ["US-001"]
     },
     {
