@@ -1,0 +1,152 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 22,
+  "issueTitle": "Gate All Pull Requests with Gilfoyle Security Architect",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/22",
+  "branchName": "ralph/issue-22-gate-all-pull-requests-with-gilfoyle-security-architect",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 0,
+    "dependencies": [
+      30
+    ],
+    "changeScopes": [
+      ".github",
+      "config",
+      "docs",
+      "infra",
+      "package.json",
+      "scripts",
+      "yarn.lock"
+    ]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Define the Gilfoyle security contract",
+      "description": "Define Gilfoyle's tunable prompt, security taxonomy, threat model, structured findings, evidence requirements, version attribution, and blocking policy on the shared adversarial-agent schema.",
+      "acceptanceCriteria": [
+        "Gilfoyle owns a dedicated human-editable prompt file with an explicit version and content hash",
+        "Prompt, schema, policy, tools, and model versions are independent and attributable",
+        "The policy blocks high and critical findings and uncertainty about security-control bypasses while medium findings remain advisory",
+        "Findings require confidence, category, exact citations, exploit or failure scenario, impact, remediation, and verification guidance"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "",
+      "dependencies": []
+    },
+    {
+      "id": "US-002",
+      "title": "Collect security context and trust boundaries",
+      "description": "Extend the shared bounded collector with security-specific trust boundaries, data flows, authentication, authorization, dependencies, workflows, Bicep, containers, configuration, contracts, and manifests.",
+      "acceptanceCriteria": [
+        "Security context covers every issue-required repository surface without executing pull-request code",
+        "Trust boundaries, privileged identities, data sources, sinks, and control changes are explicit",
+        "Untrusted content cannot alter Gilfoyle's prompt, tools, policy, or workflow behavior",
+        "Missing mandatory security context produces a blocking configuration result"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-001"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Integrate deterministic security evidence",
+      "description": "Feed Gilfoyle versioned evidence from deterministic security checks such as CodeQL, dependency review and audit, secret detection, workflow policy, Bicep analysis, and container scanning where applicable.",
+      "acceptanceCriteria": [
+        "Deterministic security checks run independently with immutable actions and least privilege",
+        "Gilfoyle cannot override, downgrade, or mask deterministic failures",
+        "Unsupported repository surfaces are explicit rather than silently skipped",
+        "Evidence inputs remain attributable and bounded"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-002"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Implement and calibrate Gilfoyle",
+      "description": "Implement the security-architect reviewer, prompt-injection defenses, seeded vulnerable and safe benchmarks, severity calibration, false-positive evaluation, and bounded cost and latency.",
+      "acceptanceCriteria": [
+        "Benchmarks cover authorization bypass, injection, secret exposure, workflow escalation, dependency risk, Bicep privilege, archive traversal, unsafe deserialization, race conditions, and cleanup leaks",
+        "High and critical seeded issues and control-bypass uncertainty are blocked at the promotion threshold",
+        "Safe examples and medium advisory cases remain within the approved false-positive threshold",
+        "Prompt changes invalidate and rerun Gilfoyle calibration",
+        "Model, tool, timeout, malformed-output, and service failures fail closed"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-001",
+        "US-002",
+        "US-003"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Register the Gilfoyle GitHub pipeline",
+      "description": "Register Gilfoyle as an isolated required check on the shared Azure runtime with fork safety, retained structured evidence, annotations, bounded concurrency, and no shared mutable state with other agents.",
+      "acceptanceCriteria": [
+        "Every pull request receives one Gilfoyle check and relevant pushes rerun it",
+        "Forks receive no secrets, privileged credentials, unrestricted tools, or executable workflow control",
+        "The check publishes concise annotations and a retained validated JSON artifact",
+        "Gilfoyle has an independent prompt, policy, calibration, check name, and exception scope",
+        "Shared max-three concurrency cannot let one agent suppress or impersonate another"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-004"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "Add emergency exception and outage handling",
+      "description": "Implement auditable narrow emergency exceptions, service-outage behavior, retry boundaries, diagnostics, and administrator procedures.",
+      "acceptanceCriteria": [
+        "Exceptions require authorized owner, issue, exact finding fingerprint, rationale, narrow scope, audit evidence, and expiry within 24 hours",
+        "Expired, malformed, unrelated, reused, or overly broad exceptions fail closed",
+        "Service outages, timeouts, cancellation, and invalid output remain blocking",
+        "Retries apply only to identified transient infrastructure failures and preserve original evidence",
+        "Administrator emergency actions are documented and auditable"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-005"
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "Deploy and enforce Gilfoyle",
+      "description": "Deploy and calibrate Gilfoyle end to end, prove fail-closed behavior, integrate Ralph remediation, document operations and prompt tuning, and require the promoted check on main.",
+      "acceptanceCriteria": [
+        "End-to-end review, annotations, artifact, calibration, outage, and exception paths are verified",
+        "Policy tests reject missing, weakened, canceled, timed-out, malformed, bypassed, or uncalibrated Gilfoyle checks",
+        "Main branch protection requires Gilfoyle alongside existing required checks",
+        "Ralph treats Gilfoyle findings as blocking and iterates until resolved",
+        "Developers can tune the versioned prompt and reproduce findings locally",
+        "Every issue acceptance criterion is reconciled to live implementation evidence"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "",
+      "dependencies": [
+        "US-004",
+        "US-005",
+        "US-006"
+      ]
+    }
+  ]
+}
