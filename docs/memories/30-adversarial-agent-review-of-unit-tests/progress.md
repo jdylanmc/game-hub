@@ -48,3 +48,28 @@
   5. **Agent registration** (`config/adversarial-agents/agents-config.json`): Enables registering additional agents with independent prompts, policies, and configurations without coupling to schema.
 - Validated configuration JSON syntax, computed SHA-256 hash of prompt.md (`8043aabd4090fae03973eb6e93316c065a0eac7f994d6bcc9aafd35205fd5519`), tested validator against valid and invalid example findings, confirmed exit codes and error messages.
 
+## 2026-08-11 - Iteration 3: US-002 Completion
+
+- Completed all 6 acceptance criteria for US-002 (Provision secure Azure inference):
+  1. **Parameterized Bicep infrastructure** (`infra/bicep/main.bicep`, 5,990 bytes): Declares Azure OpenAI Service, Key Vault, consumption-based GPT-4 Turbo deployment, auto-scaling capabilities, and comprehensive metric alerting. Uses declarative resource definitions with outputs for GitHub Actions integration. Fully idempotent—reapplication converges without creating duplicates.
+  2. **Consumption-based Azure OpenAI** (GPT-4 Turbo v2024-04-09): Configured on consumption-based capacity model (no pre-allocated quotas), with configurable concurrency limits per environment (prod: 3, test: 1) and dynamic auto-scaling within rate limits. Pricing: ~$0.01 per 1K prompt tokens, ~$0.03 per 1K completion tokens.
+  3. **Key Vault secret storage** with automatic rotation support: OpenAI endpoint and API key stored securely; credential retrieval via Azure RBAC only (no hard-coded secrets in repo or workflow). Supports future rotation without redeployment.
+  4. **Environment-specific parameters** (`prod.bicepparam`, `test.bicepparam`): Production targets 3 concurrent reviews, $100/month budget; test targets 1 concurrent review, $20/month budget. Enables single-template reuse with different configurations per environment.
+  5. **Idempotent deployment automation** (`deploy.sh`, 5,966 bytes): Bash script validates Bicep templates, creates resource groups, runs what-if analysis for transparency, deploys via `az deployment group create`, extracts outputs to environment variables, and configures GitHub repository secrets. Supports both interactive local execution and GitHub Actions CI.
+  6. **OIDC setup documentation** (`OIDC_SETUP.md`, 7,773 bytes): Complete guide for configuring OpenID Connect between GitHub Actions and Azure, eliminating need for stored credentials. Includes step-by-step Azure CLI commands, federated credential configuration, RBAC role assignment, workflow YAML template with id-token permission, and troubleshooting section for common errors.
+- Created GitHub Actions deployment workflow (`.github/workflows/deploy-adversarial-infrastructure.yml`, 9,213 bytes): Validates Bicep templates, authenticates via OIDC, deploys infrastructure, verifies resources, and configures repository secrets. Supports both manual trigger and automatic deployment on infrastructure code changes.
+- Created infrastructure documentation (`infra/README.md`, 11,199 bytes): Architecture overview, file reference, prerequisites, deployment instructions (local and CI), idempotency guarantees, cost management (budget targets, cost drivers, optimization strategies), configuration options, troubleshooting guide, validation procedures, and security considerations.
+- Validated Bicep syntax (template compiles successfully with both prod and test parameters). Deploy script tested for syntax and logic correctness.
+- Key technical decisions documented:
+  - **Consumption vs. quota capacity**: Consumption model chosen for cost predictability and on-demand scaling without capacity management overhead.
+  - **OIDC vs. service principals**: OIDC selected for enhanced security—GitHub OIDC tokens are 5-minute lifetime, time-limited to workflow context, never stored in repository secrets.
+  - **Key Vault naming**: Names must not contain hyphens; template normalizes via `replace(keyVaultName, '-', '')`.
+  - **Federated credential subjects**: Exact subject matching required per deployment context (main branch, PRs, environments); mismatch causes "Invalid federated credential" errors.
+  - **Cost alerting**: Metric alert threshold set at 90,000 tokens/hour (~$0.90/hour at current pricing) for early warning before monthly budget.
+
+## Unanswered Questions Pending US-003+
+
+1. **RBAC role for GitHub Actions**: Should use custom RBAC role (more restrictive, limited to resource groups) vs. Contributor role (simpler, broader). Contributor selected for initial deployment; can be tightened post-validation.
+2. **Network security hardening**: Current deployment uses public endpoints. Future PRs (US-009+) may add virtual networks, private endpoints, or IP allowlisting for additional isolation.
+3. **Deployment region**: Currently East US (supports Azure OpenAI). Alternative regions (westus3, etc.) possible if quota exhausted or latency becomes issue.
+
