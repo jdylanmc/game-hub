@@ -61,6 +61,12 @@ Git objects and explicit issue/pull-request metadata. It treats every collected
 value as inert untrusted data and must never check out, import, install, build,
 test, or execute pull-request content.
 
+`yarn review:adversarial` consumes only a ready context packet. Keep its
+versioned system policy separate from the human review prompt, authenticate with
+Microsoft Entra ID, register no model tools, restrict Azure OpenAI destinations,
+and return schema-valid blocking errors whenever bounded execution cannot
+produce a policy-safe verdict.
+
 `yarn policy:check` rejects unapproved lint suppressions and weakened workflow
 invariants. Record an exceptional suppression with a specific rationale in
 `config/lint-suppressions.json`. `yarn bundle:check` enforces the reviewed

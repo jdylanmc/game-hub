@@ -77,6 +77,7 @@ version.
 | `@types/react` | `18.3.20` | React TypeScript declarations | [DefinitelyTyped package](https://www.npmjs.com/package/@types/react) |
 | `@types/react-dom` | `18.3.5` | React DOM TypeScript declarations | [DefinitelyTyped package](https://www.npmjs.com/package/@types/react-dom) |
 | `@types/three` | `0.185.4` | Three.js TypeScript declarations used by the root build | [DefinitelyTyped package](https://www.npmjs.com/package/@types/three) |
+| `@azure/identity` | `4.13.1` | Microsoft Entra ID authentication for the Azure adversarial reviewer engine | [Azure Identity for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/identity-readme) |
 
 Keep Three.js itself declared by each game workspace. Do not move it into the
 root website dependency list.

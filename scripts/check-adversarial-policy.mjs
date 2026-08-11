@@ -1,4 +1,5 @@
 import { promises as fs } from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +15,11 @@ const collectorConfig = JSON.parse(
 );
 const collector = await fs.readFile(path.join(root, 'scripts/collect-adversarial-context.ts'), 'utf8');
 const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
+const reviewerConfig = JSON.parse(
+  await fs.readFile(path.join(root, 'config/adversarial-agents/reviewer-engine.json'), 'utf8'),
+);
+const reviewerEngine = await fs.readFile(path.join(root, 'scripts/review-adversarial-context.ts'), 'utf8');
+const systemPolicy = await fs.readFile(path.join(root, reviewerConfig.systemPolicyFile), 'utf8');
 const violations = [];
 
 const requiredWorkflowFragments = [
@@ -127,6 +133,58 @@ if (spawnedCommands.length === 0 || spawnedCommands.some((command) => command !=
 }
 if (packageJson.scripts?.['context:collect'] !== 'node scripts/collect-adversarial-context.ts') {
   violations.push('Missing canonical local context collection command.');
+}
+
+if (
+  packageJson.devDependencies?.['@azure/identity'] !== '4.13.1' ||
+  packageJson.scripts?.['review:adversarial'] !== 'node scripts/review-adversarial-context.ts'
+) {
+  violations.push('Reviewer must use the pinned Azure Identity client and canonical command.');
+}
+if (
+  reviewerConfig.version !== '1.0.0' ||
+  reviewerConfig.expectedDeploymentId !== 'game-hub-unit-test-reviewer' ||
+  reviewerConfig.credentialScope !== 'https://cognitiveservices.azure.com/.default' ||
+  JSON.stringify(reviewerConfig.allowedEndpointSuffixes) !== JSON.stringify(['.openai.azure.com']) ||
+  reviewerConfig.limits?.maxConcurrentReviews !== 3 ||
+  reviewerConfig.limits?.maxOutputTokens > 8000 ||
+  reviewerConfig.limits?.maxOutputBytes > 131072 ||
+  reviewerConfig.limits?.maxRetries > 2 ||
+  reviewerConfig.limits?.maxEstimatedCostUsd > 0.25 ||
+  reviewerConfig.allowedTools?.length !== 0
+) {
+  violations.push('Reviewer engine identity, destination, or execution limits were weakened.');
+}
+const systemPolicyHash = crypto.createHash('sha256').update(systemPolicy).digest('hex');
+if (systemPolicyHash !== reviewerConfig.systemPolicyContentHash) {
+  violations.push('Reviewer system policy hash does not match its versioned file.');
+}
+const requiredReviewerFragments = [
+  'new DefaultAzureCredential()',
+  'Authorization: `Bearer ${token.token}`',
+  '`UNTRUSTED_EVIDENCE_${evidenceHash}`',
+  "role: 'system'",
+  "role: 'developer'",
+  "role: 'user'",
+  'allowedTools: []',
+  'new ReviewSemaphore',
+  "'POLICY_VALIDATION_FAILED'",
+  "'SCHEMA_VALIDATION_FAILED'",
+  "'MISSING_OUTPUT'",
+  "'MODEL_BUDGET_EXCEEDED'",
+  '[408, 429, 500, 502, 503, 504]',
+];
+for (const fragment of requiredReviewerFragments) {
+  if (!reviewerEngine.includes(fragment)) {
+    violations.push(`Missing reviewer engine invariant: ${fragment}`);
+  }
+}
+if (
+  reviewerEngine.includes("'api-key'") ||
+  reviewerEngine.includes('"api-key"') ||
+  reviewerEngine.includes('tools: request.allowedTools')
+) {
+  violations.push('Reviewer transport must not use API keys or expose model tools.');
 }
 
 if (violations.length > 0) {

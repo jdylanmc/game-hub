@@ -24,6 +24,7 @@
     "policy:adversarial": "node scripts/check-adversarial-policy.mjs",
     "policy:check": "yarn lint:suppressions && yarn policy:workflow && yarn policy:adversarial",
     "context:collect": "node scripts/collect-adversarial-context.ts",
+    "review:adversarial": "node scripts/review-adversarial-context.ts",
     "security:audit": "yarn npm audit --all --recursive --severity high",
     "ralph:prioritize": "node scripts/find-failing-ralph-pr.mjs jdylanmc/game-hub",
     "test:ci-fail-closed": "node scripts/prove-ci-fail-closed.mjs",
@@ -45,6 +46,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@azure/identity": "4.13.1",
     "@eslint/js": "9.39.5",
     "@storybook/addon-a11y": "^10.5.7",
     "@storybook/react-vite": "^10.5.7",

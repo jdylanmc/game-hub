@@ -162,3 +162,45 @@
   and 11 fail-closed continuous-integration probes.
 - US-003 is passed. US-004 and later stories were not advanced. Model prompt
   construction, invocation, and enforcement remain future-story work.
+
+## 2026-08-11 - Iteration 5: US-004 completion
+
+- Added the pinned Azure Identity 4.13.1 client and
+  `scripts/review-adversarial-context.ts`. The live transport obtains a
+  Microsoft Entra ID token and sends only bearer authentication; Azure OpenAI
+  API-key environment variables are rejected.
+- Added strict environment validation for the configured
+  `game-hub-unit-test-reviewer` deployment and HTTPS
+  `*.openai.azure.com` destination. Unit tests use injected fake transports and
+  require no deployed resource, identity, credential, or network.
+- Added an independently versioned and hashed system policy. Requests keep that
+  system policy, the human-tunable reviewer prompt, and canonical
+  hash/length-delimited untrusted evidence in separate system, developer, and
+  user messages. The model receives no tools.
+- Added versioned engine configuration for context/input/output bytes and
+  tokens, 60-second timeout, two identified-transient retries, maximum
+  three-review concurrency, allowed destination, credential scope, deployment,
+  and a conservative $0.25 per-review estimated cost ceiling.
+- Retries apply only to transient network errors and HTTP 408, 429, 500, 502,
+  503, and 504. Every retry reuses the same deeply frozen request and original
+  evidence. Timeout is enforced independently of transport cooperation.
+- Added strict JSON/result validation, schema and policy mismatch rejection,
+  deterministic finding deduplication, and policy-derived counts/verdicts.
+  Timeout, network/model, identity, malformed JSON, missing output/usage,
+  schema, policy, context, output, token, and cost failures return schema-valid
+  blocking `ERROR` results.
+- Added seventeen deterministic tests covering prompt injection, bearer-only
+  Microsoft Entra ID transport, malformed/missing/schema-invalid output,
+  PASS-with-blocking mismatch, timeout, transient/nontransient retries, bounded
+  network retry exhaustion, model-reported errors, duplicate findings,
+  context/token/cost limits, maximum-three concurrency, destination/deployment
+  validation, API-key rejection, and successful attribution.
+- Added `yarn review:adversarial`, policy checks, official Microsoft references,
+  architecture dependency attribution, and operating documentation.
+- Passed the complete deterministic suite in cheapest-to-most-expensive order:
+  immutable install, formatting, lint, policy, generation, typecheck, security
+  audit, 56 tests with coverage, production build, bundle budgets, Storybook,
+  and 11 fail-closed continuous-integration probes.
+- US-004 is passed. US-005 and later stories were not advanced. Calibration,
+  GitHub publication, workflow orchestration, deployment, and enforcement
+  remain later-story work.
