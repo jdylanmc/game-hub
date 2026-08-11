@@ -84,3 +84,17 @@
 - Added a hard issue and plan requirement that adversarial model workflows run
   only after the complete deterministic workflow succeeds for the same head
   commit.
+
+## 2026-08-11 - Adversarial review blocked PR #35
+
+- Reviewed head `dfe60d561f97f0203de62367a63f7350052f4324` with an independent
+  code-review agent after deterministic checks.
+- Reopened US-001 because the schema and validator can accept incomplete or
+  policy-inconsistent PASS results.
+- Reopened US-002 because the deployment uses invalid action references, the
+  wrong model, invalid Bicep scope/environment inputs, unenforced budget and
+  concurrency settings, a privileged feature-branch deployment path, static
+  model keys, and overly broad Azure roles.
+- Published the blocking findings on draft pull request #35. No merge is
+  permitted until a new head commit fixes the findings and receives a fresh
+  adversarial review.

@@ -24,8 +24,8 @@
         "The contract supports registering additional independent adversarial agents without coupling their prompts or verdicts"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Delivered all 5 acceptance criteria: (1) schema.json defines versioned finding, verdict, severity, confidence, citations, attribution; (2) unit-test-reviewer/prompt.md human-editable markdown with version 1.0.0 and SHA-256 hash; (3) schema 1.0.0, policy 1.0.0, agents 1.0.0, prompt 1.0.0, model deployment all versioned independently; (4) TypeScript validator enforces schema compliance, actionability (citations, scenarios, suggested tests), policy thresholds; (5) agents-config.json registry enables adding agents independently. Tested with valid/invalid example findings.",
+      "passes": false,
+      "notes": "Adversarial review of head dfe60d5 reopened this story: the schema does not strictly require attribution and actionable fields or reject undeclared properties, and the validator can accept PASS with policy-blocking findings. Derive verdict/counts from validated findings and enforce strict schema requirements before marking complete.",
       "dependencies": []
     },
     {
@@ -40,8 +40,8 @@
         "Reapplying the deployment converges without duplicate resources"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Delivered all 5 acceptance criteria: (1) Bicep template (infra/bicep/main.bicep) with GPT-4 Turbo, Key Vault, monitoring, parameterized for prod/test environments; prod.bicepparam (3 concurrent, $100 budget) and test.bicepparam (1 concurrent, $20 budget) configured; (2) Consumption-based GPT-4 Turbo v2024-04-09 deployed with configurable concurrency per environment; (3) GitHub Actions workflow uses OIDC via federated credentials (no stored long-lived secrets), least-privilege access to resource groups; (4) Budget alerting via metric thresholds (90K tokens/hour ≈ $0.90/hour), monthly budgets target $100 prod/$20 test, documentation (README.md, OIDC_SETUP.md) complete; (5) Bicep deployment is fully idempotent via declarative resource definitions and `az deployment group create` convergence. Files: infra/bicep/main.bicep (5990B), prod.bicepparam (345B), test.bicepparam (405B), deploy.sh (5966B), OIDC_SETUP.md (7773B), README.md (11199B), .github/workflows/deploy-adversarial-infrastructure.yml (9213B). All templates validated, deployment script tested for syntax.",
+      "passes": false,
+      "notes": "Adversarial review of head dfe60d5 reopened this story: action SHAs are invalid; the wrong model is deployed; Bicep scope/environment inputs are undeployable; concurrency and budget are not enforced; feature-branch deployment is privileged; static API keys and broad roles violate keyless least privilege. Replace with verified actions, GPT-4.1 mini, subscription-scoped modular Bicep, real budget/concurrency controls, protected deployment, and Entra ID inference.",
       "dependencies": ["US-001"]
     },
     {
