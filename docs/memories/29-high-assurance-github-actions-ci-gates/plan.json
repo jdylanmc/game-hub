@@ -75,8 +75,8 @@
         "Tests and builds use documented deterministic seeds where randomness applies"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added reviewed raw-byte budgets for the production entry, async chunks, JavaScript, stylesheets, and total bundle; explicit lint-suppression approvals; a fail-closed workflow invariant check; and deterministic Vitest shuffle seed 29005. The canonical local and continuous integration contracts run the same policy and bundle commands.",
       "dependencies": ["US-004"]
     },
     {

@@ -19,17 +19,21 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
+    "lint:suppressions": "node scripts/check-lint-suppressions.mjs",
+    "policy:workflow": "node scripts/check-workflow-policy.mjs",
+    "policy:check": "yarn lint:suppressions && yarn policy:workflow",
     "security:audit": "yarn npm audit --all --recursive --severity high",
     "test:integrity": "node scripts/check-test-integrity.mjs",
     "test": "yarn test:coverage",
-    "test:coverage": "yarn test:integrity && vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=test-results/junit.xml",
+    "test:coverage": "yarn test:integrity && vitest run --sequence.shuffle --sequence.seed=29005 --coverage --reporter=default --reporter=junit --outputFile.junit=test-results/junit.xml",
     "build": "yarn generate:games && tsc -b && vite build",
+    "bundle:check": "node scripts/check-bundle-budgets.mjs",
     "build-storybook": "yarn generate:games && storybook build",
     "generate:mamba-storybook": "node scripts/generate-mamba-storybook.mjs",
     "preview": "vite preview",
     "storybook": "yarn generate:games && storybook dev -p 6006",
     "typecheck": "yarn generate:games && tsc -b",
-    "validate": "yarn install:check && yarn format:check && yarn lint && yarn security:audit && yarn test:coverage && yarn generate:check && yarn typecheck && yarn build && yarn build-storybook"
+    "validate": "yarn install:check && yarn format:check && yarn lint && yarn policy:check && yarn security:audit && yarn test:coverage && yarn generate:check && yarn typecheck && yarn build && yarn bundle:check && yarn build-storybook"
   },
   "dependencies": {
     "@game-hub/game-contract": "workspace:*",

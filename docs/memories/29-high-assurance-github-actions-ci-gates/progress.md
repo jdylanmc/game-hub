@@ -4,6 +4,10 @@
 
 - Root validation commands are the canonical local and continuous integration
   entry points.
+- Production bundle budgets use raw manifest-referenced bytes so local and
+  continuous integration comparisons remain deterministic.
+- Exceptional ESLint suppressions require an exact file, line, directive, and
+  rationale in `config/lint-suppressions.json`.
 - Prettier and ESLint cover repository-authored code while excluding imported
   Mamba source snapshots and generated outputs.
 - Azure resources are optional for this issue and must not be created without a
@@ -125,3 +129,25 @@
   commands used locally, and make evidence upload run unconditionally so failed
   gates preserve prior logs.
 - No blockers. US-005 is the next eligible story.
+
+## 2026-08-11 - US-005 complete
+
+- Added production entry, async chunk, JavaScript, stylesheet, and total
+  raw-byte budgets backed by the Vite manifest, with a required post-build
+  `yarn bundle:check` gate.
+- Added explicit lint-suppression approvals and continuous integration workflow
+  policy checks for required triggers, permissions, concurrency, timeout,
+  commands, evidence, retention, immutable actions, and forbidden weakening.
+- Made test ordering reproducibly shuffled with seed `29005` and added the
+  policy and bundle commands to identical local and continuous integration
+  validation sequences.
+- Files changed: root quality scripts and configuration, Vite and package
+  configuration, the continuous integration workflow, root guidance, and this
+  issue memory.
+- Checks passed: deliberate unapproved suppression, one-byte bundle budget, and
+  zero-timeout workflow probes each failed as expected; `yarn validate` passed
+  the complete repository contract.
+- Reusable discovery: Vite's generated manifest distinguishes the startup entry
+  from lazy chunks and provides a deterministic inventory for raw-byte budget
+  enforcement.
+- No blockers. US-006 is the next eligible story.

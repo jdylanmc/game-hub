@@ -45,6 +45,9 @@ jobs:
       - name: Lint repository
         run: yarn lint 2>&1 | tee continuous-integration-evidence/lint.log
 
+      - name: Verify repository policy
+        run: yarn policy:check 2>&1 | tee continuous-integration-evidence/policy.log
+
       - name: Audit dependencies
         run: yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log
 
@@ -59,6 +62,9 @@ jobs:
 
       - name: Build production website
         run: yarn build 2>&1 | tee continuous-integration-evidence/build.log
+
+      - name: Verify bundle budgets
+        run: yarn bundle:check 2>&1 | tee continuous-integration-evidence/bundle.log
 
       - name: Build Storybook
         run: yarn build-storybook 2>&1 | tee continuous-integration-evidence/storybook.log

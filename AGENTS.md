@@ -30,6 +30,8 @@ yarn typecheck
 yarn build
 yarn build-storybook
 yarn generate:check
+yarn policy:check
+yarn bundle:check
 ```
 
 When lint and test scripts exist, treat them as required gates for every Ralph
@@ -46,6 +48,13 @@ commands as local development. Keep action references pinned to full commit
 SHAs, preserve least-privilege permissions and fork safety, and retain the
 workflow's logs, test results, coverage, production build, and Storybook
 evidence.
+
+`yarn policy:check` rejects unapproved lint suppressions and weakened workflow
+invariants. Record an exceptional suppression with a specific rationale in
+`config/lint-suppressions.json`. `yarn bundle:check` enforces the reviewed
+raw-byte entry, async chunk, JavaScript, stylesheet, and total budgets in
+`config/bundle-budgets.json` after `yarn build`; budget increases require an
+explained review.
 
 ## Test Integrity
 
