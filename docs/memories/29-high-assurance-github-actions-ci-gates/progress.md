@@ -32,3 +32,16 @@
   installed. Yarn did not change `package.json` or `yarn.lock`.
 - US-001 remains unpassed. Retry the dependency installation in the next
   iteration after registry connectivity is restored.
+
+## 2026-08-11 - US-001 blocked retry
+
+- Retried the exact development dependency installation for Prettier, ESLint,
+  TypeScript ESLint, React lint plugins, Vitest, V8 coverage, Testing Library,
+  and JSDOM.
+- Every registry resolution again failed with `RequestError: read ENOTCONN`;
+  Yarn made no changes to `package.json` or `yarn.lock`.
+- Files changed:
+  `docs/memories/29-high-assurance-github-actions-ci-gates/progress.md`.
+- Required quality checks remain unavailable because the toolchain cannot be
+  installed. US-001 remains unpassed and the next iteration must retry after
+  registry connectivity is restored.
