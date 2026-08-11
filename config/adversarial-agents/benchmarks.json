@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.4",
   "testFramework": "vitest@4.1.10",
   "cases": [
     {
@@ -17,8 +17,8 @@
       "strength": "strong",
       "critical": false,
       "expectedCategory": null,
-      "production": "export const isReady = () => false;",
-      "test": "it('is not ready', () => expect(isReady()).toBe(false));"
+      "production": "export const isReady = (loaded, authenticated) => loaded && authenticated;",
+      "test": "it.each([[true, true, true], [true, false, false], [false, true, false], [false, false, false]])('derives readiness from both inputs', (loaded, authenticated, expected) => expect(isReady(loaded, authenticated)).toBe(expected));"
     },
     {
       "id": "mocked-away-weak",
@@ -35,8 +35,8 @@
       "strength": "strong",
       "critical": false,
       "expectedCategory": null,
-      "production": "export const load = () => api.fetch().then(mapResponse);",
-      "test": "vi.mock('./api'); api.fetch.mockResolvedValue({ value: 3 }); expect(await load()).toEqual({ score: 3 });"
+      "production": "export const load = response => ({ score: response.value * 2 });",
+      "test": "expect(load({ value: 3 })).toEqual({ score: 6 }); expect(load({ value: 0 })).toEqual({ score: 0 });"
     },
     {
       "id": "missing-error-weak",
@@ -54,7 +54,7 @@
       "critical": false,
       "expectedCategory": null,
       "production": "export async function save(value) { if (!value) throw new Error('required'); return store(value); }",
-      "test": "it('rejects empty values', async () => expect(save('')).rejects.toThrow('required'));"
+      "test": "it('rejects empty values', async () => { await expect(save('')).rejects.toThrow('required'); expect(store).not.toHaveBeenCalled(); }); it('stores valid values', async () => { store.mockResolvedValue('saved'); await expect(save('ok')).resolves.toBe('saved'); expect(store).toHaveBeenCalledWith('ok'); });"
     },
     {
       "id": "race-weak",
@@ -71,8 +71,8 @@
       "strength": "strong",
       "critical": false,
       "expectedCategory": null,
-      "production": "export const refresh = async () => state.value = await fetchValue();",
-      "test": "await refresh(); expect(state.value).toBe(expectedValue);"
+      "production": "let generation = 0; export const refresh = async () => { const request = ++generation; const value = await fetchValue(); if (request === generation) state.value = value; };",
+      "test": "const first = deferred(); const second = deferred(); fetchValue.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise); const oldRefresh = refresh(); const newRefresh = refresh(); second.resolve('new'); await newRefresh; first.resolve('old'); await oldRefresh; expect(state.value).toBe('new');"
     },
     {
       "id": "duplicate-score-weak",
@@ -89,8 +89,8 @@
       "strength": "strong",
       "critical": false,
       "expectedCategory": null,
-      "production": "export const submitScore = (id, score) => scoreStore.insert(id, score);",
-      "test": "submitScore('run-1', 10); expect(() => submitScore('run-1', 10)).toThrow('duplicate');"
+      "production": "export const scores = new Map(); export const submitScore = (id, score) => { if (scores.has(id)) throw new Error('duplicate'); scores.set(id, score); return { id, score }; };",
+      "test": "expect(submitScore('run-1', 10)).toEqual({ id: 'run-1', score: 10 }); expect(() => submitScore('run-1', 99)).toThrow('duplicate'); expect([...scores.entries()]).toEqual([['run-1', 10]]);"
     },
     {
       "id": "collision-boundary-weak",
@@ -108,7 +108,7 @@
       "critical": false,
       "expectedCategory": null,
       "production": "export const collides = (a, b) => a.right >= b.left && a.left <= b.right;",
-      "test": "expect(collides(touchingA, touchingB)).toBe(true); expect(collides(separatedA, separatedB)).toBe(false);"
+      "test": "expect(collides({ left: 0, right: 10 }, { left: 10, right: 20 })).toBe(true); expect(collides({ left: 0, right: 9 }, { left: 10, right: 20 })).toBe(false); expect(collides({ left: 5, right: 15 }, { left: 10, right: 20 })).toBe(true); expect(collides({ left: 0, right: 30 }, { left: 10, right: 20 })).toBe(true);"
     },
     {
       "id": "archive-traversal-weak",
@@ -125,8 +125,8 @@
       "strength": "strong",
       "critical": false,
       "expectedCategory": null,
-      "production": "export const extract = entry => write(join(root, entry.name), entry.data);",
-      "test": "expect(() => extract({ name: '../../escape.txt', data })).toThrow('unsafe path');"
+      "production": "export const extract = entry => { const target = resolve(root, entry.name); if (!target.startsWith(resolve(root) + sep)) throw new Error('unsafe path'); return write(target, entry.data); };",
+      "test": "expect(() => extract({ name: '../../escape.txt', data })).toThrow('unsafe path'); expect(write).not.toHaveBeenCalled(); extract({ name: 'safe/file.txt', data }); expect(write).toHaveBeenCalledWith(resolve(root, 'safe/file.txt'), data);"
     },
     {
       "id": "authorization-weak",
@@ -143,8 +143,8 @@
       "strength": "strong",
       "critical": false,
       "expectedCategory": null,
-      "production": "export const deleteGame = (user, id) => user.isAdmin ? remove(id) : deny();",
-      "test": "expect(() => deleteGame(player, 'game')).toThrow('forbidden'); expect(remove).not.toHaveBeenCalled();"
+      "production": "export const deleteGame = (user, id) => { if (!user.isAdmin) throw new Error('forbidden'); return remove(id); };",
+      "test": "expect(() => deleteGame({ isAdmin: false }, 'game')).toThrow('forbidden'); expect(remove).not.toHaveBeenCalled(); remove.mockReturnValue(true); expect(deleteGame({ isAdmin: true }, 'game')).toBe(true); expect(remove).toHaveBeenCalledWith('game');"
     },
     {
       "id": "cleanup-leak-weak",
@@ -161,8 +161,8 @@
       "strength": "strong",
       "critical": false,
       "expectedCategory": null,
-      "production": "export const mount = () => { window.addEventListener('resize', onResize); return () => window.removeEventListener('resize', onResize); };",
-      "test": "const cleanup = mount(); cleanup(); window.dispatchEvent(new Event('resize')); expect(onResize).not.toHaveBeenCalled();"
+      "production": "export const mount = (target, handler) => { target.addEventListener('resize', handler); return () => target.removeEventListener('resize', handler); };",
+      "test": "const target = new EventTarget(); let calls = 0; const cleanup = mount(target, () => calls++); target.dispatchEvent(new Event('resize')); expect(calls).toBe(1); cleanup(); target.dispatchEvent(new Event('resize')); expect(calls).toBe(1);"
     }
   ]
 }

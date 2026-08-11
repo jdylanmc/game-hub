@@ -190,6 +190,7 @@ This draft pull request is maintained by the local Ralph Loop. A human must revi
 check_pull_request_gates() {
   local checks_output
   local checks_status
+  local expected_head_sha
 
   set +e
   checks_output="$(gh pr checks "$PR_NUMBER" \
@@ -201,7 +202,16 @@ check_pull_request_gates() {
   set -e
 
   if [[ "$checks_status" -eq 0 ]]; then
-    return 0
+    expected_head_sha="$(git rev-parse HEAD)"
+    if gh pr view "$PR_NUMBER" \
+      --repo "$REPO_NAME_WITH_OWNER" \
+      --json headRefOid,statusCheckRollup |
+      node scripts/check-required-pull-request-gates.mjs \
+        --expected-head-sha "$expected_head_sha"; then
+      return 0
+    fi
+    printf 'Pull request #%s is missing a successful exact-head required check.\n' "$PR_NUMBER" >&2
+    return 1
   fi
 
   if [[ "$checks_output" == *"no checks reported"* ||

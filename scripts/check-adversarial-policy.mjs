@@ -231,8 +231,8 @@ const requiredScenarios = [
   'cleanup-leak',
 ];
 const benchmarkIds = new Set();
-if (benchmarkCorpus.version !== '1.0.0' || benchmarkCorpus.cases?.length !== 18) {
-  violations.push('Calibration corpus must remain version 1.0.0 with exactly 18 reviewed cases.');
+if (benchmarkCorpus.version !== '1.0.4' || benchmarkCorpus.cases?.length !== 18) {
+  violations.push('Calibration corpus must remain version 1.0.4 with exactly 18 reviewed cases.');
 }
 for (const scenario of requiredScenarios) {
   for (const strength of ['weak', 'strong']) {
@@ -310,9 +310,12 @@ for (const input of requiredInvalidationInputs) {
 }
 if (
   packageJson.scripts?.['calibrate:adversarial'] !== 'node scripts/evaluate-adversarial-reviewer.ts' ||
-  packageJson.scripts?.['calibration:check'] !== 'node scripts/evaluate-adversarial-reviewer.ts --mode check'
+  packageJson.scripts?.['calibration:check'] !== 'node scripts/evaluate-adversarial-reviewer.ts --mode check' ||
+  packageJson.scripts?.['policy:calibration'] !==
+    'node scripts/evaluate-adversarial-reviewer.ts --mode check --report config/adversarial-agents/active-calibration-unit-test-reviewer.json' ||
+  !packageJson.scripts?.['policy:check']?.includes('yarn policy:calibration')
 ) {
-  violations.push('Missing canonical calibration evaluation or promotion-check command.');
+  violations.push('Missing canonical calibration evaluation or mandatory promotion-check command.');
 }
 const requiredEvaluatorFragments = [
   'runMode !== policy.requiredRunMode',

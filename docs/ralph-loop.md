@@ -44,6 +44,11 @@ Each iteration follows the same cycle:
 7. **Restart** with another fresh context when unfinished stories or failing CI
    checks remain.
 
+Completion requires every check in `config/ralph-required-checks.json` to
+appear exactly once, succeed, and bind to the current pull-request head SHA.
+Missing or non-success adversarial review is work to iterate, not an absent gate
+to ignore.
+
 The local runner starts a new `copilot --prompt` process for every iteration. It
 does not resume a prior Copilot session.
 

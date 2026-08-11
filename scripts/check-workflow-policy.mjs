@@ -7,6 +7,13 @@ const workflowPath = path.join(rootDirectory, '.github', 'workflows', 'continuou
 const codeownersPath = path.join(rootDirectory, '.github', 'CODEOWNERS');
 const workflow = await fs.readFile(workflowPath, 'utf8');
 const codeowners = await fs.readFile(codeownersPath, 'utf8');
+const ralphRequiredChecks = JSON.parse(
+  await fs.readFile(path.join(rootDirectory, 'config', 'ralph-required-checks.json'), 'utf8'),
+);
+const ralphRunner = await fs.readFile(
+  path.join(rootDirectory, '.github', 'skills', 'ralph-loop', 'scripts', 'run-ralph-loop.sh'),
+  'utf8',
+);
 const violations = [];
 
 const requiredFragments = [
@@ -84,6 +91,24 @@ const requiredCodeOwnerRules = ['/.github/CODEOWNERS @jdylanmc', '/.github/workf
 for (const rule of requiredCodeOwnerRules) {
   if (!codeowners.split('\n').includes(rule)) {
     violations.push(`Missing mandatory Code Owner rule: ${rule}`);
+  }
+
+  if (
+    ralphRequiredChecks.version !== '1.0.0' ||
+    JSON.stringify(ralphRequiredChecks.requiredChecks) !==
+      JSON.stringify(['Continuous integration', 'Adversarial Review / unit-test-reviewer'])
+  ) {
+    violations.push('Ralph required-check configuration is missing or weakened.');
+  }
+  for (const fragment of [
+    'gh pr view "$PR_NUMBER"',
+    '--json headRefOid,statusCheckRollup',
+    'node scripts/check-required-pull-request-gates.mjs',
+    '--expected-head-sha "$expected_head_sha"',
+  ]) {
+    if (!ralphRunner.includes(fragment)) {
+      violations.push(`Ralph completion does not fail closed on required checks: ${fragment}`);
+    }
   }
 }
 

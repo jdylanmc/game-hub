@@ -1,7 +1,8 @@
 # Adversarial review infrastructure
 
-This directory defines the Azure resources for the unit-test reviewer. Live
-deployment remains a US-009 task.
+This directory defines the Azure resources for the unit-test reviewer. The
+production resources were first deployed through the US-009 rollout; Bicep
+remains the authority for repeat deployments.
 
 ## Deployed resources
 
@@ -45,11 +46,12 @@ repo:jdylanmc/game-hub:environment:test
 repo:jdylanmc/game-hub:environment:prod
 ```
 
-An Azure administrator performs the one-time identity and role bootstrap in
-US-009. `bicep/bootstrap-deployment-role.bicep` declaratively defines the narrow
-deployment custom role; do not grant Contributor. The main template
-declaratively grants the separate reviewer identity the built-in Cognitive
-Services OpenAI User role; it needs no deployment or secret-management role.
+`bicep/bootstrap-deployment-role.bicep` declaratively defines the narrow
+deployment custom role; do not grant Contributor. Separate `test` and `prod`
+deployment identities use only their matching protected-environment OpenID
+Connect subjects. The main template declaratively grants the distinct reviewer
+identity the built-in Cognitive Services OpenAI User role; it needs no
+deployment or secret-management role.
 
 ## Validation
 

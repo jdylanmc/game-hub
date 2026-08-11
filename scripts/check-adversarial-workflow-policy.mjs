@@ -44,6 +44,7 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson) {
     'allow-no-subscriptions: true',
     'yarn review:adversarial',
     'test -s reviewer-result.json',
+    'test -s publication-result.json',
     'yarn publish:adversarial',
     '--exceptions config/adversarial-agents/exceptions.json',
     '> publication-result.json',

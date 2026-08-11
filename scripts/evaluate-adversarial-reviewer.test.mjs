@@ -218,7 +218,7 @@ describe('calibration promotion gate', () => {
     run.error = true;
     run.decision = 'ERROR';
     run.severity = 'ERROR';
-    run.blockingCategories = ['model-error'];
+    run.blockingCategories = [];
     refreshRunFingerprint(run);
     for (const result of report.caseResults) {
       for (const measuredRun of result.runs) {
@@ -259,14 +259,14 @@ describe('calibration promotion gate', () => {
     expect(fingerprint.components).toMatchObject({
       modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
       modelVersion: '2025-04-14',
-      promptVersion: '1.0.0',
+      promptVersion: '1.0.3',
       toolsVersion: '1.0.0',
       testFramework: 'vitest@4.1.10',
       schemaVersion: '1.0.0',
       policyVersion: '1.0.0',
       systemPolicyVersion: '1.0.0',
       reviewerEngineConfigVersion: '1.0.0',
-      benchmarkCorpusVersion: '1.0.0',
+      benchmarkCorpusVersion: '1.0.4',
     });
     expect(fingerprint.components.systemPolicyContentHash).toMatch(/^[0-9a-f]{64}$/);
     expect(fingerprint.components.reviewerEngineConfigContentHash).toMatch(/^[0-9a-f]{64}$/);

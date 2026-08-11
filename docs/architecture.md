@@ -134,6 +134,13 @@ calibration, protected-environment OpenID Connect identity, restricted Azure
 endpoint, and revalidated structured output are mandatory before publication.
 The downstream model check never replaces the deterministic CI check.
 
+Protected `main` requires both `Continuous integration` and
+`Adversarial Review / unit-test-reviewer`. Ralph reads the same versioned
+required-check configuration and cannot complete or prioritize past a missing,
+pending, canceled, timed-out, stale, duplicated, malformed, or unsuccessful
+adversarial result. Each required result must be uniquely bound to the current
+pull-request head SHA.
+
 ### Azure infrastructure uses Bicep
 
 Define every Azure resource through idempotent

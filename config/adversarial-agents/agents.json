@@ -149,7 +149,7 @@
           "version": "1.0.0",
           "enabled": true,
           "promptFile": ".github/adversarial-agents/unit-test-reviewer/prompt.md",
-          "promptVersion": "1.0.0",
+          "promptVersion": "1.0.3",
           "modelDeployment": "gpt-4.1-mini@2025-04-14/eastus/GlobalStandard",
           "modelVersion": "2025-04-14",
           "toolsVersion": "1.0.0",

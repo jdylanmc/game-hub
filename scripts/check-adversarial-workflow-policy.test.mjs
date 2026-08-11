@@ -36,6 +36,18 @@ describe('adversarial workflow policy', () => {
       workflow.replace('actions/checkout@11d5960a326750d5838078e36cf38b85af677262', 'actions/checkout@v4'),
     ],
     ['required reviewer output', workflow.replaceAll('test -s reviewer-result.json', 'true')],
+    ['required publication output', workflow.replace('test -s publication-result.json', 'true')],
+    [
+      'exception-aware blocking conclusion',
+      workflow.replace("if (publication.conclusion === 'failure') process.exit(1);", 'process.exit(0);'),
+    ],
+    [
+      'protected exception registry',
+      workflow.replace(
+        '--exceptions config/adversarial-agents/exceptions.json',
+        '--exceptions adversarial-context.json',
+      ),
+    ],
     ['review timeout', workflow.replace('timeout-minutes: 20', 'timeout-minutes: 120')],
     [
       'shared concurrency lane',

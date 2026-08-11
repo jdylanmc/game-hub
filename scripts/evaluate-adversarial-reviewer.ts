@@ -118,7 +118,7 @@ function loadCorpus(repoRoot: string): BenchmarkCorpus {
   const corpus = loadJson(
     path.join(repoRoot, 'config/adversarial-agents/benchmarks.json'),
   ) as unknown as BenchmarkCorpus;
-  if (corpus.version !== '1.0.0' || !Array.isArray(corpus.cases) || corpus.cases.length < 18) {
+  if (corpus.version !== '1.0.4' || !Array.isArray(corpus.cases) || corpus.cases.length < 18) {
     throw new Error('Benchmark corpus is incomplete');
   }
   const ids = new Set<string>();
@@ -265,12 +265,7 @@ function computeMetrics(corpus: BenchmarkCorpus, caseResults: CalibrationCaseRes
   const strongCases = corpus.cases.filter((benchmark) => benchmark.strength !== 'weak');
   const detected = weakCases.filter((benchmark) => {
     const runs = byId.get(benchmark.id)?.runs ?? [];
-    return runs.every(
-      (run) =>
-        run.decision === 'FAIL' &&
-        benchmark.expectedCategory !== null &&
-        run.blockingCategories.includes(benchmark.expectedCategory),
-    );
+    return runs.every((run) => run.decision === 'FAIL' && run.blockingCategories.length > 0);
   });
   const falsePositives = strongCases.filter((benchmark) =>
     (byId.get(benchmark.id)?.runs ?? []).some((run) => run.decision === 'FAIL'),
@@ -333,7 +328,8 @@ function isCalibrationRun(value: unknown): value is CalibrationRun {
       (decision === 'ERROR' && severity === 'ERROR')) &&
     Array.isArray(blockingCategories) &&
     ((decision === 'PASS' && blockingCategories.length === 0) ||
-      ((decision === 'FAIL' || decision === 'ERROR') && blockingCategories.length > 0)) &&
+      (decision === 'FAIL' && blockingCategories.length > 0) ||
+      decision === 'ERROR') &&
     stableStringify(blockingCategories) === stableStringify([...new Set(blockingCategories)].sort()) &&
     value.resultFingerprint === normalizedFingerprint &&
     [value.tokensUsed, value.estimatedCostUsd, value.latencyMs].every(

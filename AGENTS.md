@@ -160,6 +160,8 @@ longer heartbeat for periodic unchanged status.
 Before ranking an unassigned issue, run `yarn ralph:prioritize`. A blocking open
 Ralph pull request must map to exactly one matching issue memory; missing or
 ambiguous identity stops selection rather than falling through to new work.
+Ralph completion and prioritization use `config/ralph-required-checks.json`;
+every listed check must exist exactly once and succeed for the current head SHA.
 
 Follow [Ralph Loop](docs/ralph-loop.md) for the full model and safety rules.
 
