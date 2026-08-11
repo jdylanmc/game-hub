@@ -1,0 +1,157 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 27,
+  "issueTitle": "Repository-Wide Code Linting",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/27",
+  "branchName": "ralph/issue-27-repository-wide-code-linting",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 2,
+    "dependencies": [30],
+    "changeScopes": [
+      "eslint.config.js",
+      "package.json",
+      "yarn.lock",
+      "src",
+      ".storybook",
+      "games",
+      "packages",
+      "scripts",
+      "config/lint-suppressions.json",
+      "docs",
+      "AGENTS.md",
+      "README.md",
+      ".github/workflows/continuous-integration.yml",
+      ".github/CODEOWNERS",
+      "vite.config.ts",
+      "vitest.config.ts",
+      "tailwind.config.ts",
+      "postcss.config.js"
+    ]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Complete the shared lint toolchain and safe fix command",
+      "description": "Reconcile the baseline from pull request #32, pin the additional shared lint dependencies required by this issue, and add a root lint:fix command that uses the same configuration as lint.",
+      "acceptanceCriteria": [
+        "All lint dependencies are pinned through Yarn and no global installation is required",
+        "yarn lint and yarn lint:fix use the same versioned root ESLint configuration",
+        "yarn lint:fix applies only supported fixes and does not format, generate, or rewrite unrelated content",
+        "The baseline repository passes yarn lint after the toolchain change"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Pull request #32 already added pinned ESLint, TypeScript ESLint, React, and React Hooks dependencies plus yarn lint. The missing lint:fix command and final plugin set require current implementation and verification."
+    },
+    {
+      "id": "US-002",
+      "title": "Enforce type-aware TypeScript correctness by environment",
+      "description": "Enable type-aware TypeScript linting and targeted browser, Node.js, test, Storybook, configuration, package, and game overrides without treating every TypeScript file as browser code.",
+      "acceptanceCriteria": [
+        "Type-aware promise, unused-code, correctness, and unsafe TypeScript rules run against the intended TypeScript projects",
+        "Browser, React, Node.js, test, Storybook, generator, configuration, package, and game files receive only appropriate globals and rules",
+        "Unsafe any usage, floating or misused promises, and unused code fail with actionable file and line diagnostics",
+        "The configuration remains one shared root flat configuration with targeted overrides"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "The current config uses non-type-aware TypeScript recommended rules and assigns browser globals to every TS/TSX file. Current evidence does not satisfy typed unsafe or promise enforcement and precise environment separation.",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-003",
+      "title": "Enforce React, hooks, accessibility, and import correctness",
+      "description": "Complete React linting with hooks, accessibility, and import correctness rules appropriate to the host, Storybook, and game-facing React source.",
+      "acceptanceCriteria": [
+        "React and React Hooks correctness rules remain enforced for JSX and TSX",
+        "Representative accessibility violations fail lint with actionable diagnostics",
+        "Representative invalid, unresolved, duplicate, or disordered imports fail according to the documented import policy",
+        "Rules that conflict with the React JSX runtime, TypeScript, Storybook, or generated boundaries are resolved through narrow documented overrides"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Pull request #32 enabled React recommended, JSX runtime, and React Hooks flat recommended rules. Accessibility and dedicated import enforcement are not installed or demonstrated.",
+      "dependencies": ["US-001", "US-002"]
+    },
+    {
+      "id": "US-004",
+      "title": "Guarantee automatic workspace coverage and deliberate exclusions",
+      "description": "Make repository discovery automatically cover current and future game and package workspaces while narrowly excluding generated, imported, dependency, coverage, and build output.",
+      "acceptanceCriteria": [
+        "Host source, shared packages, every game workspace, Storybook, tests, scripts, generators, and handwritten wrappers are linted",
+        "A representative newly created game or package workspace cannot silently bypass yarn lint",
+        "Generated Mamba snapshots, imported Mamba sources, dependencies, coverage, and build outputs are excluded without excluding generators or handwritten wrappers",
+        "The exclusion list is narrow, versioned, and verified against unexpected lint:fix modifications"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "The current eslint dot-glob covers existing authored JS/TS files and excludes Mamba snapshots and standard outputs, but no current proof establishes future workspace coverage or safe fix boundaries.",
+      "dependencies": ["US-002", "US-003"]
+    },
+    {
+      "id": "US-005",
+      "title": "Require narrow suppressions with durable reasons",
+      "description": "Strengthen suppression policy so every exceptional inline directive is narrowly scoped, has a specific durable reason, and is represented exactly once in the reviewed allowlist.",
+      "acceptanceCriteria": [
+        "Unapproved, broad, duplicate, stale, or reasonless ESLint suppressions fail repository policy",
+        "Approved suppressions identify the exact file, line, directive, affected rule, and specific rationale",
+        "Repository guidance requires the narrowest practical directive and explains the review path",
+        "Representative accepted and rejected suppression cases are automated"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Pull request #32 added exact file/line/directive allowlisting and a minimum-length external rationale. Current evidence does not prove inline reasons, affected-rule specificity, broad-directive rejection, or representative policy cases.",
+      "dependencies": ["US-004"]
+    },
+    {
+      "id": "US-006",
+      "title": "Prove representative lint failures and safe fixes",
+      "description": "Add isolated deterministic proofs for the rule families, environment overrides, workspace discovery, exclusions, suppression policy, warning behavior, and lint:fix safety.",
+      "acceptanceCriteria": [
+        "Representative TypeScript, React, hooks, accessibility, import, promise, unused, unsafe, and environment violations return nonzero for the intended reason",
+        "Warnings fail the canonical lint command",
+        "Representative supported fixes are applied by yarn lint:fix and then pass yarn lint",
+        "Generated, imported, and unrelated files remain unchanged during fix proofs",
+        "Proofs reject unrelated setup failures as successful evidence"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "The existing fail-closed harness proves one JavaScript no-unused-vars lint failure. It does not yet cover the issue's remaining rule families, workspace bypass, exclusions, warnings, or fix safety.",
+      "dependencies": ["US-003", "US-004", "US-005"]
+    },
+    {
+      "id": "US-007",
+      "title": "Reconcile local, workflow, and merge-gate integration",
+      "description": "Keep the canonical local command, continuous integration workflow, workflow policy, Ralph completion contract, and protected merge gate aligned with the completed lint implementation.",
+      "acceptanceCriteria": [
+        "Every pull request and main update runs the same yarn lint command and pinned dependencies used locally",
+        "Lint output is retained with actionable file and line diagnostics and zero allowed warnings",
+        "Workflow policy rejects removal or weakening of lint and its representative proofs",
+        "A representative lint failure prevents the required protected check from succeeding",
+        "Ralph and future agentic workflows use the same lint completion contract"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Pull request #32 integrated yarn lint into the required composite Continuous integration check and policy guard. Re-verify live protected-check behavior and update the contract only after the completed issue #27 rules and proofs exist.",
+      "dependencies": ["US-006"]
+    },
+    {
+      "id": "US-008",
+      "title": "Document decisions and reconcile every acceptance criterion",
+      "description": "Document local usage, formatting separation, plugin and rule choices, environment overrides, workspace discovery, exclusions, suppression reasons, fix safety, continuous integration behavior, and final issue evidence.",
+      "acceptanceCriteria": [
+        "Documentation explains yarn lint and yarn lint:fix, including their boundary from Prettier formatting",
+        "Rule families, environment overrides, automatic workspace coverage, exclusions, and suppression approval are documented",
+        "The final evidence explicitly distinguishes what pull request #32 delivered from what issue #27 added",
+        "Every issue acceptance criterion maps to current passing local or continuous integration evidence",
+        "All repository-required validation commands pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Existing continuous integration documentation describes the baseline lint command and suppression allowlist but not the complete issue #27 design or lint:fix behavior.",
+      "dependencies": ["US-007"]
+    }
+  ]
+}
