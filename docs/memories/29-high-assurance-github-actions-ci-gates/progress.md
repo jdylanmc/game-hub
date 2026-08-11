@@ -234,3 +234,24 @@
   check so workflow ownership cannot be removed while the required check stays
   green.
 - No blockers. US-009 is the next eligible story.
+
+## 2026-08-11 - US-009 complete
+
+- Added the continuous integration completion contract with the exact canonical
+  local and workflow command order, expected outputs, enforced thresholds,
+  fail-closed behavior, and clean-checkout reproduction steps.
+- Documented fork-safe permissions, pinned execution, 14-day logs and artifact
+  retention, branch-protection behavior, Ralph recovery, and suitability for
+  agentic completion without bypassing human review.
+- Reconciled every issue acceptance criterion to implementation evidence and
+  recorded that no Azure infrastructure is required: zero resource groups and
+  an estimated Azure cost of `$0/month`.
+- Files changed: `docs/continuous-integration.md`, `README.md`, and this issue
+  memory.
+- Checks passed: `yarn validate`, including immutable installation, formatting,
+  lint, policy, all 11 fail-closed probes, security audit, coverage, generation,
+  type checking, production build, bundle budgets, and Storybook.
+- Reusable discovery: keep one durable contract that maps canonical commands to
+  expected outputs and links live repository settings to policy-checked source
+  controls.
+- No blockers. All planned stories are complete.
