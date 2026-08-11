@@ -1,9 +1,5 @@
 import { useEffect, useState } from 'react';
-import type {
-  GameControl,
-  GameManifestIndex,
-  GameManifest,
-} from '@game-hub/game-contract';
+import type { GameControl, GameManifestIndex, GameManifest } from '@game-hub/game-contract';
 
 const gameCatalogUrl = '/generated/games.manifest.json';
 
@@ -88,10 +84,7 @@ function parseManifest(value: unknown, path: string): GameManifest {
           throw new Error(`${path}.controls must be an array.`);
         })(),
     description: parseString(value.description, `${path}.description`),
-    featured:
-      typeof value.featured === 'undefined'
-        ? undefined
-        : parseBoolean(value.featured, `${path}.featured`),
+    featured: typeof value.featured === 'undefined' ? undefined : parseBoolean(value.featured, `${path}.featured`),
     id: parseString(value.id, `${path}.id`),
     instructions: parseStringArray(value.instructions, `${path}.instructions`),
     order: parseNumber(value.order, `${path}.order`),
@@ -117,9 +110,7 @@ export async function loadGameCatalog(): Promise<GameManifest[]> {
     catalogPromise = fetch(gameCatalogUrl)
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error(
-            `The game catalog request failed with ${response.status} ${response.statusText}.`,
-          );
+          throw new Error(`The game catalog request failed with ${response.status} ${response.statusText}.`);
         }
 
         return parseCatalogIndex(await response.json()).games;
@@ -153,10 +144,7 @@ export function useGameCatalog(): GameCatalogState {
         }
 
         setState({
-          error:
-            error instanceof Error
-              ? error.message
-              : 'The game catalog could not be loaded.',
+          error: error instanceof Error ? error.message : 'The game catalog could not be loaded.',
           status: 'error',
         });
       });

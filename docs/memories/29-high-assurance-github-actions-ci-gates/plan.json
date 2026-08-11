@@ -1,0 +1,141 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 29,
+  "issueTitle": "High-Assurance GitHub Actions CI Gates",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/29",
+  "branchName": "ralph/issue-29-high-assurance-github-actions-ci-gates",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Add the reproducible quality toolchain",
+      "description": "Pin and configure repository-wide formatting, linting, unit and component testing, coverage, and reproducible Yarn validation commands.",
+      "acceptanceCriteria": [
+        "A clean checkout can install dependencies immutably with the pinned Node.js and Yarn versions",
+        "Root format, lint, test, coverage, typecheck, build, and Storybook commands are defined and fail on errors",
+        "The quality tools cover the host, shared packages, game workspaces, Storybook, tests, and scripts as applicable"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Pinned Prettier, ESLint, TypeScript ESLint, Vitest, V8 coverage, JSDOM, and Testing Library; added immutable install, format, lint, test, coverage, and aggregate validation commands. US-002 must add representative tests, coverage thresholds, and change passWithNoTests to false.",
+      "dependencies": []
+    },
+    {
+      "id": "US-002",
+      "title": "Establish meaningful tests and enforcement",
+      "description": "Add representative unit and component tests with coverage thresholds and fail-closed test-suite integrity checks.",
+      "acceptanceCriteria": [
+        "Representative host, contract, and game behavior is covered by deterministic tests",
+        "Coverage thresholds are enforced by the root test command",
+        "Focused, skipped, quarantined, or unexpectedly absent tests fail validation"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Added deterministic host catalog and component tests, a typed game-contract lifecycle test, and FloppyBird manifest integration coverage. Root tests now require suites under src, games, and packages; reject focused, skipped, todo, and quarantined tests; disallow empty/only suites in Vitest; and enforce 85% line/function/statement plus 75% branch coverage over the initial host coverage surface.",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-003",
+      "title": "Enforce deterministic generated state",
+      "description": "Add a reproducible generator verification command that detects stale committed outputs and dirty generated state.",
+      "acceptanceCriteria": [
+        "The generator verification command succeeds when committed generated files are current",
+        "The command fails when generation changes a committed output or leaves unexpected dirty state",
+        "The same command is suitable for local and continuous integration execution"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Added generate:check to run game workspace discovery and fail when generation changes repository state or either committed catalog output is dirty. The aggregate validate command now runs this same deterministic check.",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-004",
+      "title": "Add high-assurance pull-request continuous integration",
+      "description": "Create fork-safe, least-privilege GitHub Actions workflows that run the complete local quality contract with immutable action references and retained evidence.",
+      "acceptanceCriteria": [
+        "Pull requests and main branch updates run immutable install, format, lint, type, test, coverage, generation, production build, and Storybook gates",
+        "Actions are pinned to immutable commit references and jobs define least privilege, concurrency, and timeouts",
+        "Fork pull requests require no privileged credentials",
+        "Test, coverage, build, Storybook, and security evidence has explicit retention"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Added one fork-safe Continuous integration check for pull requests and main updates. It uses read-only permissions, pinned action commits, exact Node and Yarn versions, concurrency cancellation, a 30-minute timeout, canonical root gates, and 14-day artifact retention for logs, JUnit results, coverage, production, Storybook, and security evidence.",
+      "dependencies": ["US-001", "US-002", "US-003"]
+    },
+    {
+      "id": "US-005",
+      "title": "Add regression and workflow policy guards",
+      "description": "Enforce bundle and chunk budgets, lint suppression controls, deterministic seeds, and protection against weakened workflow permissions or required checks.",
+      "acceptanceCriteria": [
+        "Unexplained bundle or chunk regressions fail a documented budget check",
+        "New lint suppressions fail unless explicitly approved through the repository policy",
+        "Workflow permission, action pinning, timeout, and required-check weakening is detected",
+        "Tests and builds use documented deterministic seeds where randomness applies"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Added reviewed raw-byte budgets for the production entry, async chunks, JavaScript, stylesheets, and total bundle; explicit lint-suppression approvals; a fail-closed workflow invariant check; and deterministic Vitest shuffle seed 29005. The canonical local and continuous integration contracts run the same policy and bundle commands.",
+      "dependencies": ["US-004"]
+    },
+    {
+      "id": "US-006",
+      "title": "Prove gates fail closed",
+      "description": "Add automated workflow and policy verification demonstrating that representative failures cannot produce a successful completion state.",
+      "acceptanceCriteria": [
+        "Automated verification covers representative formatting, lint, type, test, generation, build, chunking, security, and browser failures",
+        "Missing output and weakened or absent mandatory checks fail verification",
+        "The verification does not rely on warning-only behavior, unconditional continuation, or success-shaped fallbacks"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Added an isolated detached-worktree proof harness that injects 11 controlled failures and requires both nonzero exit status and gate-specific evidence. Formatting, lint, type, test, generation, production build, bundle budget, missing build output, missing mandatory workflow command, unavailable security audit service, and Storybook browser bundle failures are proven fail closed through the canonical root commands.",
+      "dependencies": ["US-004", "US-005"]
+    },
+    {
+      "id": "US-007",
+      "title": "Prioritize failing Ralph pull requests",
+      "description": "Update Ralph issue selection so failing open Ralph pull requests are identified and routed to their matching issue memory before new work is selected.",
+      "acceptanceCriteria": [
+        "Ralph checks open Ralph pull requests and their checks before ranking a new issue",
+        "A failing pull request is mapped to its bound issue, branch, and memory without identity drift",
+        "The workflow stops safely when failure ownership or memory identity cannot be established"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Added a deterministic Ralph prioritization preflight that checks open Ralph pull requests before issue ranking, treats failed or absent checks as blocking, and requires exactly one matching repository, issue, branch, base branch, draft pull request, and memory identity.",
+      "dependencies": ["US-004"]
+    },
+    {
+      "id": "US-008",
+      "title": "Configure repository merge protection",
+      "description": "Configure and verify main branch protection using the completed workflow check identities and heightened review for workflow changes.",
+      "acceptanceCriteria": [
+        "Main requires the complete continuous integration status set before merge",
+        "Missing, pending, failed, canceled, or stale required checks prevent merge",
+        "Workflow changes require review and cannot self-approve reduced protection",
+        "The configured protection is documented and verified against the repository"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Configured main branch protection to require the strict GitHub Actions Continuous integration check, one non-last-pusher Code Owner review, stale-review dismissal, conversation resolution, linear history, and administrator enforcement while blocking force pushes and deletion. Added protected ownership rules, policy validation, documentation, and live API verification.",
+      "dependencies": ["US-004", "US-005", "US-006"]
+    },
+    {
+      "id": "US-009",
+      "title": "Document and reconcile the completion contract",
+      "description": "Document the local and continuous integration contract, retention, fork and security behavior, branch protection, and the Azure infrastructure decision.",
+      "acceptanceCriteria": [
+        "Documentation lists identical local and continuous integration commands and expected outputs",
+        "Artifact retention, fork safety, permissions, branch protection, and failure handling are documented",
+        "The Azure decision is documented; any required resources use Bicep, environment parameters, the approved subscription, no more than three resource groups, and an estimate below $100 per month",
+        "All issue acceptance criteria are reconciled to implementation evidence"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Added a single continuous integration contract documenting the exact local and workflow command sequence, expected outputs, fail-closed behavior, 14-day evidence retention, fork-safe permissions, branch protection, Ralph recovery, zero-resource Azure decision, and acceptance-criterion traceability.",
+      "dependencies": ["US-006", "US-007", "US-008"]
+    }
+  ]
+}

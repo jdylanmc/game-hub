@@ -14,9 +14,7 @@ export function GameCard({ featured = false, game, index }: GameCardProps) {
     <Link
       className={cardStyles(
         true,
-        featured
-          ? 'group relative overflow-hidden p-8 lg:p-9'
-          : 'group relative overflow-hidden p-7',
+        featured ? 'group relative overflow-hidden p-8 lg:p-9' : 'group relative overflow-hidden p-7',
       )}
       href={`/games/${game.id}`}
     >
@@ -31,9 +29,7 @@ export function GameCard({ featured = false, game, index }: GameCardProps) {
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            {game.featured ? (
-              <Badge className="bg-amber-400/15 text-amber-100">Featured</Badge>
-            ) : null}
+            {game.featured ? <Badge className="bg-amber-400/15 text-amber-100">Featured</Badge> : null}
             <Badge className="bg-black/20 text-slate-100">{game.technology}</Badge>
           </div>
           <span className="font-mono text-sm text-slate-500">{String(index + 1).padStart(2, '0')}</span>
@@ -57,9 +53,7 @@ export function GameCard({ featured = false, game, index }: GameCardProps) {
           </div>
 
           <div className={featured ? 'self-end rounded-3xl border border-white/10 bg-black/20 p-5' : 'mt-7'}>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Controls
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Controls</p>
             <ul className="mt-3 space-y-3 text-sm text-slate-300">
               {game.controls.slice(0, featured ? 3 : 2).map((control) => (
                 <li key={control.action}>

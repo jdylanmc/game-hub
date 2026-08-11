@@ -1,0 +1,9 @@
+.yarn/
+**/*.md
+coverage/
+dist/
+public/generated/
+storybook-static/
+src/generated/
+src/storybook/mamba/generated/
+src/storybook/mamba/source/

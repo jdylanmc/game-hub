@@ -125,12 +125,16 @@ with one issue number whenever possible.
 
 When no issue is supplied, the `ralph-loop` skill:
 
-1. Lists open issues.
-2. Ranks issues by `priority:P0`, `priority:P1`, `priority:P2`, and
+1. Runs `yarn ralph:prioritize` to inspect open Ralph pull requests and their
+   checks.
+2. Resumes the uniquely mapped issue memory for the oldest blocking Ralph pull
+   request, or stops if ownership and immutable run identity cannot be proven.
+3. Lists open issues only when no blocking Ralph pull request exists.
+4. Ranks issues by `priority:P0`, `priority:P1`, `priority:P2`, and
    `priority:P3`, then by issue number.
-3. Recommends the next issue based on priority, dependencies, repository state,
+5. Recommends the next issue based on priority, dependencies, repository state,
    and whether another pull request already covers it.
-4. Asks for confirmation before preparing the run.
+6. Asks for confirmation before preparing the run.
 
 The user may explicitly delegate selection and continuation by best judgment.
 That delegation removes later issue-selection prompts for the current run; it

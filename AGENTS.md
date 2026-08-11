@@ -29,10 +29,48 @@ currently provides:
 yarn typecheck
 yarn build
 yarn build-storybook
+yarn generate:check
+yarn policy:check
+yarn bundle:check
 ```
 
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
+
+Run `yarn generate:check` after changing game workspace metadata or discovery
+logic. It fails when generation changes Git state or the committed catalog
+outputs are dirty.
+
+## Continuous Integration
+
+`.github/workflows/continuous-integration.yml` runs the same root validation
+commands as local development. Keep action references pinned to full commit
+SHAs, preserve least-privilege permissions and fork safety, and retain the
+workflow's logs, test results, coverage, production build, and Storybook
+evidence.
+
+`yarn policy:check` rejects unapproved lint suppressions and weakened workflow
+invariants. Record an exceptional suppression with a specific rationale in
+`config/lint-suppressions.json`. `yarn bundle:check` enforces the reviewed
+raw-byte entry, async chunk, JavaScript, stylesheet, and total budgets in
+`config/bundle-budgets.json` after `yarn build`; budget increases require an
+explained review.
+
+`yarn test:ci-fail-closed` creates an isolated detached worktree and injects
+representative failures into every mandatory gate. Keep each probe tied to the
+canonical root command and require evidence that it failed for the intended
+reason.
+
+The `main` branch requires the GitHub Actions `Continuous integration` check,
+an up-to-date branch, and a non-author Code Owner review. Keep workflow and
+ownership paths covered by `.github/CODEOWNERS`; `yarn policy:check` rejects
+weakened ownership rules.
+
+## Test Integrity
+
+Keep at least one deterministic test under each of `src/`, `games/`, and
+`packages/`. Do not commit focused, skipped, todo, or quarantined tests; the root
+test command rejects those states and enforces coverage thresholds.
 
 ## GitHub CLI Account
 
@@ -80,6 +118,10 @@ Orchestrator status is transition-driven. Emit reports for launch, story,
 publication or continuous-integration changes, blocker, and completion;
 coalesce changes found in one observation, suppress unchanged polls, and use a
 longer heartbeat for periodic unchanged status.
+
+Before ranking an unassigned issue, run `yarn ralph:prioritize`. A blocking open
+Ralph pull request must map to exactly one matching issue memory; missing or
+ambiguous identity stops selection rather than falling through to new work.
 
 Follow [Ralph Loop](docs/ralph-loop.md) for the full model and safety rules.
 

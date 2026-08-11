@@ -22,9 +22,7 @@ export function GameHudCard({ accent, detail, label, phase, score }: GameHudCard
     <Card as="section" className="p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Live HUD
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Live HUD</p>
           <h2 className="mt-3 font-display text-3xl font-semibold">{score.toLocaleString()}</h2>
           <p className="mt-1 text-sm text-slate-400">{label}</p>
         </div>
@@ -32,7 +30,9 @@ export function GameHudCard({ accent, detail, label, phase, score }: GameHudCard
           {phaseLabels[phase]}
         </Badge>
       </div>
-      <p className="mt-4 text-sm leading-7 text-slate-300">{detail ?? 'Waiting for the scene to publish the next HUD event.'}</p>
+      <p className="mt-4 text-sm leading-7 text-slate-300">
+        {detail ?? 'Waiting for the scene to publish the next HUD event.'}
+      </p>
     </Card>
   );
 }

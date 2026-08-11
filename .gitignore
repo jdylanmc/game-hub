@@ -1,6 +1,8 @@
 node_modules
 dist
 storybook-static
+coverage
+test-results
 .yarn/*
 !.yarn/patches
 !.yarn/plugins

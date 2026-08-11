@@ -1,15 +1,6 @@
-import type {
-  GameEvent,
-  GameInstance,
-  GameManifest,
-  GamePhase,
-  GameScore,
-} from '@game-hub/game-contract';
+import type { GameEvent, GameInstance, GameManifest, GamePhase, GameScore } from '@game-hub/game-contract';
 import { useEffect, useRef, useState } from 'react';
-import {
-  hasGameLoader,
-  loadGameModule,
-} from '../../generated/game-import-map';
+import { hasGameLoader, loadGameModule } from '../../generated/game-import-map';
 import { Button } from '../ui/Button';
 import { GameHudCard } from './GameHudCard';
 import { GameStageStatus } from './GameStageStatus';
@@ -45,9 +36,7 @@ export function PlayableGame({ game, onScore }: PlayableGameProps) {
   });
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [phase, setPhase] = useState<GamePhase>('ready');
-  const [phaseMessage, setPhaseMessage] = useState(
-    'Importing the workspace bundle and its Three.js scene…',
-  );
+  const [phaseMessage, setPhaseMessage] = useState('Importing the workspace bundle and its Three.js scene…');
   const [runtimeError, setRuntimeError] = useState<string>();
   const [sessionKey, setSessionKey] = useState(0);
 
@@ -136,11 +125,7 @@ export function PlayableGame({ game, onScore }: PlayableGameProps) {
         }
 
         setLoadState('error');
-        setRuntimeError(
-          error instanceof Error
-            ? error.message
-            : 'The workspace could not be loaded.',
-        );
+        setRuntimeError(error instanceof Error ? error.message : 'The workspace could not be loaded.');
       }
     };
 
@@ -180,12 +165,7 @@ export function PlayableGame({ game, onScore }: PlayableGameProps) {
         title="Workspace unavailable"
       />
     ) : phase === 'ready' ? (
-      <GameStageStatus
-        accent={game.accent}
-        message={phaseMessage}
-        state="ready"
-        title="Ready to play"
-      />
+      <GameStageStatus accent={game.accent} message={phaseMessage} state="ready" title="Ready to play" />
     ) : phase === 'paused' ? (
       <GameStageStatus
         actionLabel="Resume"
@@ -232,9 +212,7 @@ export function PlayableGame({ game, onScore }: PlayableGameProps) {
         />
 
         <div className="flex flex-wrap gap-2 lg:justify-end">
-          {loadState === 'ready' && phase === 'running' ? (
-            <Button onClick={pause}>Pause</Button>
-          ) : null}
+          {loadState === 'ready' && phase === 'running' ? <Button onClick={pause}>Pause</Button> : null}
           {loadState === 'ready' && phase === 'paused' ? (
             <Button onClick={resume} variant="primary">
               Resume
@@ -254,7 +232,8 @@ export function PlayableGame({ game, onScore }: PlayableGameProps) {
       </div>
 
       <p className="mt-3 text-sm text-slate-500">
-        The browser fetches catalog metadata first, then lazy-loads this workspace and its Three.js scene when you open the route.
+        The browser fetches catalog metadata first, then lazy-loads this workspace and its Three.js scene when you open
+        the route.
       </p>
       <div aria-live="polite" className="sr-only">
         {announcement}

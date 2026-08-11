@@ -19,9 +19,7 @@ try {
   const baseBranch = readOption('--base', 'main');
   const repoRoot = readOption('--repo-root', process.cwd());
   if (!issueNumber || !branchName) {
-    fail(
-      'Usage: prepare-ralph-worktree.mjs --issue <number> --branch <name> [--base main] [--repo-root path]',
-    );
+    fail('Usage: prepare-ralph-worktree.mjs --issue <number> --branch <name> [--base main] [--repo-root path]');
   }
   const result = prepareWorktree({ repoRoot, issueNumber, branchName, baseBranch });
   console.log(result.worktreePath);

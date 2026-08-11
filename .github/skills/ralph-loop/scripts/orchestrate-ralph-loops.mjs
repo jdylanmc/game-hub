@@ -3,18 +3,9 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import {
-  assertCleanWorktree,
-  deterministicWorktreePath,
-  loadPlan,
-  run,
-  scheduleLoops,
-} from './ralph-worktrees.mjs';
+import { assertCleanWorktree, deterministicWorktreePath, loadPlan, run, scheduleLoops } from './ralph-worktrees.mjs';
 import { RalphStatusReporter } from './ralph-status-reporter.mjs';
-import {
-  createIsolatedGitHubEnvironment,
-  verifyGitHubIdentity,
-} from './ralph-github-auth.mjs';
+import { createIsolatedGitHubEnvironment, verifyGitHubIdentity } from './ralph-github-auth.mjs';
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => {
@@ -45,17 +36,13 @@ function collectStatus(loop, repoNameWithOwner) {
 
   try {
     const plan = loadPlan(loop.worktreePath, loop.memoryDir);
-    snapshot.passedStoryIds = plan.stories
-      .filter((story) => story.passes)
-      .map((story) => story.id);
+    snapshot.passedStoryIds = plan.stories.filter((story) => story.passes).map((story) => story.id);
     snapshot.localCommit = run('git', ['rev-parse', 'HEAD'], {
       cwd: loop.worktreePath,
     });
-    const remote = run(
-      'git',
-      ['ls-remote', '--heads', 'origin', `refs/heads/${loop.branchName}`],
-      { cwd: loop.worktreePath },
-    );
+    const remote = run('git', ['ls-remote', '--heads', 'origin', `refs/heads/${loop.branchName}`], {
+      cwd: loop.worktreePath,
+    });
     snapshot.remoteCommit = remote ? remote.split(/\s+/)[0] : null;
 
     const pullRequests = JSON.parse(
@@ -88,18 +75,12 @@ function collectStatus(loop, repoNameWithOwner) {
         snapshot.ciState = 'none';
       } else if (
         checks.some((check) =>
-          ['FAILURE', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED'].includes(
-            check.conclusion ?? check.state,
-          ),
+          ['FAILURE', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED'].includes(check.conclusion ?? check.state),
         )
       ) {
         snapshot.ciState = 'failure';
       } else if (
-        checks.some((check) =>
-          ['PENDING', 'QUEUED', 'IN_PROGRESS', 'EXPECTED'].includes(
-            check.status ?? check.state,
-          ),
-        )
+        checks.some((check) => ['PENDING', 'QUEUED', 'IN_PROGRESS', 'EXPECTED'].includes(check.status ?? check.state))
       ) {
         snapshot.ciState = 'pending';
       } else {
@@ -173,15 +154,7 @@ async function main() {
       const pullRequest = JSON.parse(
         execFileSync(
           'gh',
-          [
-            'pr',
-            'view',
-            reference.url,
-            '--repo',
-            repoNameWithOwner,
-            '--json',
-            'state,mergedAt,baseRefName',
-          ],
+          ['pr', 'view', reference.url, '--repo', repoNameWithOwner, '--json', 'state,mergedAt,baseRefName'],
           { encoding: 'utf8' },
         ),
       );
@@ -192,9 +165,7 @@ async function main() {
 
   const { eligible, blocked } = scheduleLoops(loops, dependencyStates);
   for (const loop of blocked) {
-    console.log(
-      `BLOCKED issue #${loop.issueNumber}: waiting for merged issue(s) ${loop.unmetDependencies.join(', ')}`,
-    );
+    console.log(`BLOCKED issue #${loop.issueNumber}: waiting for merged issue(s) ${loop.unmetDependencies.join(', ')}`);
   }
   console.log(`ELIGIBLE ${eligible.map((loop) => `#${loop.issueNumber}`).join(', ') || 'none'}`);
 
@@ -217,10 +188,7 @@ async function main() {
   }
   for (const loop of eligible) {
     assertCleanWorktree(loop.worktreePath);
-    const runner = path.join(
-      loop.worktreePath,
-      '.github/skills/ralph-loop/scripts/run-ralph-loop.sh',
-    );
+    const runner = path.join(loop.worktreePath, '.github/skills/ralph-loop/scripts/run-ralph-loop.sh');
     if (!existsSync(runner)) {
       throw new Error(`Missing Ralph runner in ${loop.worktreePath}.`);
     }
@@ -234,10 +202,7 @@ async function main() {
 
   const launch = (loop) => {
     reporter.reportLaunch(loop, collectStatus(loop, repoNameWithOwner));
-    const runner = path.join(
-      loop.worktreePath,
-      '.github/skills/ralph-loop/scripts/run-ralph-loop.sh',
-    );
+    const runner = path.join(loop.worktreePath, '.github/skills/ralph-loop/scripts/run-ralph-loop.sh');
     const child = spawn(
       runner,
       ['--memory-dir', loop.memoryDir, '--max-iterations', String(manifest.maxIterations ?? 10)],
@@ -260,11 +225,7 @@ async function main() {
       if (!blocker && code === 0) {
         reporter.reportCompletion(loop, snapshot);
       } else {
-        reporter.reportBlocker(
-          loop,
-          blocker ?? `runner exited with status ${code}`,
-          snapshot,
-        );
+        reporter.reportBlocker(loop, blocker ?? `runner exited with status ${code}`, snapshot);
       }
       pump();
     };

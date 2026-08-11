@@ -6,6 +6,7 @@ export default defineConfig({
     strictPort: true,
   },
   build: {
+    manifest: true,
     target: 'es2022',
   },
 });

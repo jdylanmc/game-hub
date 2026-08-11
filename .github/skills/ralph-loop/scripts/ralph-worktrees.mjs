@@ -25,10 +25,7 @@ export function repositoryIdentity(repoRoot) {
     root,
     commonDir,
     primaryWorktree,
-    worktreeRoot: path.join(
-      path.dirname(primaryWorktree),
-      `${path.basename(primaryWorktree)}-worktrees`,
-    ),
+    worktreeRoot: path.join(path.dirname(primaryWorktree), `${path.basename(primaryWorktree)}-worktrees`),
   };
 }
 
@@ -70,19 +67,11 @@ export function remoteBranchExists(repoRoot, branchName) {
 
 export function verifyRemoteBranch(repoRoot, branchName) {
   if (!remoteBranchExists(repoRoot, branchName)) return;
-  git(
-    repoRoot,
-    'fetch',
-    '--quiet',
-    'origin',
-    `${branchName}:refs/remotes/origin/${branchName}`,
-  );
+  git(repoRoot, 'fetch', '--quiet', 'origin', `${branchName}:refs/remotes/origin/${branchName}`);
   try {
     git(repoRoot, 'merge-base', '--is-ancestor', `origin/${branchName}`, branchName);
   } catch {
-    throw new Error(
-      `Local branch ${branchName} is behind or diverged from origin/${branchName}.`,
-    );
+    throw new Error(`Local branch ${branchName} is behind or diverged from origin/${branchName}.`);
   }
 }
 
@@ -93,12 +82,7 @@ export function assertCleanWorktree(worktreePath) {
   }
 }
 
-export function prepareWorktree({
-  repoRoot,
-  issueNumber,
-  branchName,
-  baseBranch = 'main',
-}) {
+export function prepareWorktree({ repoRoot, issueNumber, branchName, baseBranch = 'main' }) {
   const identity = repositoryIdentity(repoRoot);
   const targetPath = deterministicWorktreePath(repoRoot, issueNumber);
   const worktrees = parseWorktrees(repoRoot);
@@ -133,33 +117,10 @@ export function prepareWorktree({
       verifyRemoteBranch(repoRoot, branchName);
       git(repoRoot, 'worktree', 'add', targetPath, branchName);
     } else if (remoteBranchExists(repoRoot, branchName)) {
-      git(
-        repoRoot,
-        'fetch',
-        '--quiet',
-        'origin',
-        `${branchName}:refs/remotes/origin/${branchName}`,
-      );
-      git(
-        repoRoot,
-        'worktree',
-        'add',
-        '--track',
-        '-b',
-        branchName,
-        targetPath,
-        `origin/${branchName}`,
-      );
+      git(repoRoot, 'fetch', '--quiet', 'origin', `${branchName}:refs/remotes/origin/${branchName}`);
+      git(repoRoot, 'worktree', 'add', '--track', '-b', branchName, targetPath, `origin/${branchName}`);
     } else {
-      git(
-        repoRoot,
-        'worktree',
-        'add',
-        '-b',
-        branchName,
-        targetPath,
-        `origin/${baseBranch}`,
-      );
+      git(repoRoot, 'worktree', 'add', '-b', branchName, targetPath, `origin/${baseBranch}`);
     }
   }
 
@@ -223,10 +184,7 @@ export function validateLoops(loops) {
     if (
       !Array.isArray(loop.dependencies) ||
       loop.dependencies.some(
-        (dependency) =>
-          !Number.isInteger(dependency) ||
-          dependency < 1 ||
-          dependency === loop.issueNumber,
+        (dependency) => !Number.isInteger(dependency) || dependency < 1 || dependency === loop.issueNumber,
       )
     ) {
       throw new Error(`Issue #${loop.issueNumber} has invalid dependencies.`);
@@ -274,9 +232,7 @@ export function scheduleLoops(loops, dependencyStates = {}) {
   const blocked = [];
 
   for (const loop of loops) {
-    const unmet = loop.dependencies.filter(
-      (issueNumber) => dependencyStates[issueNumber] !== 'merged',
-    );
+    const unmet = loop.dependencies.filter((issueNumber) => dependencyStates[issueNumber] !== 'merged');
     if (unmet.length) {
       blocked.push({ ...loop, unmetDependencies: unmet });
     } else {
@@ -284,9 +240,7 @@ export function scheduleLoops(loops, dependencyStates = {}) {
     }
   }
 
-  eligible.sort(
-    (left, right) => left.priority - right.priority || left.issueNumber - right.issueNumber,
-  );
+  eligible.sort((left, right) => left.priority - right.priority || left.issueNumber - right.issueNumber);
 
   for (let index = 0; index < eligible.length; index += 1) {
     for (let other = index + 1; other < eligible.length; other += 1) {

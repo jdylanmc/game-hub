@@ -52,9 +52,7 @@ export class RalphStatusReporter {
 
     const transitions = [];
     const previous = state.snapshot;
-    const completedStories = snapshot.passedStoryIds.filter(
-      (storyId) => !previous.passedStoryIds.includes(storyId),
-    );
+    const completedStories = snapshot.passedStoryIds.filter((storyId) => !previous.passedStoryIds.includes(storyId));
     if (completedStories.length) {
       transitions.push({ type: 'story-completion', storyIds: completedStories });
     }

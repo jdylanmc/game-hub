@@ -13,10 +13,7 @@ import {
   verifyRemoteBranch,
 } from '../scripts/ralph-worktrees.mjs';
 import { RalphStatusReporter } from '../scripts/ralph-status-reporter.mjs';
-import {
-  createIsolatedGitHubEnvironment,
-  verifyGitHubIdentity,
-} from '../scripts/ralph-github-auth.mjs';
+import { createIsolatedGitHubEnvironment, verifyGitHubIdentity } from '../scripts/ralph-github-auth.mjs';
 
 const scratchRoot = path.resolve('.ralph-test-work');
 const execFileAsync = promisify(execFile);
@@ -48,8 +45,7 @@ function createRepository(name) {
 const loop = (root, issueNumber, overrides = {}) => ({
   issueNumber,
   branchName: overrides.branchName ?? `ralph/issue-${issueNumber}`,
-  worktreePath:
-    overrides.worktreePath ?? deterministicWorktreePath(root, issueNumber),
+  worktreePath: overrides.worktreePath ?? deterministicWorktreePath(root, issueNumber),
   priority: overrides.priority ?? issueNumber,
   dependencies: overrides.dependencies ?? [],
   changeScopes: overrides.changeScopes ?? [`games/game-${issueNumber}`],
@@ -76,9 +72,7 @@ test('two independent issue loops coexist in deterministic worktrees', () => {
   });
   assert.notEqual(first.worktreePath, second.worktreePath);
   assert.deepEqual(
-    scheduleLoops([loop(root, 42), loop(root, 41)]).eligible.map(
-      ({ issueNumber }) => issueNumber,
-    ),
+    scheduleLoops([loop(root, 42), loop(root, 41)]).eligible.map(({ issueNumber }) => issueNumber),
     [41, 42],
   );
 });
@@ -87,19 +81,11 @@ test('duplicate issue, branch, and worktree ownership fail safely', () => {
   const { root } = createRepository('ownership');
   assert.throws(() => scheduleLoops([loop(root, 41), loop(root, 41)]), /duplicate ownership/);
   assert.throws(
-    () =>
-      scheduleLoops([
-        loop(root, 41, { branchName: 'shared' }),
-        loop(root, 42, { branchName: 'shared' }),
-      ]),
+    () => scheduleLoops([loop(root, 41, { branchName: 'shared' }), loop(root, 42, { branchName: 'shared' })]),
     /Branch shared/,
   );
   assert.throws(
-    () =>
-      scheduleLoops([
-        loop(root, 41, { worktreePath: '/same' }),
-        loop(root, 42, { worktreePath: '/same' }),
-      ]),
+    () => scheduleLoops([loop(root, 41, { worktreePath: '/same' }), loop(root, 42, { worktreePath: '/same' })]),
     /Worktree \/same/,
   );
 });
@@ -114,14 +100,13 @@ test('unmerged dependencies block a loop and priorities order eligible loops', (
     ],
     { 40: 'open' },
   );
-  assert.deepEqual(result.eligible.map(({ issueNumber }) => issueNumber), [43, 41]);
+  assert.deepEqual(
+    result.eligible.map(({ issueNumber }) => issueNumber),
+    [43, 41],
+  );
   assert.deepEqual(result.blocked[0].unmetDependencies, [40]);
   assert.throws(
-    () =>
-      scheduleLoops([
-        loop(root, 44, { dependencies: [45] }),
-        loop(root, 45, { dependencies: [44] }),
-      ]),
+    () => scheduleLoops([loop(root, 44, { dependencies: [45] }), loop(root, 45, { dependencies: [44] })]),
     /dependency cycle/,
   );
 });
@@ -178,15 +163,9 @@ test('remote branch divergence stops without changing either side', () => {
   command('git', ['commit', '-m', 'remote'], other);
   command('git', ['push', 'origin', 'ralph/issue-41'], other);
 
-  assert.throws(
-    () => verifyRemoteBranch(root, 'ralph/issue-41'),
-    /behind or diverged/,
-  );
+  assert.throws(() => verifyRemoteBranch(root, 'ralph/issue-41'), /behind or diverged/);
   assert.equal(command('git', ['show', 'HEAD:local.txt'], prepared.worktreePath), 'local');
-  assert.equal(
-    command('git', ['show', 'origin/ralph/issue-41:remote.txt'], root),
-    'remote',
-  );
+  assert.equal(command('git', ['show', 'origin/ralph/issue-41:remote.txt'], root), 'remote');
 });
 
 test('meaningful status changes emit once while unchanged polls stay quiet', () => {
@@ -216,15 +195,18 @@ test('meaningful status changes emit once while unchanged polls stay quiet', () 
   reporter.observe(statusLoop, initial);
   now = 299_999;
   reporter.observe(statusLoop, initial);
-  assert.deepEqual(reports.map(({ type }) => type), ['loop-launch']);
+  assert.deepEqual(
+    reports.map(({ type }) => type),
+    ['loop-launch'],
+  );
 
   now = 300_000;
   reporter.observe(statusLoop, initial);
   reporter.observe(statusLoop, initial);
-  assert.deepEqual(reports.map(({ type }) => type), [
-    'loop-launch',
-    'periodic-heartbeat',
-  ]);
+  assert.deepEqual(
+    reports.map(({ type }) => type),
+    ['loop-launch', 'periodic-heartbeat'],
+  );
 
   now += 1;
   const storyComplete = {
@@ -281,11 +263,10 @@ test('blocker and completion transitions are deduplicated', () => {
   reporter.reportBlocker(statusLoop, 'CI failed', snapshot);
   reporter.reportCompletion(statusLoop, snapshot);
   reporter.reportCompletion(statusLoop, snapshot);
-  assert.deepEqual(reports.map(({ type }) => type), [
-    'loop-launch',
-    'blocker',
-    'loop-completion',
-  ]);
+  assert.deepEqual(
+    reports.map(({ type }) => type),
+    ['loop-launch', 'blocker', 'loop-completion'],
+  );
 });
 
 test('concurrent loops keep isolated GitHub identities despite global switches', async () => {
@@ -334,14 +315,8 @@ exit 2
     tokenResolver,
   });
 
-  assert.equal(
-    verifyGitHubIdentity('first-owner', firstEnvironment, scratchRoot),
-    'first-owner',
-  );
-  assert.equal(
-    verifyGitHubIdentity('second-owner', secondEnvironment, scratchRoot),
-    'second-owner',
-  );
+  assert.equal(verifyGitHubIdentity('first-owner', firstEnvironment, scratchRoot), 'first-owner');
+  assert.equal(verifyGitHubIdentity('second-owner', secondEnvironment, scratchRoot), 'second-owner');
 
   const identityReads = Array.from({ length: 20 }, (_, index) =>
     execFileAsync(fakeGhPath, ['api', 'user', '--jq', '.login'], {
@@ -349,23 +324,13 @@ exit 2
     }),
   );
   const globalSwitches = ['intruder-a', 'intruder-b', 'intruder-c'].map((user) =>
-    execFileAsync(fakeGhPath, [
-      'auth',
-      'switch',
-      '--hostname',
-      'github.com',
-      '--user',
-      user,
-    ], {
+    execFileAsync(fakeGhPath, ['auth', 'switch', '--hostname', 'github.com', '--user', user], {
       env: baseEnvironment,
     }),
   );
   const results = await Promise.all([...identityReads, ...globalSwitches]);
   for (const [index, result] of results.slice(0, identityReads.length).entries()) {
-    assert.equal(
-      result.stdout.trim(),
-      index % 2 === 0 ? 'first-owner' : 'second-owner',
-    );
+    assert.equal(result.stdout.trim(), index % 2 === 0 ? 'first-owner' : 'second-owner');
   }
   assert.equal(firstEnvironment.GH_TOKEN, 'token-first-owner');
   assert.equal(secondEnvironment.GH_TOKEN, 'token-second-owner');

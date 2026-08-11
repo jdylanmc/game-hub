@@ -34,11 +34,7 @@ export function App() {
 
   if (catalog.status === 'ready') {
     const game = findGame(catalog.games, requestedGameId);
-    return game ? (
-      <GamePage game={game} requestedGameId={requestedGameId} />
-    ) : (
-      <NotFoundPage />
-    );
+    return game ? <GamePage game={game} requestedGameId={requestedGameId} /> : <NotFoundPage />;
   }
 
   return (

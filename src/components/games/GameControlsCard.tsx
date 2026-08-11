@@ -8,9 +8,7 @@ interface GameControlsCardProps {
 export function GameControlsCard({ game }: GameControlsCardProps) {
   return (
     <Card as="section" className="p-6">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-        Controls & accessibility
-      </p>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Controls & accessibility</p>
       <h2 className="mt-3 font-display text-2xl font-semibold">Play by sight or by status text</h2>
       <div className="mt-6 space-y-5">
         {game.controls.map((control) => (

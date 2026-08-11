@@ -11,23 +11,16 @@ function tokenLookupEnvironment(baseEnvironment) {
 }
 
 function resolveStoredToken(owner, baseEnvironment) {
-  return execFileSync(
-    'gh',
-    ['auth', 'token', '--hostname', 'github.com', '--user', owner],
-    {
-      encoding: 'utf8',
-      env: tokenLookupEnvironment(baseEnvironment),
-      stdio: ['ignore', 'pipe', 'pipe'],
-    },
-  ).trim();
+  return execFileSync('gh', ['auth', 'token', '--hostname', 'github.com', '--user', owner], {
+    encoding: 'utf8',
+    env: tokenLookupEnvironment(baseEnvironment),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
 }
 
 export function createIsolatedGitHubEnvironment(
   owner,
-  {
-    baseEnvironment = process.env,
-    tokenResolver = resolveStoredToken,
-  } = {},
+  { baseEnvironment = process.env, tokenResolver = resolveStoredToken } = {},
 ) {
   if (typeof owner !== 'string' || !owner) {
     throw new Error('A GitHub owner is required for isolated authentication.');
