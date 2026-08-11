@@ -1,0 +1,100 @@
+{
+  "games": [
+    {
+      "id": "floppy-bird",
+      "title": "FloppyBird",
+      "tagline": "Flap the disk. Beat the gates.",
+      "description": "Guide a winged floppy disk through a bright field of moving towers in a responsive Three.js run built as its own workspace.",
+      "accent": "#f59e0b",
+      "secondaryAccent": "#22d3ee",
+      "technology": "Three.js",
+      "featured": true,
+      "order": 1,
+      "controls": [
+        {
+          "action": "Flap upward",
+          "inputs": [
+            "Spacebar",
+            "Click",
+            "Touch"
+          ]
+        },
+        {
+          "action": "Pause or resume",
+          "inputs": [
+            "Host controls"
+          ]
+        },
+        {
+          "action": "Restart after a crash",
+          "inputs": [
+            "Host restart button"
+          ]
+        }
+      ],
+      "instructions": [
+        "Press Spacebar, click, or tap to flap upward from the ready state.",
+        "Stay centered and clear each glowing gate to score one point per passed obstacle.",
+        "The host HUD and overlays stay in the DOM so status, pause, and game-over states remain accessible."
+      ]
+    },
+    {
+      "id": "neon-drift",
+      "title": "Neon Drift",
+      "tagline": "Thread the light.",
+      "description": "A self-contained Three.js workspace that keeps the original neon-drift energy while swapping raw WebGL for a smoother linked scene.",
+      "accent": "#60a5fa",
+      "secondaryAccent": "#22d3ee",
+      "technology": "Three.js",
+      "order": 2,
+      "controls": [
+        {
+          "action": "Trigger a boost pulse",
+          "inputs": [
+            "Click",
+            "Touch"
+          ]
+        },
+        {
+          "action": "Pause or resume",
+          "inputs": [
+            "Host controls"
+          ]
+        }
+      ],
+      "instructions": [
+        "Watch the ship carve through the lane grid while boost pulses sharpen the light trails.",
+        "This placeholder showcase still mounts through the same host contract, HUD, and pause-resume lifecycle as the playable games."
+      ]
+    },
+    {
+      "id": "orbital-stack",
+      "title": "Orbital Stack",
+      "tagline": "Build beyond gravity.",
+      "description": "A compact Three.js workspace that keeps the original orbital-stack prototype energy while moving it into the shared lazy-loaded runtime.",
+      "accent": "#c084fc",
+      "secondaryAccent": "#f472b6",
+      "technology": "Three.js",
+      "order": 3,
+      "controls": [
+        {
+          "action": "Drop another plate",
+          "inputs": [
+            "Click",
+            "Touch"
+          ]
+        },
+        {
+          "action": "Pause or resume",
+          "inputs": [
+            "Host controls"
+          ]
+        }
+      ],
+      "instructions": [
+        "Tap or click to add another glowing plate to the orbital tower.",
+        "This showcase workspace keeps score in the shared HUD and respects the host pause-resume lifecycle."
+      ]
+    }
+  ]
+}

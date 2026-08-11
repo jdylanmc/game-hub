@@ -1,10 +1,49 @@
-import { Link } from '../components/Link';
+import type { GameManifest } from '@game-hub/game-contract';
+import type { GameCatalogState } from '../game-catalog';
 import { SiteHeader } from '../components/SiteHeader';
-import { Badge } from '../components/ui/Badge';
-import { cardStyles } from '../components/ui/Card';
-import { games } from '../games/catalog';
+import { GameCard } from '../components/games/GameCard';
+import { Card } from '../components/ui/Card';
 
-export function LandingPage() {
+interface LandingPageProps {
+  catalog: GameCatalogState;
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="animate-pulse rounded-[2rem] border border-white/10 bg-slate-900/60 p-8">
+        <div className="h-5 w-28 rounded-full bg-white/10" />
+        <div className="mt-6 h-12 max-w-md rounded-full bg-white/10" />
+        <div className="mt-4 h-5 max-w-2xl rounded-full bg-white/10" />
+        <div className="mt-3 h-5 max-w-xl rounded-full bg-white/5" />
+      </div>
+      <div className="grid gap-6 md:grid-cols-2">
+        {[0, 1].map((value) => (
+          <div className="animate-pulse rounded-[2rem] border border-white/10 bg-slate-900/60 p-7" key={value}>
+            <div className="h-5 w-20 rounded-full bg-white/10" />
+            <div className="mt-8 h-10 w-56 rounded-full bg-white/10" />
+            <div className="mt-4 h-5 w-full rounded-full bg-white/10" />
+            <div className="mt-3 h-5 w-5/6 rounded-full bg-white/5" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function splitGames(games: GameManifest[]) {
+  const featuredGame = games.find((game) => game.featured) ?? games[0];
+  const remainingGames = featuredGame
+    ? games.filter((game) => game.id !== featuredGame.id)
+    : [];
+
+  return { featuredGame, remainingGames };
+}
+
+export function LandingPage({ catalog }: LandingPageProps) {
+  const games = catalog.status === 'ready' ? catalog.games : [];
+  const { featuredGame, remainingGames } = splitGames(games);
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <SiteHeader />
@@ -17,17 +56,17 @@ export function LandingPage() {
             </p>
             <h1 className="max-w-4xl font-display text-5xl font-bold tracking-[-0.04em] text-balance sm:text-7xl">
               Small games.
-              <span className="block text-slate-400">Big bragging rights.</span>
+              <span className="block text-slate-400">Workspace-sized launch velocity.</span>
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-              Jump into quick browser games, chase the leaderboard, and find the
-              community around every challenge.
+              The root site stays lean while each game ships from its own workspace,
+              manifest, and lazy-loaded Three.js scene.
             </p>
           </div>
         </section>
 
         <section className="mx-auto max-w-7xl px-6 py-16 lg:px-10 lg:py-24">
-          <div className="mb-10 flex items-end justify-between gap-6">
+          <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">
                 Now playing
@@ -36,49 +75,39 @@ export function LandingPage() {
                 Choose your next run
               </h2>
             </div>
-            <p className="hidden text-sm text-slate-500 sm:block">2 games available</p>
+            <p className="text-sm text-slate-500">
+              {catalog.status === 'ready'
+                ? `${games.length} games available`
+                : catalog.status === 'loading'
+                  ? 'Loading game catalog…'
+                  : 'Catalog unavailable'}
+            </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {games.map((game, index) => (
-              <Link
-                className={cardStyles(
-                  true,
-                  'group relative overflow-hidden p-7',
-                )}
-                href={`/games/${game.id}`}
-                key={game.id}
-              >
-                <div
-                  className="absolute inset-0 opacity-20 transition-opacity group-hover:opacity-30"
-                  style={{
-                    background: `radial-gradient(circle at 85% 15%, ${game.accent}, transparent 45%)`,
-                  }}
-                />
-                <div className="relative flex min-h-72 flex-col justify-between">
-                  <div className="flex items-start justify-between">
-                    <Badge className="bg-black/20">WebGL</Badge>
-                    <span className="font-mono text-sm text-slate-500">0{index + 1}</span>
-                  </div>
-                  <div>
-                    <p className="mb-3 text-sm font-medium" style={{ color: game.accent }}>
-                      {game.tagline}
-                    </p>
-                    <h3 className="font-display text-4xl font-semibold tracking-tight">
-                      {game.title}
-                    </h3>
-                    <p className="mt-4 max-w-md leading-7 text-slate-400">
-                      {game.description}
-                    </p>
-                    <span className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-white">
-                      Play now
-                      <span className="transition-transform group-hover:translate-x-1">→</span>
-                    </span>
-                  </div>
+          {catalog.status === 'error' ? (
+            <Card as="section" className="p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
+                Manifest error
+              </p>
+              <h3 className="mt-3 font-display text-2xl font-semibold">The catalog could not be loaded</h3>
+              <p className="mt-4 leading-7 text-slate-300">{catalog.error}</p>
+            </Card>
+          ) : null}
+
+          {catalog.status === 'loading' ? <LoadingSkeleton /> : null}
+
+          {catalog.status === 'ready' && featuredGame ? (
+            <div className="space-y-6">
+              <GameCard featured game={featuredGame} index={0} />
+              {remainingGames.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2">
+                  {remainingGames.map((game, index) => (
+                    <GameCard game={game} index={index + 1} key={game.id} />
+                  ))}
                 </div>
-              </Link>
-            ))}
-          </div>
+              ) : null}
+            </div>
+          ) : null}
         </section>
       </main>
     </div>

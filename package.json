@@ -4,16 +4,22 @@
   "version": "0.1.0",
   "type": "module",
   "packageManager": "yarn@4.17.1",
+  "workspaces": [
+    "packages/*",
+    "games/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build-storybook": "storybook build",
+    "generate:games": "node scripts/generate-game-workspaces.mjs",
+    "dev": "yarn generate:games && vite",
+    "build": "yarn generate:games && tsc -b && vite build",
+    "build-storybook": "yarn generate:games && storybook build",
     "generate:mamba-storybook": "node scripts/generate-mamba-storybook.mjs",
     "preview": "vite preview",
-    "storybook": "storybook dev -p 6006",
-    "typecheck": "tsc -b"
+    "storybook": "yarn generate:games && storybook dev -p 6006",
+    "typecheck": "yarn generate:games && tsc -b"
   },
   "dependencies": {
+    "@game-hub/game-contract": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -24,6 +30,7 @@
     "@tailwindcss/typography": "^0.5.20",
     "@types/react": "18.3.20",
     "@types/react-dom": "18.3.5",
+    "@types/three": "^0.185.4",
     "autoprefixer": "^10.4.27",
     "node-html-parser": "^9.0.1",
     "postcss": "^8.5.14",

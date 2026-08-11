@@ -2,7 +2,7 @@ import { Avatar } from '../../components/community/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { games } from '../../games/catalog';
+import { storybookGames as games } from '../../storybook/gameHubFixtures';
 import { createAvatarDataUri } from '../../storybook/game-hub/avatarArt';
 
 const communityMoments = [

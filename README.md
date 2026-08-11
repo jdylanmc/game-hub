@@ -1,12 +1,9 @@
 # Game Hub
 
-A static React and TypeScript website for small WebGL games. Each game has its
-own page with placeholders for community posts, ratings, and leaderboards.
-
-The interface uses adapted [Mamba UI](https://github.com/Microwawe/mamba-ui)
-Tailwind component patterns. Mamba UI is a copy-and-customize component
-collection, so it does not add a runtime package dependency. Shared primitives
-live in `src/components/ui`.
+Game Hub is a Yarn workspaces monorepo for small browser games. The React +
+Vite + TypeScript + Tailwind website stays at the repo root, while each game is
+its own workspace under `games/*` with its own manifest, source, assets, and
+`package.json`.
 
 ## Local development
 
@@ -15,114 +12,162 @@ yarn install
 yarn dev
 ```
 
-The local site is available at `http://localhost:1337`.
+The main site always runs at `http://localhost:1337`.
 
-Build the production site with:
-
-```bash
-yarn build
-```
-
-## Storybook
-
-Run the component Storybook with:
+## Commands
 
 ```bash
-yarn storybook
-```
-
-Storybook uses `http://localhost:6006` and does not change the main app port.
-
-Build the static Storybook site with:
-
-```bash
-yarn build-storybook
-```
-
-The static Storybook output is written to `storybook-static`.
-
-### Mamba snapshot catalog
-
-Game Hub checks in a generated Mamba UI snapshot catalog that excludes the
-upstream full-page templates and includes all 159 non-template variants across
-41 component categories.
-
-- Upstream source snapshot: Mamba UI `0.2.1`
-- Upstream commit: `de03932581585acb38adb6039ce2cae7e57cd619`
-- Upstream commit date: `2024-04-03T22:48:35+03:00`
-
-Checked-in upstream source copies live in `src/storybook/mamba/source`.
-Generated React-friendly renderings live in `src/storybook/mamba/generated`,
-and the generated story modules live in `src/stories/catalog/mamba`.
-
-Regenerate the catalog after updating the upstream checkout with:
-
-```bash
+yarn generate:games     # discover game workspaces and refresh generated artifacts
+yarn dev                # generate + start Vite on port 1337
+yarn build              # generate + typecheck + production build
+yarn storybook          # generate + run Storybook on port 6006
+yarn build-storybook    # generate + build static Storybook
 yarn generate:mamba-storybook --source /absolute/path/to/mamba-ui-source
 ```
 
-Angular bindings, loops, and theme tokens are resolved ahead of time. Stories
-render as static visual snapshots, so interactive upstream behaviors remain
-non-interactive in Storybook.
+## Workspace architecture
 
-### Avatar and profile grounding
+```text
+.
+├── games/
+│   ├── floppy-bird/
+│   ├── neon-drift/
+│   └── orbital-stack/
+├── packages/
+│   └── game-contract/
+├── public/generated/
+│   └── games.manifest.json      # generated public catalog metadata
+└── src/generated/
+    └── game-import-map.ts       # generated typed dynamic import map
+```
 
-Curated Game Hub stories live under `Game Hub/Avatars & Profiles` and highlight
-the domain surfaces where avatars matter most:
+### Root app
 
-- avatar upload preview
-- user profile
-- leaderboard rows
-- reviews
-- game votes and ratings
+- Hosts routing, landing page, Storybook, and shared UI.
+- Fetches `/generated/games.manifest.json` at runtime for catalog metadata.
+- Loads game code only after a game route opens.
 
-`src/components/community/AvatarUploadPreview.tsx` validates image MIME types,
-uses object URLs safely, revokes replaced or unmounted previews, and falls back
-to player initials when no image is present.
+### `packages/game-contract`
 
-### Advertising boundary
+Shared strict runtime contract between the host and every game workspace:
 
-Curated advertising stories live under `Game Hub/Advertising` and document the
-neutral placeholder slot used on the game details page.
+- lifecycle: `start`, `pause`, `resume`, `dispose`
+- score submission: `submitScore(...)`
+- typed game events: phase, HUD, and announcement updates
+- manifest typing shared by the generator, host UI, and workspaces
 
-- The visible label stays `Advertisement`
-- The slot keeps stable mobile and desktop banner dimensions to avoid content
-  shift around the WebGL canvas and community cards
-- The current implementation is UI-only and intentionally does not load an ad
-  network SDK
+### `games/*`
 
-Future ad integrations should render inside the reserved inner shell provided by
-`src/components/ads/AdvertisementPlacement.tsx` without changing the outer slot
-height, label, or subdued container styling.
+Each game workspace owns:
 
-### Curated Storybook overlays
+- `package.json`
+- `game.manifest.json`
+- `src/index.ts`
+- `assets/`
 
-In addition to the full catalog, Storybook includes curated overlays that make
-priority surfaces easier to review:
+## Three.js ownership and deduplication
 
-- `Game Hub/Advertising` shows game-details ad placement plus populated,
-  loading, and empty/unavailable placeholder states
-- `Game Hub/Community Forums` shows per-game topic lists, pinned and locked
-  states, thread metadata, recent activity, author avatars, and a UI-only reply
-  composer
-- `Catalog/Mamba Highlights` surfaces review and navigation/menu components first
-- `Game Hub/Marketing` shows how Hero, Call to Action, Feature, Gallery, Stats,
-  Testimonial, and Pricing-style Mamba blocks can compose the eventual
-  game-browsing homepage
+`three` belongs to each individual game workspace, not the root website.
 
-## Adding a game
+- `games/floppy-bird/package.json` declares `three`
+- `games/neon-drift/package.json` declares `three`
+- `games/orbital-stack/package.json` declares `three`
+- the root `package.json` does **not** declare `three`
 
-Games implement the interfaces in `src/game-contract.ts`. A game receives a
-canvas and a host object, then reports completed scores through
-`host.reportScore(...)`.
+This keeps game implementation details out of the host dependency graph while
+still letting Yarn deduplicate compatible versions in `node_modules`. Modern
+Three.js ships its own TypeScript declarations, so no separate `@types/three`
+package is required.
 
-Add each game to `src/games/catalog.ts`. The initial games share a small WebGL
-placeholder renderer in `src/games/webgl-demo.ts`.
+## Runtime manifest schema
+
+Each `game.manifest.json` must include:
+
+```json
+{
+  "id": "floppy-bird",
+  "title": "FloppyBird",
+  "tagline": "Flap the disk. Beat the gates.",
+  "description": "...",
+  "accent": "#f59e0b",
+  "secondaryAccent": "#22d3ee",
+  "technology": "Three.js",
+  "featured": true,
+  "order": 1,
+  "controls": [
+    { "action": "Flap upward", "inputs": ["Spacebar", "Click", "Touch"] }
+  ],
+  "instructions": ["..."]
+}
+```
+
+The generator validates these fields before writing any artifacts.
+
+## Generator workflow
+
+`yarn generate:games` scans `games/*` for workspace `package.json` files with a
+`gameHub` block:
+
+```json
+{
+  "gameHub": {
+    "manifest": "./game.manifest.json",
+    "entry": "./src/index.ts"
+  }
+}
+```
+
+The generator emits two committed artifacts:
+
+1. `public/generated/games.manifest.json` — runtime catalog metadata fetched by
+   the browser in development and production.
+2. `src/generated/game-import-map.ts` — a typed, statically analyzable dynamic
+   import map for Vite.
+
+Root dev, build, and Storybook commands run the generator automatically.
+
+## Runtime loading flow
+
+1. The browser loads the root website bundle.
+2. The app fetches `/generated/games.manifest.json` for landing-page and
+   details-page metadata.
+3. Opening `/games/<id>` uses `src/generated/game-import-map.ts` to lazy-load
+   the matching workspace source.
+4. Vite emits separate lazy chunks per game workspace.
+5. If Vite extracts a shared Three.js vendor chunk, it is still only requested
+   after a game route opens.
+
+Result: game code and Three.js stay out of the landing-page startup bundle.
+
+## Creating a new game workspace
+
+1. Create `games/<slug>/`.
+2. Add a `package.json` with:
+   - a unique workspace package name
+   - `@game-hub/game-contract` as a workspace dependency
+   - `three` as a direct dependency if the game renders with Three.js
+   - a `gameHub` block pointing to the manifest and source entry
+3. Add `game.manifest.json`.
+4. Implement `src/index.ts` that exports:
+   - `manifest`
+   - `createGame(canvas, host)`
+5. Add generated or source-controlled assets under `assets/` if needed.
+6. Run `yarn generate:games`.
+7. Validate with `yarn build` and `yarn build-storybook`.
+
+No root catalog edit is required—the generator discovers the workspace.
+
+## Storybook and the checked-in Mamba catalog
+
+Storybook remains the official grounding surface for host UI and marketing
+studies. The generated Mamba catalog under `src/storybook/mamba/generated` and
+`src/stories/catalog/mamba` stays checked in.
+
+Game-specific grounding stories live under `Game Hub/Games/*`.
 
 ## Azure deployment
 
-The build output is `dist`. When creating an Azure Static Web Apps resource,
-use these build settings:
+The production app output is still `dist`. For Azure Static Web Apps use:
 
 | Setting | Value |
 | --- | --- |
@@ -131,9 +176,8 @@ use these build settings:
 | Output location | `dist` |
 | Build command | `yarn build` |
 
-`public/staticwebapp.config.json` configures client-side route fallback and
-basic security headers. An API location can be added later when the container
-service is introduced.
+`public/staticwebapp.config.json` continues to provide client-side routing
+fallbacks and baseline security headers.
 
 ## Third-party software
 

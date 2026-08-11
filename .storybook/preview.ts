@@ -21,7 +21,7 @@ const preview = {
       storySort: {
         order: [
           'Game Hub',
-          ['Avatars & Profiles', 'Advertising', 'Community Forums', 'Marketing', '*'],
+          ['Avatars & Profiles', 'Advertising', 'Community Forums', 'Games', 'Marketing', '*'],
           'Catalog',
           [
             'Mamba Highlights',

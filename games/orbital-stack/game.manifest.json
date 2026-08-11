@@ -1,0 +1,24 @@
+{
+  "id": "orbital-stack",
+  "title": "Orbital Stack",
+  "tagline": "Build beyond gravity.",
+  "description": "A compact Three.js workspace that keeps the original orbital-stack prototype energy while moving it into the shared lazy-loaded runtime.",
+  "accent": "#c084fc",
+  "secondaryAccent": "#f472b6",
+  "technology": "Three.js",
+  "order": 3,
+  "controls": [
+    {
+      "action": "Drop another plate",
+      "inputs": ["Click", "Touch"]
+    },
+    {
+      "action": "Pause or resume",
+      "inputs": ["Host controls"]
+    }
+  ],
+  "instructions": [
+    "Tap or click to add another glowing plate to the orbital tower.",
+    "This showcase workspace keeps score in the shared HUD and respects the host pause-resume lifecycle."
+  ]
+}

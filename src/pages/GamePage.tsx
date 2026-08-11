@@ -1,14 +1,22 @@
+import type { GameManifest, GameScore } from '@game-hub/game-contract';
 import { useCallback, useState } from 'react';
 import { AdvertisementPlacement } from '../components/ads/AdvertisementPlacement';
-import { GameCanvas } from '../components/GameCanvas';
+import { GameControlsCard } from '../components/games/GameControlsCard';
+import { GameManifestCard } from '../components/games/GameManifestCard';
+import { GameStageStatus } from '../components/games/GameStageStatus';
+import { PlayableGame } from '../components/games/PlayableGame';
 import { Link } from '../components/Link';
 import { SiteHeader } from '../components/SiteHeader';
+import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import type { GameDefinition, GameScore } from '../game-contract';
+import { formatGameId } from '../game-catalog';
 
 interface GamePageProps {
-  game: GameDefinition;
+  catalogError?: string;
+  catalogLoading?: boolean;
+  game?: GameManifest;
+  requestedGameId: string;
 }
 
 const sampleLeaders = [
@@ -17,9 +25,55 @@ const sampleLeaders = [
   { name: 'guest_2048', score: '88,100' },
 ];
 
-export function GamePage({ game }: GamePageProps) {
+export function GamePage({
+  catalogError,
+  catalogLoading = false,
+  game,
+  requestedGameId,
+}: GamePageProps) {
   const [latestScore, setLatestScore] = useState<GameScore>();
   const handleScore = useCallback((score: GameScore) => setLatestScore(score), []);
+
+  if (!game) {
+    const accent = '#60a5fa';
+    const title = formatGameId(requestedGameId);
+
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <SiteHeader />
+        <main className="mx-auto max-w-7xl px-6 py-10 lg:px-10">
+          <Link
+            className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-white"
+            href="/"
+          >
+            ← All games
+          </Link>
+
+          <div className="mb-8">
+            <p className="font-display text-sm font-semibold uppercase tracking-[0.22em] text-blue-300">
+              {catalogLoading ? 'Loading manifest' : 'Manifest unavailable'}
+            </p>
+            <h1 className="mt-3 font-display text-5xl font-bold tracking-[-0.04em]">{title}</h1>
+          </div>
+
+          <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/70">
+            <div className="aspect-video">
+              <GameStageStatus
+                accent={accent}
+                message={
+                  catalogLoading
+                    ? 'Fetching the runtime catalog before loading the selected workspace.'
+                    : catalogError ?? 'The runtime manifest for this game could not be loaded.'
+                }
+                state={catalogLoading ? 'loading' : 'error'}
+                title={catalogLoading ? `Loading ${title}` : 'Game unavailable'}
+              />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -34,7 +88,13 @@ export function GamePage({ game }: GamePageProps) {
 
         <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
-            <p className="font-display text-sm font-semibold uppercase tracking-[0.22em]" style={{ color: game.accent }}>
+            <div className="flex flex-wrap gap-2">
+              {game.featured ? (
+                <Badge className="bg-amber-400/10 text-amber-100">Featured</Badge>
+              ) : null}
+              <Badge className="bg-white/5 text-slate-200">{game.technology}</Badge>
+            </div>
+            <p className="mt-4 font-display text-sm font-semibold uppercase tracking-[0.22em]" style={{ color: game.accent }}>
               {game.tagline}
             </p>
             <h1 className="mt-3 font-display text-5xl font-bold tracking-[-0.04em]">
@@ -47,21 +107,18 @@ export function GamePage({ game }: GamePageProps) {
           </div>
         </div>
 
-        <div
-          className="rounded-3xl border border-white/10 bg-slate-900/70 p-3 shadow-2xl"
-          style={{ boxShadow: `0 30px 100px -40px ${game.accent}` }}
-        >
-          <GameCanvas game={game} onScore={handleScore} />
-        </div>
-        <p className="mt-3 text-center text-xs text-slate-500">
-          Click the game canvas to submit a placeholder score.
-        </p>
+        <PlayableGame game={game} onScore={handleScore} />
 
-        {latestScore && (
+        {latestScore ? (
           <div className="mt-5 rounded-xl border border-blue-400/20 bg-blue-400/10 px-4 py-3 text-sm text-blue-100">
-            Placeholder score recorded locally: {latestScore.score.toLocaleString()}
+            Final score recorded locally: {latestScore.score.toLocaleString()}
           </div>
-        )}
+        ) : null}
+
+        <div className="mt-10 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <GameManifestCard game={game} />
+          <GameControlsCard game={game} />
+        </div>
 
         <AdvertisementPlacement className="mt-8" state="populated" />
 
@@ -70,9 +127,7 @@ export function GamePage({ game }: GamePageProps) {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
               Community
             </p>
-            <h2 className="mt-3 font-display text-2xl font-semibold">
-              Talk strategy
-            </h2>
+            <h2 className="mt-3 font-display text-2xl font-semibold">Talk strategy</h2>
             <p className="mt-3 leading-7 text-slate-400">
               Sign in to share tips, post your best run, and meet other players.
               Community posts will appear here when the service is connected.

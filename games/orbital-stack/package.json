@@ -1,0 +1,14 @@
+{
+  "name": "@game-hub/orbital-stack",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@game-hub/game-contract": "workspace:*",
+    "three": "0.179.1"
+  },
+  "gameHub": {
+    "manifest": "./game.manifest.json",
+    "entry": "./src/index.ts"
+  }
+}

@@ -2,13 +2,11 @@ import { AdvertisementPlacement, type AdvertisementPlacementState } from '../../
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { games } from '../../games/catalog';
 import { StorySurface } from '../../storybook/StorySurface';
-
-const [featuredGame] = games;
+import { featuredStorybookGame } from '../../storybook/gameHubFixtures';
 
 const integrationRules = [
-  'Always keep the outer slot dimensions stable so the WebGL game canvas and score callouts never shift.',
+  'Always keep the outer slot dimensions stable so the game canvas and score callouts never shift.',
   'Render future ad network or direct-sales creative inside the reserved inner boundary only.',
   'Keep the visible “Advertisement” label and neutral treatment so no sponsored slot can be mistaken for gameplay UI.',
 ];
@@ -67,9 +65,9 @@ export const GameDetailsPlacement = {
           <div className="border-b border-white/10 px-6 py-5 sm:px-8">
             <Badge className="bg-blue-400/10 text-blue-200">Game details page excerpt</Badge>
             <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              {featuredGame.title}
+              {featuredStorybookGame.title}
             </h2>
-            <p className="mt-4 max-w-3xl leading-7 text-slate-400">{featuredGame.description}</p>
+            <p className="mt-4 max-w-3xl leading-7 text-slate-400">{featuredStorybookGame.description}</p>
           </div>
 
           <div className="px-6 py-6 sm:px-8">
@@ -77,12 +75,12 @@ export const GameDetailsPlacement = {
               <div
                 className="grid min-h-[20rem] place-items-center rounded-[1.4rem] border border-dashed border-white/10 px-6 text-center"
                 style={{
-                  background: `radial-gradient(circle at top, ${featuredGame.accent}22, transparent 45%), linear-gradient(180deg, rgba(15,23,42,0.94), rgba(2,6,23,0.98))`,
+                  background: `radial-gradient(circle at top, ${featuredStorybookGame.accent}22, transparent 45%), linear-gradient(180deg, rgba(15,23,42,0.94), rgba(2,6,23,0.98))`,
                 }}
               >
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                    WebGL gameplay canvas
+                    Gameplay canvas
                   </p>
                   <p className="mt-4 font-display text-3xl font-semibold text-white">
                     Primary play surface stays dominant

@@ -2,7 +2,7 @@ import { Avatar } from '../../components/community/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { games } from '../../games/catalog';
+import { storybookGames } from '../../storybook/gameHubFixtures';
 import { StorySurface } from '../../storybook/StorySurface';
 import { createAvatarDataUri } from '../../storybook/game-hub/avatarArt';
 
@@ -42,7 +42,7 @@ interface ThreadEntry {
   label?: string;
 }
 
-const [featuredGame, secondaryGame] = games;
+const [featuredGame, secondaryGame] = storybookGames;
 
 const members: Record<string, CommunityMember> = {
   ari: {

@@ -1,0 +1,30 @@
+{
+  "id": "floppy-bird",
+  "title": "FloppyBird",
+  "tagline": "Flap the disk. Beat the gates.",
+  "description": "Guide a winged floppy disk through a bright field of moving towers in a responsive Three.js run built as its own workspace.",
+  "accent": "#f59e0b",
+  "secondaryAccent": "#22d3ee",
+  "technology": "Three.js",
+  "featured": true,
+  "order": 1,
+  "controls": [
+    {
+      "action": "Flap upward",
+      "inputs": ["Spacebar", "Click", "Touch"]
+    },
+    {
+      "action": "Pause or resume",
+      "inputs": ["Host controls"]
+    },
+    {
+      "action": "Restart after a crash",
+      "inputs": ["Host restart button"]
+    }
+  ],
+  "instructions": [
+    "Press Spacebar, click, or tap to flap upward from the ready state.",
+    "Stay centered and clear each glowing gate to score one point per passed obstacle.",
+    "The host HUD and overlays stay in the DOM so status, pause, and game-over states remain accessible."
+  ]
+}
