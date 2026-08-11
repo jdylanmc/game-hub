@@ -9,6 +9,11 @@ const mainBicep = await fs.readFile(path.join(root, 'infra/bicep/main.bicep'), '
 const agentConfig = JSON.parse(
   await fs.readFile(path.join(root, 'config/adversarial-agents/agents-config.json'), 'utf8'),
 );
+const collectorConfig = JSON.parse(
+  await fs.readFile(path.join(root, 'config/adversarial-agents/context-collector.json'), 'utf8'),
+);
+const collector = await fs.readFile(path.join(root, 'scripts/collect-adversarial-context.ts'), 'utf8');
+const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
 const violations = [];
 
 const requiredWorkflowFragments = [
@@ -68,6 +73,60 @@ if (reviewer?.executionConfig?.maxConcurrentReviews !== 3) {
 }
 if (reviewer?.modelDeployment !== 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard') {
   violations.push('Registry model attribution must match the deployed Azure model exactly.');
+}
+
+const requiredContextSections = [
+  'contracts',
+  'manifests',
+  'generators',
+  'workflows',
+  'validationConfig',
+  'relevantTests',
+];
+for (const section of requiredContextSections) {
+  if (!collectorConfig.sections?.[section]?.mandatory) {
+    violations.push(`Context collector section must be mandatory: ${section}`);
+  }
+}
+if (
+  collectorConfig.version !== '1.0.0' ||
+  collectorConfig.limits?.maxPacketBytes > 1048576 ||
+  collectorConfig.limits?.maxEvidenceBytes > 262144 ||
+  collectorConfig.limits?.maxFileBytes > 32768 ||
+  collectorConfig.limits?.maxPatchBytes > 65536
+) {
+  violations.push('Context collector version or reviewed byte limits were weakened.');
+}
+const requiredCollectorFragments = [
+  "classification: 'UNTRUSTED_DATA_ONLY'",
+  'executableContentAllowed: false',
+  'instructionsFromEvidenceAllowed: false',
+  "'--no-ext-diff'",
+  "'--no-textconv'",
+  "'MANDATORY_CONTEXT_MISSING'",
+  "'MANDATORY_CONTEXT_TRUNCATED'",
+  "'GLOBAL_EVIDENCE_LIMIT'",
+  "'PACKET_SIZE_LIMIT'",
+];
+for (const fragment of requiredCollectorFragments) {
+  if (!collector.includes(fragment)) {
+    violations.push(`Missing context collector invariant: ${fragment}`);
+  }
+}
+if (
+  collector.includes('execSync') ||
+  collector.includes('shell: true') ||
+  collector.includes('fetch(') ||
+  collector.includes('https.request')
+) {
+  violations.push('Context collector must not execute repository code or access the network.');
+}
+const spawnedCommands = [...collector.matchAll(/spawnSync\(([^,]+)/g)].map((match) => match[1].trim());
+if (spawnedCommands.length === 0 || spawnedCommands.some((command) => command !== "'git'")) {
+  violations.push('Context collector may spawn only the Git executable.');
+}
+if (packageJson.scripts?.['context:collect'] !== 'node scripts/collect-adversarial-context.ts') {
+  violations.push('Missing canonical local context collection command.');
 }
 
 if (violations.length > 0) {

@@ -13,4 +13,5 @@ test-results
 *.tsbuildinfo
 docs/memories/**/iterations/*.log
 .ralph-test-work/
+.adversarial-context-test-work/
 .ralph-orchestration*.json

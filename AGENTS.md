@@ -56,6 +56,11 @@ workflows must depend on the complete deterministic workflow succeeding; they
 must not consume model capacity while any deterministic gate is missing,
 pending, canceled, or failing.
 
+`yarn context:collect` creates bounded adversarial-review evidence from local
+Git objects and explicit issue/pull-request metadata. It treats every collected
+value as inert untrusted data and must never check out, import, install, build,
+test, or execute pull-request content.
+
 `yarn policy:check` rejects unapproved lint suppressions and weakened workflow
 invariants. Record an exceptional suppression with a specific rationale in
 `config/lint-suppressions.json`. `yarn bundle:check` enforces the reviewed

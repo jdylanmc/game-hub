@@ -23,6 +23,7 @@
     "policy:workflow": "node scripts/check-workflow-policy.mjs",
     "policy:adversarial": "node scripts/check-adversarial-policy.mjs",
     "policy:check": "yarn lint:suppressions && yarn policy:workflow && yarn policy:adversarial",
+    "context:collect": "node scripts/collect-adversarial-context.ts",
     "security:audit": "yarn npm audit --all --recursive --severity high",
     "ralph:prioritize": "node scripts/find-failing-ralph-pr.mjs jdylanmc/game-hub",
     "test:ci-fail-closed": "node scripts/prove-ci-fail-closed.mjs",

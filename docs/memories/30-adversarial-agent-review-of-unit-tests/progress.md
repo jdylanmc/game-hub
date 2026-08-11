@@ -129,3 +129,36 @@
 - US-001 and US-002 are passed. US-003 and later stories were not advanced.
   Live identity creation, environment protection, deployment, and end-to-end
   model invocation remain US-009 work.
+
+## 2026-08-11 - Iteration 4: US-003 completion
+
+- Added `scripts/collect-adversarial-context.ts` and the canonical
+  `yarn context:collect` command. Inputs are explicit issue requirements and
+  pull-request metadata plus locally available base/head commit objects; the
+  collector performs no network access.
+- Added versioned selection and byte limits in
+  `config/adversarial-agents/context-collector.json`, including a one-megabyte
+  packet ceiling, 256 KiB evidence budget, per-file/patch bounds, deterministic
+  patterns, and mandatory section policy.
+- Collects production and test diffs, contracts, manifests, generators,
+  workflows, validation configuration, and relevant existing tests. Diff hunks
+  retain exact old/new line numbers; repository blobs retain path and included
+  line range.
+- Treats issue, pull-request, diff, and repository content as inert untrusted
+  data. Git runs without hooks, local/system configuration, external diffs,
+  text conversion, or interpreted pathspecs; blobs are read by object ID and no
+  pull-request code is checked out or executed.
+- Canonical input/configuration hashes and exact issue, pull-request, base, and
+  head identities make output attributable and byte-for-byte reproducible.
+- Mandatory missing, binary, file-limited, globally limited, oversized, or
+  truncated context produces a stable `BLOCKED` packet and exit code 3.
+- Added ten tests covering malicious fork prompt injection and non-execution,
+  binary/large content, rename/delete status, truncation, deterministic
+  ordering and output, exact line citations, serialized packet bounds, local
+  command reproduction, and required-context failures.
+- Passed the complete deterministic suite in cheapest-to-most-expensive order:
+  immutable install, formatting, lint, policy, generation, typecheck, security
+  audit, 39 tests with coverage, production build, bundle budgets, Storybook,
+  and 11 fail-closed continuous-integration probes.
+- US-003 is passed. US-004 and later stories were not advanced. Model prompt
+  construction, invocation, and enforcement remain future-story work.

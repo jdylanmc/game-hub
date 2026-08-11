@@ -55,8 +55,8 @@
         "Missing or truncated mandatory context is explicit and can block review"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a versioned deterministic collector and local command that reads explicit issue/PR metadata plus base/head Git objects without checkout or code execution. It collects bounded production/test diffs with old/new line citations and mandatory contracts, manifests, generators, workflows, validation config, and existing tests. Canonical hashes and exact commits provide attribution; binary, missing, file-limited, globally limited, or truncated mandatory evidence blocks. Ten tests cover malicious fork prompt injection, non-execution, binary/large files, rename/delete, deterministic ordering/output, line citations, packet limits, CLI reproduction, and required-context failures.",
       "dependencies": ["US-001"]
     },
     {
