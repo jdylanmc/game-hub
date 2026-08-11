@@ -213,10 +213,7 @@ function TopicRow({ topic }: { topic: Topic }) {
             {topic.isLocked ? <StateBadge kind="locked" /> : null}
             <Badge className="bg-white/5 text-slate-300">{topic.board}</Badge>
           </div>
-          <h3
-            className="mt-3 font-display text-2xl font-semibold tracking-tight text-white"
-            id={`${topic.id}-title`}
-          >
+          <h3 className="mt-3 font-display text-2xl font-semibold tracking-tight text-white" id={`${topic.id}-title`}>
             {topic.title}
           </h3>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{topic.excerpt}</p>
@@ -241,23 +238,17 @@ function TopicRow({ topic }: { topic: Topic }) {
 
         <dl className="grid grid-cols-2 gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 lg:grid-cols-1">
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Replies
-            </dt>
+            <dt className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Replies</dt>
             <dd className="mt-2 font-display text-3xl font-semibold text-white">{topic.replies}</dd>
           </div>
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Views
-            </dt>
+            <dt className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Views</dt>
             <dd className="mt-2 font-display text-3xl font-semibold text-white">{topic.views}</dd>
           </div>
         </dl>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Recent activity
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Recent activity</p>
           <div className="mt-4 flex items-center gap-3">
             <Avatar
               alt={`${topic.latestActivity.member.name} recent activity avatar`}
@@ -268,8 +259,7 @@ function TopicRow({ topic }: { topic: Topic }) {
             />
             <div className="min-w-0">
               <p className="truncate text-sm text-slate-200">
-                {topic.latestActivity.action}{' '}
-                <span className="font-medium">{topic.latestActivity.member.name}</span>
+                {topic.latestActivity.action} <span className="font-medium">{topic.latestActivity.member.name}</span>
               </p>
               <p className="mt-1 text-sm text-slate-400">{topic.latestActivity.time}</p>
             </div>
@@ -282,10 +272,7 @@ function TopicRow({ topic }: { topic: Topic }) {
 
 function ThreadPost({ entry }: { entry: ThreadEntry }) {
   return (
-    <Card
-      as="article"
-      className={`p-6 ${entry.highlighted ? 'border-blue-400/30 bg-blue-400/5' : ''}`}
-    >
+    <Card as="article" className={`p-6 ${entry.highlighted ? 'border-blue-400/30 bg-blue-400/5' : ''}`}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-4">
           <Avatar
@@ -348,8 +335,8 @@ export const BoardOverview = {
               {featuredGame.title} community forum
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">
-              Strategy guides, challenge-night coordination, and pinned moderation notes all
-              need strong information scent before a player clicks into a thread.
+              Strategy guides, challenge-night coordination, and pinned moderation notes all need strong information
+              scent before a player clicks into a thread.
             </p>
           </div>
 
@@ -368,9 +355,7 @@ export const BoardOverview = {
 
         <div className="grid gap-6">
           <Card as="section" className="p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Board health
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Board health</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
               {[
                 ['128', 'Open topics this week'],
@@ -386,9 +371,7 @@ export const BoardOverview = {
           </Card>
 
           <Card as="section" className="p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Posting guidance
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Posting guidance</p>
             <ul className="mt-5 space-y-3 text-sm leading-7 text-slate-300">
               <li>Use pinned threads for route docs, patch notes, and official moderation updates.</li>
               <li>Keep locked topics readable and visually distinct so resolved issues are easy to scan.</li>
@@ -397,9 +380,7 @@ export const BoardOverview = {
           </Card>
 
           <Card as="section" className="p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Recently active members
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Recently active members</p>
             <div className="mt-5 space-y-4">
               {[members.ari, members.june, members.parker, members.mina].map((member) => (
                 <div className="flex items-center gap-4" key={member.handle}>
@@ -445,8 +426,8 @@ export const DiscussionThread = {
               Weekly gauntlet route notes for {featuredGame.title}
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">
-              Players can review the original route, inspect the reply timeline, and add their
-              own refinement in one continuous forum surface.
+              Players can review the original route, inspect the reply timeline, and add their own refinement in one
+              continuous forum surface.
             </p>
           </Card>
 
@@ -459,8 +440,8 @@ export const DiscussionThread = {
               <div>
                 <h3 className="font-display text-2xl font-semibold text-white">Reply composer</h3>
                 <p className="mt-2 text-sm text-slate-400" id="reply-composer-help">
-                  UI-only example. Labels, helper text, and keyboard focus are included, but no
-                  forum API behavior is wired up.
+                  UI-only example. Labels, helper text, and keyboard focus are included, but no forum API behavior is
+                  wired up.
                 </p>
               </div>
               <Badge className="bg-white/5 text-slate-200">Reuses avatar grounding</Badge>
@@ -478,7 +459,9 @@ export const DiscussionThread = {
                   />
                   <div>
                     <p className="font-medium text-white">Posting as {members.kai.name}</p>
-                    <p className="text-sm text-slate-400">{members.kai.handle} · {members.kai.role}</p>
+                    <p className="text-sm text-slate-400">
+                      {members.kai.handle} · {members.kai.role}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -510,7 +493,11 @@ export const DiscussionThread = {
 
               <div className="flex flex-wrap items-start gap-4">
                 <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
-                  <input className="mt-1 rounded border-white/15 bg-slate-950 text-blue-400" defaultChecked type="checkbox" />
+                  <input
+                    className="mt-1 rounded border-white/15 bg-slate-950 text-blue-400"
+                    defaultChecked
+                    type="checkbox"
+                  />
                   <span>Notify me when someone replies to this thread.</span>
                 </label>
                 <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
@@ -520,10 +507,16 @@ export const DiscussionThread = {
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-4">
-                <p className="text-sm text-slate-400">Formatting tools, drafts, and attachments would layer on later.</p>
+                <p className="text-sm text-slate-400">
+                  Formatting tools, drafts, and attachments would layer on later.
+                </p>
                 <div className="flex gap-3">
-                  <Button type="button" variant="ghost">Save draft</Button>
-                  <Button type="submit" variant="primary">Post reply</Button>
+                  <Button type="button" variant="ghost">
+                    Save draft
+                  </Button>
+                  <Button type="submit" variant="primary">
+                    Post reply
+                  </Button>
                 </div>
               </div>
             </form>
@@ -532,9 +525,7 @@ export const DiscussionThread = {
 
         <div className="space-y-6">
           <Card as="section" className="p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Thread metadata
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Thread metadata</p>
             <dl className="mt-5 space-y-4 text-sm text-slate-300">
               <div>
                 <dt className="text-slate-500">Replies</dt>
@@ -552,9 +543,7 @@ export const DiscussionThread = {
           </Card>
 
           <Card as="section" className="p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Recent activity
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Recent activity</p>
             <div className="mt-5 space-y-4">
               {[members.parker, members.kai, members.noah].map((member, index) => (
                 <div className="flex items-center gap-4" key={member.handle}>
@@ -568,7 +557,11 @@ export const DiscussionThread = {
                   <div>
                     <p className="text-sm text-slate-200">{member.name}</p>
                     <p className="text-sm text-slate-400">
-                      {index === 0 ? 'Shared a safer route variant' : index === 1 ? 'Asked for controller timings' : 'Linked tonight’s bracket thread'}
+                      {index === 0
+                        ? 'Shared a safer route variant'
+                        : index === 1
+                          ? 'Asked for controller timings'
+                          : 'Linked tonight’s bracket thread'}
                     </p>
                   </div>
                 </div>

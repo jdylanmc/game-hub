@@ -44,14 +44,7 @@ const themeContext = {
   prose: 'prose prose-invert',
 };
 
-const booleanAttributes = new Set([
-  'checked',
-  'disabled',
-  'hidden',
-  'readonly',
-  'required',
-  'selected',
-]);
+const booleanAttributes = new Set(['checked', 'disabled', 'hidden', 'readonly', 'required', 'selected']);
 
 const voidElements = new Set([
   'area',
@@ -96,11 +89,7 @@ for (const category of categories) {
 
   const entries = [];
   for (const variant of variants) {
-    const upstreamHtmlPath = path.join(
-      category.path,
-      variant.id,
-      `${variant.id}.component.html`,
-    );
+    const upstreamHtmlPath = path.join(category.path, variant.id, `${variant.id}.component.html`);
     const upstreamTsPath = path.join(category.path, variant.id, `${variant.id}.component.ts`);
     const copiedHtmlPath = path.join(sourceCategoryRoot, `${variant.id}.component.html`);
     const copiedTsPath = path.join(sourceCategoryRoot, `${variant.id}.component.ts`);
@@ -112,10 +101,7 @@ for (const category of categories) {
     const normalizedHtml = normalizeText(rawHtml);
     const normalizedTs = normalizeText(rawTs);
 
-    await Promise.all([
-      fs.writeFile(copiedHtmlPath, normalizedHtml),
-      fs.writeFile(copiedTsPath, normalizedTs),
-    ]);
+    await Promise.all([fs.writeFile(copiedHtmlPath, normalizedHtml), fs.writeFile(copiedTsPath, normalizedTs)]);
 
     const componentContext = extractComponentContext(normalizedTs);
     const renderedHtml = renderAngularTemplate(normalizedHtml, {
@@ -145,10 +131,7 @@ for (const category of categories) {
 }
 
 await Promise.all(
-  categoryRecords.flatMap((category) => [
-    writeCategoryDataFile(category),
-    writeCategoryStoryFile(category),
-  ]),
+  categoryRecords.flatMap((category) => [writeCategoryDataFile(category), writeCategoryStoryFile(category)]),
 );
 await writeIndexFile(categoryRecords, {
   ...sourceMetadata,
@@ -156,9 +139,7 @@ await writeIndexFile(categoryRecords, {
   componentVariantCount: totalVariantCount,
 });
 
-console.log(
-  `Generated ${totalVariantCount} Mamba UI variants across ${categoryRecords.length} component categories.`,
-);
+console.log(`Generated ${totalVariantCount} Mamba UI variants across ${categoryRecords.length} component categories.`);
 
 function resolveSourceRoot(argv) {
   let explicit;
@@ -246,13 +227,7 @@ function getCategoryTitle(slug) {
 }
 
 function extractComponentContext(sourceText) {
-  const sourceFile = ts.createSourceFile(
-    'component.ts',
-    sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
+  const sourceFile = ts.createSourceFile('component.ts', sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const context = {};
   const classDeclaration = sourceFile.statements.find(ts.isClassDeclaration);
 
@@ -275,10 +250,7 @@ function extractComponentContext(sourceText) {
           statement.expression.left.expression.kind === ts.SyntaxKind.ThisKeyword &&
           ts.isIdentifier(statement.expression.left.name)
         ) {
-          context[statement.expression.left.name.text] = evaluateTsExpression(
-            statement.expression.right,
-            context,
-          );
+          context[statement.expression.left.name.text] = evaluateTsExpression(statement.expression.right, context);
         }
       }
     }
@@ -319,9 +291,7 @@ function evaluateTsExpression(node, context) {
   }
 
   if (ts.isPrefixUnaryExpression(node) && ts.isNumericLiteral(node.operand)) {
-    return node.operator === ts.SyntaxKind.MinusToken
-      ? -Number(node.operand.text)
-      : Number(node.operand.text);
+    return node.operator === ts.SyntaxKind.MinusToken ? -Number(node.operand.text) : Number(node.operand.text);
   }
 
   if (ts.isIdentifier(node)) {
@@ -390,12 +360,12 @@ function renderNode(node, scope) {
           ...scope,
           [itemName]: item,
           ...(indexName ? { [indexName]: index } : {}),
-        }, true),
+        }),
       )
       .join('');
   }
 
-  return renderElement(node, scope, false);
+  return renderElement(node, scope);
 }
 
 function parseNgForExpression(expression) {
@@ -415,7 +385,7 @@ function parseNgForExpression(expression) {
   };
 }
 
-function renderElement(element, scope, ignoreNgFor) {
+function renderElement(element, scope) {
   const tagName = element.rawTagName.toLowerCase();
   const classTokens = new Set(
     splitClassTokens(replaceAttributeInterpolations(element.getAttribute('class') ?? '', scope)),
@@ -464,15 +434,11 @@ function renderElement(element, scope, ignoreNgFor) {
     }
 
     if (name.startsWith('attr.')) {
-      attributes.push(
-        `${name.slice(5)}="${escapeAttribute(replaceAttributeInterpolations(rawValue, scope))}"`,
-      );
+      attributes.push(`${name.slice(5)}="${escapeAttribute(replaceAttributeInterpolations(rawValue, scope))}"`);
       continue;
     }
 
-    attributes.push(
-      `${name}="${escapeAttribute(replaceAttributeInterpolations(rawValue, scope))}"`,
-    );
+    attributes.push(`${name}="${escapeAttribute(replaceAttributeInterpolations(rawValue, scope))}"`);
   }
 
   if (classTokens.size > 0) {
@@ -556,12 +522,7 @@ function evaluateAngularExpression(expression, scope) {
 
 function normalizeAngularExpression(expression) {
   const sourceText = expression.replace(/\bthis\./g, '').trim();
-  const scanner = ts.createScanner(
-    ts.ScriptTarget.Latest,
-    false,
-    ts.LanguageVariant.Standard,
-    sourceText,
-  );
+  const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, ts.LanguageVariant.Standard, sourceText);
   const parts = [];
   let token = scanner.scan();
 
@@ -603,18 +564,11 @@ function postProcessRenderedHtml(renderedHtml) {
 }
 
 function escapeAttribute(value) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function escapeHtml(value) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 async function writeCategoryDataFile(category) {
@@ -751,9 +705,7 @@ function runGit(cwd, args) {
 }
 
 function toTemplateLiteral(value) {
-  return `String.raw\`${normalizeText(value)
-    .replace(/`/g, '\\`')
-    .replace(/\$\{/g, '\\${')}\``;
+  return `String.raw\`${normalizeText(value).replace(/`/g, '\\`').replace(/\$\{/g, '\\${')}\``;
 }
 
 function normalizeText(value) {

@@ -17,8 +17,8 @@
         "The quality tools cover the host, shared packages, game workspaces, Storybook, tests, and scripts as applicable"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Pinned Prettier, ESLint, TypeScript ESLint, Vitest, V8 coverage, JSDOM, and Testing Library; added immutable install, format, lint, test, coverage, and aggregate validation commands. US-002 must add representative tests, coverage thresholds, and change passWithNoTests to false.",
       "dependencies": []
     },
     {
@@ -33,9 +33,7 @@
       "priority": 2,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-001"
-      ]
+      "dependencies": ["US-001"]
     },
     {
       "id": "US-003",
@@ -49,9 +47,7 @@
       "priority": 3,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-001"
-      ]
+      "dependencies": ["US-001"]
     },
     {
       "id": "US-004",
@@ -66,11 +62,7 @@
       "priority": 4,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-001",
-        "US-002",
-        "US-003"
-      ]
+      "dependencies": ["US-001", "US-002", "US-003"]
     },
     {
       "id": "US-005",
@@ -85,9 +77,7 @@
       "priority": 5,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-004"
-      ]
+      "dependencies": ["US-004"]
     },
     {
       "id": "US-006",
@@ -101,10 +91,7 @@
       "priority": 6,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-004",
-        "US-005"
-      ]
+      "dependencies": ["US-004", "US-005"]
     },
     {
       "id": "US-007",
@@ -118,9 +105,7 @@
       "priority": 7,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-004"
-      ]
+      "dependencies": ["US-004"]
     },
     {
       "id": "US-008",
@@ -135,11 +120,7 @@
       "priority": 8,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-004",
-        "US-005",
-        "US-006"
-      ]
+      "dependencies": ["US-004", "US-005", "US-006"]
     },
     {
       "id": "US-009",
@@ -154,11 +135,7 @@
       "priority": 9,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-006",
-        "US-007",
-        "US-008"
-      ]
+      "dependencies": ["US-006", "US-007", "US-008"]
     }
   ]
 }

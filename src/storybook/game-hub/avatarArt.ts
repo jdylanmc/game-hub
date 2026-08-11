@@ -1,18 +1,10 @@
 function getInitials(name: string): string {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2);
+  const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
 
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('') || 'GH';
 }
 
-export function createAvatarDataUri(
-  name: string,
-  colors: readonly [string, string],
-  background = '#0f172a',
-): string {
+export function createAvatarDataUri(name: string, colors: readonly [string, string], background = '#0f172a'): string {
   const initials = getInitials(name);
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="${name} avatar illustration">

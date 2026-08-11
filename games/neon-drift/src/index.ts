@@ -1,8 +1,4 @@
-import type {
-  GameHost,
-  GameInstance,
-  GameManifest,
-} from '@game-hub/game-contract';
+import type { GameHost, GameInstance, GameManifest } from '@game-hub/game-contract';
 import manifestData from '../game.manifest.json';
 import {
   AmbientLight,
@@ -48,11 +44,7 @@ function disposeSceneGraph(root: Object3D): void {
   });
 }
 
-function resizeRenderer(
-  camera: OrthographicCamera,
-  renderer: WebGLRenderer,
-  canvas: HTMLCanvasElement,
-): void {
+function resizeRenderer(camera: OrthographicCamera, renderer: WebGLRenderer, canvas: HTMLCanvasElement): void {
   const width = Math.max(1, canvas.clientWidth);
   const height = Math.max(1, canvas.clientHeight);
   const devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -75,10 +67,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   const renderer = new WebGLRenderer({ antialias: true, canvas });
   const scene = new Scene();
   const camera = new OrthographicCamera(-16, 16, VIEW_HEIGHT / 2, -VIEW_HEIGHT / 2, 0.1, 100);
-  const floor = new Mesh(
-    new PlaneGeometry(70, 30),
-    new MeshBasicMaterial({ color: '#020617' }),
-  );
+  const floor = new Mesh(new PlaneGeometry(70, 30), new MeshBasicMaterial({ color: '#020617' }));
   const glow = new Mesh(
     new PlaneGeometry(60, 18),
     new MeshBasicMaterial({ color: '#60a5fa', transparent: true, opacity: 0.07 }),

@@ -10,10 +10,7 @@ export function MambaSnapshot({ entry }: MambaSnapshotProps) {
       <div className="overflow-hidden rounded-[2rem] border border-slate-300/15 bg-white/[0.03] shadow-2xl shadow-black/20 backdrop-blur-sm">
         <div className="overflow-x-auto p-6 md:p-8">
           <div className={entry.centered ? 'flex justify-center' : undefined}>
-            <div
-              className="min-w-0"
-              dangerouslySetInnerHTML={{ __html: entry.renderedHtml }}
-            />
+            <div className="min-w-0" dangerouslySetInnerHTML={{ __html: entry.renderedHtml }} />
           </div>
         </div>
       </div>

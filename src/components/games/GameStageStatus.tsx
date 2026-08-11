@@ -20,15 +20,7 @@ const eyebrowByState: Record<StageStatusState, string> = {
   ready: 'Ready',
 };
 
-export function GameStageStatus({
-  actionLabel,
-  accent,
-  message,
-  onAction,
-  score,
-  state,
-  title,
-}: GameStageStatusProps) {
+export function GameStageStatus({ actionLabel, accent, message, onAction, score, state, title }: GameStageStatusProps) {
   const interactive = Boolean(actionLabel && onAction);
 
   return (
@@ -39,9 +31,7 @@ export function GameStageStatus({
         <p className="text-xs font-semibold uppercase tracking-[0.26em]" style={{ color: accent }}>
           {eyebrowByState[state]}
         </p>
-        <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          {title}
-        </h2>
+        <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">{title}</h2>
         <p className="mt-4 leading-7 text-slate-300">{message}</p>
         {typeof score === 'number' ? (
           <p className="mt-5 font-mono text-4xl font-semibold text-white">{score.toLocaleString()}</p>

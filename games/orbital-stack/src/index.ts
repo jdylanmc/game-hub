@@ -1,8 +1,4 @@
-import type {
-  GameHost,
-  GameInstance,
-  GameManifest,
-} from '@game-hub/game-contract';
+import type { GameHost, GameInstance, GameManifest } from '@game-hub/game-contract';
 import manifestData from '../game.manifest.json';
 import {
   AmbientLight,
@@ -48,11 +44,7 @@ function disposeSceneGraph(root: Object3D): void {
   });
 }
 
-function resizeRenderer(
-  camera: OrthographicCamera,
-  renderer: WebGLRenderer,
-  canvas: HTMLCanvasElement,
-): void {
+function resizeRenderer(camera: OrthographicCamera, renderer: WebGLRenderer, canvas: HTMLCanvasElement): void {
   const width = Math.max(1, canvas.clientWidth);
   const height = Math.max(1, canvas.clientHeight);
   const devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -95,10 +87,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   const directionalLight = new DirectionalLight('#ffffff', 0.9);
   directionalLight.position.set(10, 14, 16);
 
-  const backdrop = new Mesh(
-    new SphereGeometry(18, 24, 18),
-    new MeshBasicMaterial({ color: '#111827' }),
-  );
+  const backdrop = new Mesh(new SphereGeometry(18, 24, 18), new MeshBasicMaterial({ color: '#111827' }));
   backdrop.scale.z = 0.5;
   backdrop.position.z = -14;
 
@@ -210,11 +199,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
     satellites.forEach((satellite, index) => {
       const angle = time * 0.9 + index * ((Math.PI * 2) / satellites.length);
       const radius = 6.2 + (index % 2) * 0.45;
-      satellite.position.set(
-        Math.cos(angle) * radius,
-        -0.4 + Math.sin(angle * 1.4) * 1.2,
-        Math.sin(angle) * 1.1,
-      );
+      satellite.position.set(Math.cos(angle) * radius, -0.4 + Math.sin(angle * 1.4) * 1.2, Math.sin(angle) * 1.1);
     });
 
     stackGroup.rotation.y = Math.sin(time * 0.45) * 0.2;

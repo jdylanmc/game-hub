@@ -17,13 +17,7 @@ interface HighlightCardProps {
   title: string;
 }
 
-function HighlightCard({
-  canonicalPath,
-  className = '',
-  entry,
-  notes,
-  title,
-}: HighlightCardProps) {
+function HighlightCard({ canonicalPath, className = '', entry, notes, title }: HighlightCardProps) {
   return (
     <Card as="article" className={`overflow-hidden p-0 ${className}`}>
       <div className="border-b border-white/10 px-5 py-4">
@@ -35,10 +29,7 @@ function HighlightCard({
       </div>
       <div className="overflow-x-auto p-5">
         <div className={entry.centered ? 'flex justify-center' : undefined}>
-          <div
-            className="min-w-0"
-            dangerouslySetInnerHTML={{ __html: entry.renderedHtml }}
-          />
+          <div className="min-w-0" dangerouslySetInnerHTML={{ __html: entry.renderedHtml }} />
         </div>
       </div>
     </Card>
@@ -66,9 +57,7 @@ export const ReviewsAndSocialProof = {
       maxWidthClassName="max-w-6xl"
     >
       <Card as="section" className="mb-6 p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-          Canonical path
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Canonical path</p>
         <div className="mt-4 flex flex-wrap gap-3">
           {reviewCategory.variants.map((entry) => (
             <Badge className="bg-white/10 text-slate-100" key={entry.id}>
@@ -113,9 +102,7 @@ export const NavigationAndMenus = {
       maxWidthClassName="max-w-7xl"
     >
       <Card as="section" className="mb-6 p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-          Quick-find lanes
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Quick-find lanes</p>
         <div className="mt-4 flex flex-wrap gap-3">
           {[
             'Catalog/Mamba/Header',

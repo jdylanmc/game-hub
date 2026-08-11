@@ -25,12 +25,7 @@ const sampleLeaders = [
   { name: 'guest_2048', score: '88,100' },
 ];
 
-export function GamePage({
-  catalogError,
-  catalogLoading = false,
-  game,
-  requestedGameId,
-}: GamePageProps) {
+export function GamePage({ catalogError, catalogLoading = false, game, requestedGameId }: GamePageProps) {
   const [latestScore, setLatestScore] = useState<GameScore>();
   const handleScore = useCallback((score: GameScore) => setLatestScore(score), []);
 
@@ -63,7 +58,7 @@ export function GamePage({
                 message={
                   catalogLoading
                     ? 'Fetching the runtime catalog before loading the selected workspace.'
-                    : catalogError ?? 'The runtime manifest for this game could not be loaded.'
+                    : (catalogError ?? 'The runtime manifest for this game could not be loaded.')
                 }
                 state={catalogLoading ? 'loading' : 'error'}
                 title={catalogLoading ? `Loading ${title}` : 'Game unavailable'}
@@ -89,17 +84,16 @@ export function GamePage({
         <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
             <div className="flex flex-wrap gap-2">
-              {game.featured ? (
-                <Badge className="bg-amber-400/10 text-amber-100">Featured</Badge>
-              ) : null}
+              {game.featured ? <Badge className="bg-amber-400/10 text-amber-100">Featured</Badge> : null}
               <Badge className="bg-white/5 text-slate-200">{game.technology}</Badge>
             </div>
-            <p className="mt-4 font-display text-sm font-semibold uppercase tracking-[0.22em]" style={{ color: game.accent }}>
+            <p
+              className="mt-4 font-display text-sm font-semibold uppercase tracking-[0.22em]"
+              style={{ color: game.accent }}
+            >
               {game.tagline}
             </p>
-            <h1 className="mt-3 font-display text-5xl font-bold tracking-[-0.04em]">
-              {game.title}
-            </h1>
+            <h1 className="mt-3 font-display text-5xl font-bold tracking-[-0.04em]">{game.title}</h1>
           </div>
           <div className="flex items-center gap-3">
             <Button>☆ Rate</Button>
@@ -124,13 +118,11 @@ export function GamePage({
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
           <Card as="section" className="p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Community
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Community</p>
             <h2 className="mt-3 font-display text-2xl font-semibold">Talk strategy</h2>
             <p className="mt-3 leading-7 text-slate-400">
-              Sign in to share tips, post your best run, and meet other players.
-              Community posts will appear here when the service is connected.
+              Sign in to share tips, post your best run, and meet other players. Community posts will appear here when
+              the service is connected.
             </p>
             <Button className="mt-6" variant="primary">
               Join the conversation
@@ -140,16 +132,17 @@ export function GamePage({
           <Card as="section" className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Leaderboard
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Leaderboard</p>
                 <h2 className="mt-3 font-display text-2xl font-semibold">Top runs</h2>
               </div>
               <span className="text-xs text-slate-500">All time</span>
             </div>
             <ol className="mt-6 space-y-4">
               {sampleLeaders.map((leader, index) => (
-                <li className="flex items-center justify-between border-b border-white/5 pb-4 last:border-0 last:pb-0" key={leader.name}>
+                <li
+                  className="flex items-center justify-between border-b border-white/5 pb-4 last:border-0 last:pb-0"
+                  key={leader.name}
+                >
                   <span className="flex items-center gap-3 text-sm">
                     <span className="w-5 text-slate-600">{index + 1}</span>
                     {leader.name}

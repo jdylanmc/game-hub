@@ -4,6 +4,8 @@
 
 - Root validation commands are the canonical local and continuous integration
   entry points.
+- Prettier and ESLint cover repository-authored code while excluding imported
+  Mamba source snapshots and generated outputs.
 - Azure resources are optional for this issue and must not be created without a
   concrete implementation need.
 - If Azure infrastructure becomes necessary, select subscription
@@ -45,3 +47,24 @@
 - Required quality checks remain unavailable because the toolchain cannot be
   installed. US-001 remains unpassed and the next iteration must retry after
   registry connectivity is restored.
+
+## 2026-08-11 - US-001 complete
+
+- Installed exact versions of Prettier, ESLint, TypeScript ESLint, React lint
+  plugins, Vitest, V8 coverage, JSDOM, and Testing Library, then added canonical
+  immutable install, format, lint, test, coverage, and aggregate validation
+  commands.
+- Added fail-closed ESLint configuration for repository-authored JavaScript,
+  TypeScript, React, games, packages, Storybook, and scripts; added Prettier
+  configuration and normalized the covered source tree.
+- Added Vitest and coverage configuration that discovers host, game, package,
+  and script tests. Empty suites remain temporarily allowed so this toolchain
+  story can pass; US-002 must add representative tests and then set
+  `passWithNoTests` to `false`.
+- Removed an unused generator parameter surfaced by the new lint gate.
+- Files changed: root quality configuration and dependency files, repository
+  authored source files formatted by Prettier, and this issue memory.
+- Checks passed: `yarn install:check`, `yarn format:check`, `yarn lint`,
+  `yarn test`, `yarn test:coverage`, `yarn typecheck`, `yarn build`, and
+  `yarn build-storybook`.
+- No blockers. US-002 is the next eligible story.

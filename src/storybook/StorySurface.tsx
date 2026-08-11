@@ -22,16 +22,10 @@ export function StorySurface({
       <div className={`mx-auto ${maxWidthClassName}`}>
         <header className="mb-8 max-w-3xl">
           {eyebrow ? (
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-blue-300">
-              {eyebrow}
-            </p>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-blue-300">{eyebrow}</p>
           ) : null}
-          <h1 className="font-display text-4xl font-bold tracking-[-0.04em] sm:text-5xl">
-            {title}
-          </h1>
-          {description ? (
-            <p className="mt-4 text-lg leading-8 text-slate-300">{description}</p>
-          ) : null}
+          <h1 className="font-display text-4xl font-bold tracking-[-0.04em] sm:text-5xl">{title}</h1>
+          {description ? <p className="mt-4 text-lg leading-8 text-slate-300">{description}</p> : null}
         </header>
         {children}
       </div>
