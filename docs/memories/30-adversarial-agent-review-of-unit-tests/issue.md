@@ -97,5 +97,8 @@ agent's versioned quality policy.
   do not store production credentials in pull-request workflows.
 - Publish a required check with concise annotations and a retained structured
   JSON artifact.
+- Store each adversarial agent's prompt in a dedicated human-editable,
+  versioned repository file so it can be tuned independently from model,
+  schema, tools, and blocking policy.
 - Design agent registration and infrastructure for horizontal expansion to
   multiple independent adversarial review pipelines.

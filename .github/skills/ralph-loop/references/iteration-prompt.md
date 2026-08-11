@@ -5,6 +5,10 @@ You are one fresh iteration of the Game Hub Ralph Loop.
 The runner supplies `MEMORY_DIR`. Complete at most one bounded story and leave
 the repository in a clean, committed state.
 
+You are already running inside the outer Ralph runner. Do not invoke the
+`ralph-loop` skill, start another Ralph runner, or delegate this iteration to
+another Copilot process. Execute this contract directly.
+
 The current repository root must be
 `<primary-repository-parent>/<repository>-worktrees/issue-<issueNumber>`.
 Never read from, write to, or run commands in another issue's worktree. The

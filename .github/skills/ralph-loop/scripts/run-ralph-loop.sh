@@ -461,7 +461,7 @@ COPILOT_COMMAND=(
   copilot
   -C "$REPO_ROOT"
   --prompt
-  "Run one Ralph Loop iteration. MEMORY_DIR=$MEMORY_DIR. Read and follow .github/skills/ralph-loop/references/iteration-prompt.md."
+  "You are already one fresh Ralph iteration. Do not invoke the ralph-loop skill or start another runner. MEMORY_DIR=$MEMORY_DIR. Execute .github/skills/ralph-loop/references/iteration-prompt.md directly."
   --allow-all-tools
   --allow-all-urls
   --no-ask-user

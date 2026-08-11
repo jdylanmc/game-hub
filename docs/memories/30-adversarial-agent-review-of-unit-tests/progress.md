@@ -11,6 +11,9 @@
   credentials.
 - Structured results must be actionable: exact citations, missing scenario,
   expected failure signal, and a concrete suggested test.
+- Each agent owns a dedicated human-tunable prompt file. Prompt versions and
+  hashes are recorded in every review result and calibrated independently from
+  policy, schema, tools, and model versions.
 
 ## 2026-08-11 - Planning
 
@@ -26,3 +29,11 @@
   artifact.
 - Explicitly delegated continuous continuation until the draft pull request is
   complete or a safety blocker stops the loop.
+
+## 2026-08-11 - Runner recursion repair
+
+- The first fresh context recursively invoked the `ralph-loop` skill and found
+  the outer runner's active lock instead of executing its bounded story.
+- Updated the iteration contract and runner prompt to state that the fresh
+  context is already inside Ralph and must execute directly.
+- Issue #30 now explicitly requires a dedicated tunable prompt file per agent.

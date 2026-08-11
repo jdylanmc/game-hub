@@ -29,7 +29,8 @@
       "description": "Define the reusable versioned prompt, policy, model, tools, verdict, finding schema, attribution, and fail-closed interface for independent pull-request review agents.",
       "acceptanceCriteria": [
         "A strict versioned JSON schema defines verdict, blocking and advisory severity, confidence, category, citations, missing scenario, expected failure signal, suggested test, and run attribution",
-        "Prompt, policy, model, and tool configuration are versioned independently",
+        "Each agent prompt is a dedicated human-editable repository file with an explicit version and content hash",
+        "Prompt, policy, schema, model, and tool configuration are versioned independently so prompt tuning does not silently change enforcement",
         "Invalid, incomplete, or unactionable structured results fail validation",
         "The contract supports registering additional independent adversarial agents without coupling their prompts or verdicts"
       ],
