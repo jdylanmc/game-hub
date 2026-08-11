@@ -48,6 +48,9 @@ jobs:
       - name: Verify repository policy
         run: yarn policy:check 2>&1 | tee continuous-integration-evidence/policy.log
 
+      - name: Prove gates fail closed
+        run: yarn test:ci-fail-closed 2>&1 | tee continuous-integration-evidence/fail-closed.log
+
       - name: Audit dependencies
         run: yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log
 

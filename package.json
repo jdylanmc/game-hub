@@ -23,6 +23,7 @@
     "policy:workflow": "node scripts/check-workflow-policy.mjs",
     "policy:check": "yarn lint:suppressions && yarn policy:workflow",
     "security:audit": "yarn npm audit --all --recursive --severity high",
+    "test:ci-fail-closed": "node scripts/prove-ci-fail-closed.mjs",
     "test:integrity": "node scripts/check-test-integrity.mjs",
     "test": "yarn test:coverage",
     "test:coverage": "yarn test:integrity && vitest run --sequence.shuffle --sequence.seed=29005 --coverage --reporter=default --reporter=junit --outputFile.junit=test-results/junit.xml",
@@ -33,7 +34,7 @@
     "preview": "vite preview",
     "storybook": "yarn generate:games && storybook dev -p 6006",
     "typecheck": "yarn generate:games && tsc -b",
-    "validate": "yarn install:check && yarn format:check && yarn lint && yarn policy:check && yarn security:audit && yarn test:coverage && yarn generate:check && yarn typecheck && yarn build && yarn bundle:check && yarn build-storybook"
+    "validate": "yarn install:check && yarn format:check && yarn lint && yarn policy:check && yarn test:ci-fail-closed && yarn security:audit && yarn test:coverage && yarn generate:check && yarn typecheck && yarn build && yarn bundle:check && yarn build-storybook"
   },
   "dependencies": {
     "@game-hub/game-contract": "workspace:*",

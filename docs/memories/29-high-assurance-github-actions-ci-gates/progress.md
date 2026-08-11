@@ -151,3 +151,25 @@
   from lazy chunks and provides a deterministic inventory for raw-byte budget
   enforcement.
 - No blockers. US-006 is the next eligible story.
+
+## 2026-08-11 - US-006 complete
+
+- Added an isolated detached-worktree proof harness that injects controlled
+  failures and rejects both unexpected success and failures without the
+  expected gate-specific evidence.
+- Proved formatting, lint, type, test, generation, production build, bundle
+  budget, missing build output, missing mandatory workflow command, unavailable
+  security audit service, and Storybook browser bundle failures block
+  completion.
+- Added the proof command to the identical local and continuous integration
+  contracts and retained its log with the existing continuous integration
+  evidence.
+- Files changed: `scripts/prove-ci-fail-closed.mjs`, `package.json`,
+  `.github/workflows/continuous-integration.yml`,
+  `scripts/check-workflow-policy.mjs`, `AGENTS.md`, and this issue memory.
+- Checks passed: targeted Prettier, ESLint, workflow policy, all 11 deliberate
+  failure probes, and the complete `yarn validate` contract.
+- Reusable discovery: failure proofs must assert both a nonzero command result
+  and expected diagnostic evidence so an unrelated infrastructure or setup
+  failure cannot masquerade as proof of a working gate.
+- No blockers. US-007 is the next eligible story.

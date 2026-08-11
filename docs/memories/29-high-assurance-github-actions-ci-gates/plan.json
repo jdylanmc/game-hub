@@ -89,8 +89,8 @@
         "The verification does not rely on warning-only behavior, unconditional continuation, or success-shaped fallbacks"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added an isolated detached-worktree proof harness that injects 11 controlled failures and requires both nonzero exit status and gate-specific evidence. Formatting, lint, type, test, generation, production build, bundle budget, missing build output, missing mandatory workflow command, unavailable security audit service, and Storybook browser bundle failures are proven fail closed through the canonical root commands.",
       "dependencies": ["US-004", "US-005"]
     },
     {

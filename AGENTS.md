@@ -56,6 +56,11 @@ raw-byte entry, async chunk, JavaScript, stylesheet, and total budgets in
 `config/bundle-budgets.json` after `yarn build`; budget increases require an
 explained review.
 
+`yarn test:ci-fail-closed` creates an isolated detached worktree and injects
+representative failures into every mandatory gate. Keep each probe tied to the
+canonical root command and require evidence that it failed for the intended
+reason.
+
 ## Test Integrity
 
 Keep at least one deterministic test under each of `src/`, `games/`, and

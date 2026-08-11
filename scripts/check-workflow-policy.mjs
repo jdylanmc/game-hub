@@ -46,6 +46,7 @@ const requiredCommands = [
   'yarn format:check 2>&1 | tee continuous-integration-evidence/format.log',
   'yarn lint 2>&1 | tee continuous-integration-evidence/lint.log',
   'yarn policy:check 2>&1 | tee continuous-integration-evidence/policy.log',
+  'yarn test:ci-fail-closed 2>&1 | tee continuous-integration-evidence/fail-closed.log',
   'yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log',
   'yarn test:coverage 2>&1 | tee continuous-integration-evidence/test.log',
   'yarn generate:check 2>&1 | tee continuous-integration-evidence/generation.log',
