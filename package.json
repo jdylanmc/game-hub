@@ -25,6 +25,7 @@
     "policy:check": "yarn lint:suppressions && yarn policy:workflow && yarn policy:adversarial",
     "context:collect": "node scripts/collect-adversarial-context.ts",
     "review:adversarial": "node scripts/review-adversarial-context.ts",
+    "publish:adversarial": "node scripts/publish-adversarial-evidence.ts",
     "calibrate:adversarial": "node scripts/evaluate-adversarial-reviewer.ts",
     "calibration:check": "node scripts/evaluate-adversarial-reviewer.ts --mode check",
     "security:audit": "yarn npm audit --all --recursive --severity high",

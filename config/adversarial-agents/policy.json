@@ -157,8 +157,8 @@
         "commentOnFail": {
           "type": "boolean",
           "description": "Post a PR comment when verdict is FAIL.",
-          "const": true,
-          "examples": [true]
+          "const": false,
+          "examples": [false]
         },
         "failureCheckNamePrefix": {
           "type": "string",

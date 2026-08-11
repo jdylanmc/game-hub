@@ -20,6 +20,7 @@ const reviewerConfig = JSON.parse(
 );
 const reviewerEngine = await fs.readFile(path.join(root, 'scripts/review-adversarial-context.ts'), 'utf8');
 const systemPolicy = await fs.readFile(path.join(root, reviewerConfig.systemPolicyFile), 'utf8');
+const verdictPolicy = JSON.parse(await fs.readFile(path.join(root, 'config/adversarial-agents/policy.json'), 'utf8'));
 const benchmarkCorpus = JSON.parse(
   await fs.readFile(path.join(root, 'config/adversarial-agents/benchmarks.json'), 'utf8'),
 );
@@ -27,6 +28,10 @@ const promotionPolicy = JSON.parse(
   await fs.readFile(path.join(root, 'config/adversarial-agents/promotion-policy.json'), 'utf8'),
 );
 const evaluator = await fs.readFile(path.join(root, 'scripts/evaluate-adversarial-reviewer.ts'), 'utf8');
+const publisherConfig = JSON.parse(
+  await fs.readFile(path.join(root, 'config/adversarial-agents/github-publisher.json'), 'utf8'),
+);
+const publisher = await fs.readFile(path.join(root, 'scripts/publish-adversarial-evidence.ts'), 'utf8');
 const workflowDirectory = path.join(root, '.github/workflows');
 const workflowSources = await Promise.all(
   (await fs.readdir(workflowDirectory))
@@ -316,14 +321,55 @@ if (
     (source) =>
       source.includes('review:adversarial') ||
       source.includes('calibrate:adversarial') ||
-      source.includes('evaluate-adversarial-reviewer'),
+      source.includes('evaluate-adversarial-reviewer') ||
+      source.includes('publish:adversarial') ||
+      source.includes('publish-adversarial-evidence'),
   )
 ) {
-  violations.push('Model-backed reviewer evaluation must remain outside workflows until promotion.');
+  violations.push('Model-backed review and publication must remain outside workflows until orchestration.');
+}
+
+if (
+  publisherConfig.version !== '1.0.0' ||
+  publisherConfig.artifactVersion !== '1.0.0' ||
+  publisherConfig.manifestVersion !== '1.0.0' ||
+  publisherConfig.checkNamePrefix !== 'Adversarial Review' ||
+  publisherConfig.githubApiVersion !== '2022-11-28' ||
+  publisherConfig.retentionDays !== 90 ||
+  publisherConfig.limits?.maxAnnotationsPerRequest !== 50 ||
+  publisherConfig.limits?.maxAnnotationsTotal !== 1000 ||
+  publisherConfig.limits?.maxCheckSummaryBytes !== 32768 ||
+  publisherConfig.limits?.maxCheckTextBytes !== 32768
+) {
+  violations.push('GitHub publisher identity, retention, or annotation limits were weakened.');
+}
+if (packageJson.scripts?.['publish:adversarial'] !== 'node scripts/publish-adversarial-evidence.ts') {
+  violations.push('Missing canonical adversarial evidence publication command.');
+}
+const requiredPublisherFragments = [
+  'new AdversarialFindingValidator(options.repoRoot).validate(sanitizedResult)',
+  'attribution.repositoryCommit !== options.headSha',
+  'summary.pullRequestCommit !== options.headSha',
+  "'Multiple check runs already exist for this agent and head SHA'",
+  "url.searchParams.set('filter', 'all')",
+  'maxAnnotationsPerRequest',
+  'findingFingerprint',
+  'supersedesRunFingerprint',
+  "'[REDACTED:SENSITIVE_CONTENT]'",
+  'validateEvidenceManifest',
+  'validatePromotionReport(repoRoot, calibrationReport)',
+];
+for (const fragment of requiredPublisherFragments) {
+  if (!publisher.includes(fragment)) {
+    violations.push(`Missing GitHub publisher invariant: ${fragment}`);
+  }
+}
+if (verdictPolicy.properties?.notificationSettings?.properties?.commentOnFail?.const !== false) {
+  violations.push('Adversarial review must publish checks without pull-request comment spam.');
 }
 
 if (violations.length > 0) {
   throw new Error(`Adversarial policy failed:\n${violations.join('\n')}`);
 }
 
-console.log('Adversarial infrastructure, runtime, and calibration policy passed.');
+console.log('Adversarial infrastructure, runtime, calibration, and publication policy passed.');

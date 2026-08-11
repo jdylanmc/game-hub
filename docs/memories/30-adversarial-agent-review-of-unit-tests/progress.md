@@ -245,3 +245,51 @@
 - US-005 is passed. US-006 and later stories were not advanced. A real Azure
   calibration report, GitHub check publication, workflow orchestration, live
   deployment, and enforcement remain later-story work.
+
+## 2026-08-11 - Iteration 7: US-006 completion
+
+- Added `scripts/publish-adversarial-evidence.ts` and the canonical
+  `yarn publish:adversarial` command. The reusable publisher accepts an injected
+  GitHub transport, so repository tests require no credential or network.
+- Revalidates the complete reviewer result and exact repository commit before
+  any GitHub API request. The live command also requires a calibration report
+  that passes the versioned promotion policy.
+- Lists checks for the exact head SHA and agent-specific name, creates when none
+  exists, updates the sole matching run, and fails closed for duplicate,
+  mismatched, or stale check attribution. Stable external, run, and finding
+  fingerprints prevent a stale head from being applied to another commit.
+- Maps validated high-confidence blocking findings to failure annotations and
+  advisory findings to warning annotations. Check conclusions are failure for
+  FAIL/ERROR, neutral for advisory PASS, and success for clean PASS.
+- Deduplicates finding content independently of model-supplied IDs, sends at
+  most 50 annotations per GitHub Checks API request, caps total annotations and
+  output sizes, validates safe repository-relative paths/lines, and appends only
+  novel annotations on reruns.
+- Records superseded run and finding fingerprints in check metadata and the
+  retained manifest. Because GitHub cannot delete existing annotations, the
+  current retained artifact is explicitly authoritative after supersession.
+- Writes an immutable run-fingerprinted evidence artifact plus one active
+  agent/head manifest. The 90-day retention metadata and attribution include
+  issue, pull request, repository, head SHA, agent, model, prompt version/hash,
+  schema, policy, tools, calibration, review/publication timestamps, tokens,
+  estimated cost, latency, and supersession.
+- Redacts recognized credential-like values before check or artifact output,
+  revalidates the sanitized complete result, prevents output path/symlink
+  escapes, hashes the artifact, and validates manifest size, attribution,
+  retention, filename, reviewer policy, and sensitive-content invariants.
+- Disabled pull-request failure comments so publication uses one check instead
+  of comment spam. Added policy checks that preserve publisher limits and keep
+  model-backed review/publication out of workflows until US-007.
+- Added 15 deterministic tests covering create/update, exact-one enforcement,
+  annotation batching/limits, invalid paths and lines, advisory/blocking
+  conclusions, stale reviewer/check/API SHAs, duplicate findings, superseded
+  runs, artifact redaction/integrity, missing output, and list/create/update API
+  failures.
+- Passed the complete deterministic suite in cheapest-to-most-expensive order:
+  immutable install, formatting, lint, policy, generation, typecheck, security
+  audit, 85 tests with coverage, production build, bundle budgets, Storybook,
+  and 11 fail-closed continuous-integration probes.
+- US-006 is passed. US-007 and later stories were not advanced. Live GitHub App
+  publication, the final fork-safe workflow, Azure deployment, and enforcement
+  remain later-story work. The policy content change intentionally invalidates
+  any older calibration report.

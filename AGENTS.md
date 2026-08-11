@@ -25,14 +25,7 @@ documentation links, and required architectural invariants.
 Run the smallest commands that cover the files you changed. The repository
 currently provides:
 
-```
-
-Adversarial reviewer calibration is versioned and fail-closed. Use
-`yarn calibrate:adversarial --mode fixture` for deterministic local evaluation;
-only a complete real-Azure report that passes
-`yarn calibration:check --report <path>` is eligible for promotion. Recalibrate
-after any fingerprinted model, prompt, tool, framework, schema, policy, or
-architecture change.bash
+```bash
 yarn typecheck
 yarn build
 yarn build-storybook
@@ -40,6 +33,13 @@ yarn generate:check
 yarn policy:check
 yarn bundle:check
 ```
+
+Adversarial reviewer calibration is versioned and fail-closed. Use
+`yarn calibrate:adversarial --mode fixture` for deterministic local evaluation;
+only a complete real-Azure report that passes
+`yarn calibration:check --report <path>` is eligible for promotion. Recalibrate
+after any fingerprinted model, prompt, tool, framework, schema, policy, or
+architecture change.
 
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
@@ -73,6 +73,12 @@ versioned system policy separate from the human review prompt, authenticate with
 Microsoft Entra ID, register no model tools, restrict Azure OpenAI destinations,
 and return schema-valid blocking errors whenever bounded execution cannot
 produce a policy-safe verdict.
+
+`yarn publish:adversarial` validates reviewer output again before publishing one
+agent-specific GitHub check for the exact head commit. It writes a retained,
+redacted evidence bundle; the artifact is authoritative when repeated runs
+supersede annotations. Publication must remain downstream of complete
+deterministic continuous integration.
 
 `yarn policy:check` rejects unapproved lint suppressions and weakened workflow
 invariants. Record an exceptional suppression with a specific rationale in

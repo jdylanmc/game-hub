@@ -102,8 +102,8 @@
         "Repeated runs deduplicate superseded findings and remain attributable to issue, commit, model, prompt, tools, and policy"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a reusable GitHub Checks publisher with an injectable transport that revalidates reviewer output, binds one agent-specific check to the exact head SHA, creates or updates the sole matching run, batches at most 50 concise annotations per request, and maps blocking/advisory results to failure/neutral conclusions. Stable run/finding fingerprints deduplicate reruns and record supersession. It writes and revalidates a redacted 90-day JSON evidence artifact/manifest with complete issue, repository, commit, model, prompt, schema, policy, tools, calibration, timing, cost, and supersession attribution. Fifteen deterministic tests cover create/update, limits, unsafe citations, conclusions, stale SHAs, duplicates, supersession, redaction/integrity, missing output, API failures, and duplicate checks. No workflow, live publication, Azure deployment, or US-007 work was added.",
       "dependencies": ["US-004"]
     },
     {
