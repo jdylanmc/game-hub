@@ -33,15 +33,10 @@ export function AdvertisementPlacement({
       className={`mx-auto flex w-full max-w-3xl flex-col rounded-2xl border border-white/10 bg-slate-950/55 shadow-sm ${placementConfig.slotClassName} ${className}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
-        <p
-          className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400"
-          id={titleId}
-        >
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400" id={titleId}>
           Advertisement
         </p>
-        <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
-          {placementConfig.sizeLabel}
-        </span>
+        <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{placementConfig.sizeLabel}</span>
       </div>
 
       <div className="flex-1 p-4 sm:p-5">
@@ -51,9 +46,7 @@ export function AdvertisementPlacement({
               Ad
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-slate-100">
-                Neutral sponsor placeholder
-              </p>
+              <p className="truncate text-sm font-medium text-slate-100">Neutral sponsor placeholder</p>
               <p className="mt-1 text-xs leading-5 text-slate-400" id={descriptionId}>
                 Reserved slot · no SDK yet · gameplay stays primary
               </p>
@@ -71,9 +64,7 @@ export function AdvertisementPlacement({
             <div className="space-y-3" id={descriptionId}>
               <div aria-hidden="true" className="h-3 w-32 animate-pulse rounded-full bg-white/10" />
               <div aria-hidden="true" className="h-3 w-48 max-w-full animate-pulse rounded-full bg-white/10" />
-              <span className="sr-only">
-                Advertisement is loading inside reserved layout space.
-              </span>
+              <span className="sr-only">Advertisement is loading inside reserved layout space.</span>
             </div>
           </div>
         ) : null}

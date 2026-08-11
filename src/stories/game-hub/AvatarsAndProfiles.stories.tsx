@@ -150,13 +150,11 @@ export const UserProfile = {
                 status="online"
               />
               <div>
-                <h2 className="font-display text-3xl font-semibold tracking-tight text-white">
-                  Ari Mercer
-                </h2>
+                <h2 className="font-display text-3xl font-semibold tracking-tight text-white">Ari Mercer</h2>
                 <p className="mt-2 text-sm text-blue-200">@aim-high · challenge curator</p>
                 <p className="mt-4 max-w-xl text-sm leading-7 text-slate-300">
-                  Hosts weekly speedrun brackets, writes route primers, and keeps the
-                  puzzle ladder friendly for first-time competitors.
+                  Hosts weekly speedrun brackets, writes route primers, and keeps the puzzle ladder friendly for
+                  first-time competitors.
                 </p>
               </div>
             </div>
@@ -196,12 +194,8 @@ export const LeaderboardRows = {
       <Card as="section" className="p-0">
         <header className="flex items-center justify-between border-b border-white/10 px-6 py-5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Leaderboard
-            </p>
-            <h2 className="mt-2 font-display text-2xl font-semibold text-white">
-              Nebula Dash all-time top runs
-            </h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Leaderboard</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold text-white">Nebula Dash all-time top runs</h2>
           </div>
           <Badge className="bg-blue-400/10 text-blue-200">Live bracket</Badge>
         </header>
@@ -261,9 +255,7 @@ export const Reviews = {
                 <p className="mt-1 text-sm font-semibold">{review.rating}</p>
               </div>
             </div>
-            <h3 className="mt-6 font-display text-2xl font-semibold text-white">
-              {review.title}
-            </h3>
+            <h3 className="mt-6 font-display text-2xl font-semibold text-white">{review.title}</h3>
             <p className="mt-4 flex-1 leading-7 text-slate-300">{review.quote}</p>
             <div className="mt-6 flex items-center justify-between text-sm text-slate-400">
               <span>Helpful to 37 players</span>
@@ -289,9 +281,7 @@ export const VotesAndRatings = {
     >
       <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
         <Card as="section" className="p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Rating snapshot
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Rating snapshot</p>
           <div className="mt-4 flex items-end gap-4">
             <span className="font-display text-6xl font-semibold text-white">4.8</span>
             <div className="pb-2 text-amber-300">
@@ -301,7 +291,10 @@ export const VotesAndRatings = {
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
             {leaderboardPlayers.slice(0, 4).map((player) => (
-              <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-3 py-2" key={player.name}>
+              <div
+                className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-3 py-2"
+                key={player.name}
+              >
                 <Avatar
                   alt={`${player.name} voter avatar`}
                   name={player.name}

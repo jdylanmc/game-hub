@@ -4,13 +4,7 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Avatar } from './Avatar';
 
-const defaultAcceptedMimeTypes = [
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'image/gif',
-  'image/avif',
-] as const;
+const defaultAcceptedMimeTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif'] as const;
 
 interface PreviewState {
   alt: string;
@@ -64,10 +58,7 @@ export function AvatarUploadPreview({
       : null,
   );
 
-  const acceptedMimeLabel = useMemo(
-    () => formatMimeTypes(acceptedMimeTypes),
-    [acceptedMimeTypes],
-  );
+  const acceptedMimeLabel = useMemo(() => formatMimeTypes(acceptedMimeTypes), [acceptedMimeTypes]);
 
   useEffect(() => {
     return () => {
@@ -150,13 +141,11 @@ export function AvatarUploadPreview({
               status="online"
             />
             <div>
-              <h2 className="font-display text-2xl font-semibold tracking-tight text-white">
-                {displayName}
-              </h2>
+              <h2 className="font-display text-2xl font-semibold tracking-tight text-white">{displayName}</h2>
               <p className="mt-1 text-sm text-slate-300">{handle}</p>
               <p className="mt-3 max-w-xs text-sm leading-6 text-slate-400">
-                Accessible avatar previews for profile editing, leaderboard identity,
-                reviews, and social voting surfaces.
+                Accessible avatar previews for profile editing, leaderboard identity, reviews, and social voting
+                surfaces.
               </p>
             </div>
           </div>
@@ -167,8 +156,8 @@ export function AvatarUploadPreview({
             Upload avatar image
           </label>
           <p className="mt-2 text-sm leading-6 text-slate-400" id={hintId}>
-            Accepted formats: {acceptedMimeLabel}. Preview URLs are created locally and
-            revoked when you replace the file, reset it, or unmount the component.
+            Accepted formats: {acceptedMimeLabel}. Preview URLs are created locally and revoked when you replace the
+            file, reset it, or unmount the component.
           </p>
           <input
             accept={acceptedMimeTypes.join(',')}

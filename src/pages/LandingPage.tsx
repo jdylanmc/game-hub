@@ -33,9 +33,7 @@ function LoadingSkeleton() {
 
 function splitGames(games: GameManifest[]) {
   const featuredGame = games.find((game) => game.featured) ?? games[0];
-  const remainingGames = featuredGame
-    ? games.filter((game) => game.id !== featuredGame.id)
-    : [];
+  const remainingGames = featuredGame ? games.filter((game) => game.id !== featuredGame.id) : [];
 
   return { featuredGame, remainingGames };
 }
@@ -59,8 +57,8 @@ export function LandingPage({ catalog }: LandingPageProps) {
               <span className="block text-slate-400">Workspace-sized launch velocity.</span>
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-              The root site stays lean while each game ships from its own workspace,
-              manifest, and lazy-loaded Three.js scene.
+              The root site stays lean while each game ships from its own workspace, manifest, and lazy-loaded Three.js
+              scene.
             </p>
           </div>
         </section>
@@ -68,12 +66,8 @@ export function LandingPage({ catalog }: LandingPageProps) {
         <section className="mx-auto max-w-7xl px-6 py-16 lg:px-10 lg:py-24">
           <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">
-                Now playing
-              </p>
-              <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight">
-                Choose your next run
-              </h2>
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Now playing</p>
+              <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight">Choose your next run</h2>
             </div>
             <p className="text-sm text-slate-500">
               {catalog.status === 'ready'
@@ -86,9 +80,7 @@ export function LandingPage({ catalog }: LandingPageProps) {
 
           {catalog.status === 'error' ? (
             <Card as="section" className="p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
-                Manifest error
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">Manifest error</p>
               <h3 className="mt-3 font-display text-2xl font-semibold">The catalog could not be loaded</h3>
               <p className="mt-4 leading-7 text-slate-300">{catalog.error}</p>
             </Card>

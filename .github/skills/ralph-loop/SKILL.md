@@ -45,19 +45,32 @@ worktree.
 ## Phase 1: Select the Issue
 
 1. If the user supplied an issue number or URL, retrieve that issue and use it.
-2. If no issue was supplied, run:
+2. If no issue was supplied, check open Ralph pull requests before listing new
+   issues:
+
+   ```bash
+   yarn ralph:prioritize
+   ```
+
+   If the command returns `status: failing`, resume the reported `memoryDir` on
+   its reported branch and issue. Do not rank or select a new issue. Treat an
+   absent check rollup as blocking because the required completion gate is
+   missing. The command stops rather than guessing when the pull request's issue
+   marker, draft state, branch, base branch, repository, or unique memory mapping
+   cannot be verified.
+3. Only when `yarn ralph:prioritize` returns `status: none`, run:
 
    ```bash
    gh issue list --repo jdylanmc/game-hub --state open --limit 100 \
      --json number,title,body,labels,url
    ```
 
-3. Rank issues by `priority:P0`, `priority:P1`, `priority:P2`, and
+4. Rank issues by `priority:P0`, `priority:P1`, `priority:P2`, and
    `priority:P3`, then by issue number. Adjust the recommendation when
    dependencies, existing pull requests, or repository state make the first
    issue unsafe or blocked.
-4. Show the recommended issue and rationale. Use `ask_user` to confirm it.
-5. Offer an explicit "continue by best judgment" choice. Record that delegation
+5. Show the recommended issue and rationale. Use `ask_user` to confirm it.
+6. Offer an explicit "continue by best judgment" choice. Record that delegation
    for this invocation only. Without it, do not choose another issue without
    confirmation.
 

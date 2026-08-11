@@ -30,24 +30,12 @@ const statusStyles = {
 } as const;
 
 function getInitials(name: string): string {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2);
+  const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
 
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('') || 'GH';
 }
 
-export function Avatar({
-  alt,
-  className = '',
-  name,
-  ringTone = 'blue',
-  size = 'md',
-  src,
-  status,
-}: AvatarProps) {
+export function Avatar({ alt, className = '', name, ringTone = 'blue', size = 'md', src, status }: AvatarProps) {
   const label = alt ?? `${name} avatar`;
 
   return (

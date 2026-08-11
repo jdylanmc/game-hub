@@ -1,8 +1,4 @@
-import type {
-  GameHost,
-  GameInstance,
-  GameManifest,
-} from '@game-hub/game-contract';
+import type { GameHost, GameInstance, GameManifest } from '@game-hub/game-contract';
 import manifestData from '../game.manifest.json';
 import {
   AmbientLight,
@@ -176,11 +172,7 @@ function setObstacleColor(obstacle: Obstacle, colorIndex: number): void {
   ringMaterial.emissive.set(color);
 }
 
-function resizeRenderer(
-  camera: OrthographicCamera,
-  renderer: WebGLRenderer,
-  canvas: HTMLCanvasElement,
-): void {
+function resizeRenderer(camera: OrthographicCamera, renderer: WebGLRenderer, canvas: HTMLCanvasElement): void {
   const width = Math.max(1, canvas.clientWidth);
   const height = Math.max(1, canvas.clientHeight);
   const devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -203,10 +195,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   const renderer = new WebGLRenderer({ antialias: true, canvas });
   const scene = new Scene();
   const camera = new OrthographicCamera(-16, 16, VIEW_HEIGHT / 2, -VIEW_HEIGHT / 2, 0.1, 100);
-  const backgroundPlane = new Mesh(
-    new PlaneGeometry(70, 40),
-    new MeshBasicMaterial({ color: '#020617' }),
-  );
+  const backgroundPlane = new Mesh(new PlaneGeometry(70, 40), new MeshBasicMaterial({ color: '#020617' }));
   const glowPlane = new Mesh(
     new CircleGeometry(9, 48),
     new MeshBasicMaterial({ color: manifest.accent, transparent: true, opacity: 0.12 }),
@@ -260,10 +249,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       roughness: 0.35,
     }),
   );
-  const hub = new Mesh(
-    new CircleGeometry(0.26, 24),
-    new MeshBasicMaterial({ color: '#38bdf8' }),
-  );
+  const hub = new Mesh(new CircleGeometry(0.26, 24), new MeshBasicMaterial({ color: '#38bdf8' }));
   const wingGeometry = createWingGeometry();
   const wingMaterial = new MeshStandardMaterial({
     color: '#f59e0b',
@@ -338,14 +324,8 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   }
 
   for (let index = 0; index < 12; index += 1) {
-    const floorMarker = new Mesh(
-      new BoxGeometry(1.2, 0.14, 0.1),
-      new MeshBasicMaterial({ color: '#38bdf8' }),
-    );
-    const topMarker = new Mesh(
-      new BoxGeometry(1.2, 0.08, 0.1),
-      new MeshBasicMaterial({ color: '#67e8f9' }),
-    );
+    const floorMarker = new Mesh(new BoxGeometry(1.2, 0.14, 0.1), new MeshBasicMaterial({ color: '#38bdf8' }));
+    const topMarker = new Mesh(new BoxGeometry(1.2, 0.08, 0.1), new MeshBasicMaterial({ color: '#67e8f9' }));
 
     floorMarkers.push({
       mesh: floorMarker,
@@ -372,19 +352,13 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
     });
   };
 
-  const emitPhase = (
-    nextPhase: 'ready' | 'running' | 'paused' | 'game-over',
-    message: string,
-  ) => {
+  const emitPhase = (nextPhase: 'ready' | 'running' | 'paused' | 'game-over', message: string) => {
     phase = nextPhase;
     phaseMessage = message;
     host.emitEvent({ type: 'phase', phase: nextPhase, message });
   };
 
-  const emitAnnouncement = (
-    message: string,
-    politeness: 'polite' | 'assertive' = 'polite',
-  ) => {
+  const emitAnnouncement = (message: string, politeness: 'polite' | 'assertive' = 'polite') => {
     host.emitEvent({ type: 'announcement', message, politeness });
   };
 
@@ -394,14 +368,12 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   const flightSpeed = () => lerp(BASE_SPEED, MAX_SPEED, difficulty());
 
   const nextGapIndex = () => {
-    let candidates = GAP_PATTERN_Y
-      .map((_, index) => index)
-      .filter((index) => index !== previousGapIndex && Math.abs(index - previousGapIndex) > 1);
+    let candidates = GAP_PATTERN_Y.map((_, index) => index).filter(
+      (index) => index !== previousGapIndex && Math.abs(index - previousGapIndex) > 1,
+    );
 
     if (candidates.length === 0) {
-      candidates = GAP_PATTERN_Y
-        .map((_, index) => index)
-        .filter((index) => index !== previousGapIndex);
+      candidates = GAP_PATTERN_Y.map((_, index) => index).filter((index) => index !== previousGapIndex);
     }
 
     const picked = candidates[Math.floor(Math.random() * candidates.length)];
@@ -410,9 +382,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   };
 
   const nextStyleIndex = () => {
-    const candidates = OBSTACLE_COLORS
-      .map((_, index) => index)
-      .filter((index) => index !== previousStyleIndex);
+    const candidates = OBSTACLE_COLORS.map((_, index) => index).filter((index) => index !== previousStyleIndex);
     const picked = candidates[Math.floor(Math.random() * candidates.length)];
     previousStyleIndex = picked;
     return picked;

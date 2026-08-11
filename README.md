@@ -18,6 +18,10 @@ The main site always runs at `http://localhost:1337`.
 
 - [Game Hub Architecture](docs/architecture.md) defines system boundaries,
   pinned versions, and upstream documentation.
+- [Continuous Integration Contract](docs/continuous-integration.md) defines the
+  reproducible local gates, retained evidence, and fail-closed merge contract.
+- [Branch Protection](docs/branch-protection.md) records the required merge
+  controls and live verification procedure.
 - [Ralph Loop](docs/ralph-loop.md) defines the fresh-context autonomous
   development workflow.
 
@@ -26,6 +30,7 @@ The main site always runs at `http://localhost:1337`.
 ```bash
 yarn generate:games     # discover game workspaces and refresh generated artifacts
 yarn dev                # generate + start Vite on port 1337
+yarn validate           # reproduce the complete continuous integration contract
 yarn build              # generate + typecheck + production build
 yarn storybook          # generate + run Storybook on port 6006
 yarn build-storybook    # generate + build static Storybook

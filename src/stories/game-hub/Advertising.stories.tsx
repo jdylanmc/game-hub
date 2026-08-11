@@ -38,12 +38,10 @@ function StateShowcase({
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <AdvertisementPlacement state={state} />
         <Card as="section" className="h-fit p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Future integration boundary
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Future integration boundary</p>
           <p className="mt-3 text-sm leading-7 text-slate-300">
-            Plug a future advertising provider into the reserved inner shell only. Keep the label,
-            slot height, and subdued container chrome unchanged.
+            Plug a future advertising provider into the reserved inner shell only. Keep the label, slot height, and
+            subdued container chrome unchanged.
           </p>
         </Card>
       </div>
@@ -79,15 +77,13 @@ export const GameDetailsPlacement = {
                 }}
               >
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                    Gameplay canvas
-                  </p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Gameplay canvas</p>
                   <p className="mt-4 font-display text-3xl font-semibold text-white">
                     Primary play surface stays dominant
                   </p>
                   <p className="mt-4 max-w-2xl leading-7 text-slate-300">
-                    The ad placement sits outside the active canvas and uses muted framing so the
-                    sponsored area never imitates gameplay controls or score feedback.
+                    The ad placement sits outside the active canvas and uses muted framing so the sponsored area never
+                    imitates gameplay controls or score feedback.
                   </p>
                 </div>
               </div>
@@ -101,21 +97,16 @@ export const GameDetailsPlacement = {
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <Card as="section" className="p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Community handoff
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Community handoff</p>
                 <p className="mt-3 text-sm leading-7 text-slate-300">
-                  Community threads, ratings, and friend activity remain directly below the reserved
-                  sponsor slot.
+                  Community threads, ratings, and friend activity remain directly below the reserved sponsor slot.
                 </p>
               </Card>
               <Card as="section" className="p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Placeholder behavior
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Placeholder behavior</p>
                 <p className="mt-3 text-sm leading-7 text-slate-300">
-                  Until an SDK arrives, a neutral placeholder communicates the integration boundary
-                  without creating deceptive calls to action.
+                  Until an SDK arrives, a neutral placeholder communicates the integration boundary without creating
+                  deceptive calls to action.
                 </p>
               </Card>
             </div>
@@ -137,12 +128,10 @@ export const GameDetailsPlacement = {
             </ul>
           </Card>
           <Card as="section" className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Visual constraints
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Visual constraints</p>
             <p className="mt-3 text-sm leading-7 text-slate-300">
-              Use muted borders, neutral copy, and obvious labeling. The sponsor slot should feel
-              present but subordinate next to the game art, canvas, and social proof.
+              Use muted borders, neutral copy, and obvious labeling. The sponsor slot should feel present but
+              subordinate next to the game art, canvas, and social proof.
             </p>
             <Button className="mt-5" variant="secondary">
               Review monetization guidelines

@@ -3,11 +3,7 @@ import typography from '@tailwindcss/typography';
 import type { Config } from 'tailwindcss';
 
 export default {
-  content: [
-    './index.html',
-    './src/**/*.{ts,tsx,html}',
-    './.storybook/**/*.{ts,tsx}',
-  ],
+  content: ['./index.html', './src/**/*.{ts,tsx,html}', './.storybook/**/*.{ts,tsx}'],
   theme: {
     container: {
       center: true,

@@ -13,7 +13,8 @@ const communityMoments = [
     title: 'Community moments scale beyond the hero section',
   },
   {
-    description: 'Game pages can preview clips, creator notes, and challenge snapshots before the player commits to a launch.',
+    description:
+      'Game pages can preview clips, creator notes, and challenge snapshots before the player commits to a launch.',
     label: 'Gallery + feature',
     stat: '81% click-through on featured rows',
     title: 'Discovery stays visual and low-friction',
@@ -38,7 +39,8 @@ const marketingHighlights = [
     title: 'Back the pitch with reasons to stay',
   },
   {
-    description: 'Gallery, testimonial, and review-inspired content give the eventual homepage human texture and proof.',
+    description:
+      'Gallery, testimonial, and review-inspired content give the eventual homepage human texture and proof.',
     mamba: 'Gallery + Testimonial + Review',
     title: 'Turn social proof into part of the browse experience',
   },
@@ -80,14 +82,22 @@ const playPlans = [
     accent: 'from-violet-400/25 to-fuchsia-400/10',
     cta: 'Chase the bracket',
     name: 'Ranked competitor',
-    points: ['Featured ladders and live gauntlets', 'Leaderboard previews in every lane', 'Profile reputation and review depth'],
+    points: [
+      'Featured ladders and live gauntlets',
+      'Leaderboard previews in every lane',
+      'Profile reputation and review depth',
+    ],
     subtitle: 'A plan-card treatment for competitive intent and social prestige.',
   },
   {
     accent: 'from-emerald-400/25 to-teal-400/10',
     cta: 'Grow a following',
     name: 'Creator spotlight',
-    points: ['Curated shelves for clips and guides', 'Community proof modules', 'Clear prompts to publish strategy notes'],
+    points: [
+      'Curated shelves for clips and guides',
+      'Community proof modules',
+      'Clear prompts to publish strategy notes',
+    ],
     subtitle: 'A creator-friendly variant for editorial and UGC programming.',
   },
 ];
@@ -125,25 +135,35 @@ export const HomepageComposition = {
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_0%,rgba(37,99,235,0.24),transparent_34%),radial-gradient(circle_at_85%_20%,rgba(168,85,247,0.18),transparent_32%),linear-gradient(180deg,rgba(2,6,23,0.98),rgba(2,6,23,0.94))]" />
           <div className="mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-24">
             <div>
-              <Badge className="bg-blue-400/10 text-blue-200">
-                Mamba inspiration · Hero + Call to Action + Header
-              </Badge>
+              <Badge className="bg-blue-400/10 text-blue-200">Mamba inspiration · Hero + Call to Action + Header</Badge>
               <h1 className="mt-6 max-w-4xl font-display text-5xl font-bold tracking-[-0.05em] sm:text-7xl">
                 Make the game-browsing homepage feel like the start of the next great run.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-                This curated Storybook page shows how Hero, Call to Action, Feature,
-                Gallery, Stats, Testimonial, and Pricing-style Mamba blocks can evolve
-                into a browse-first landing experience for Game Hub.
+                This curated Storybook page shows how Hero, Call to Action, Feature, Gallery, Stats, Testimonial, and
+                Pricing-style Mamba blocks can evolve into a browse-first landing experience for Game Hub.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <Button className="px-6 py-3" variant="primary">Explore featured games</Button>
-                <Button className="px-6 py-3" variant="secondary">View community proof</Button>
+                <Button className="px-6 py-3" variant="primary">
+                  Explore featured games
+                </Button>
+                <Button className="px-6 py-3" variant="secondary">
+                  View community proof
+                </Button>
               </div>
               <div className="mt-10 flex flex-wrap items-center gap-4">
                 {[playerStories[0], playerStories[1], playerStories[2]].map((player) => (
-                  <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-3 py-2" key={player.name}>
-                    <Avatar alt={`${player.name} community avatar`} name={player.name} size="sm" src={player.avatar} status="online" />
+                  <div
+                    className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-3 py-2"
+                    key={player.name}
+                  >
+                    <Avatar
+                      alt={`${player.name} community avatar`}
+                      name={player.name}
+                      size="sm"
+                      src={player.avatar}
+                      status="online"
+                    />
                     <span className="text-sm text-slate-300">{player.role}</span>
                   </div>
                 ))}
@@ -168,9 +188,7 @@ export const HomepageComposition = {
                       <p className="text-sm font-medium" style={{ color: game.secondaryAccent }}>
                         Featured launch target
                       </p>
-                      <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight">
-                        {game.title}
-                      </h2>
+                      <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight">{game.title}</h2>
                       <p className="mt-4 max-w-sm leading-7 text-slate-300">{game.description}</p>
                     </div>
                   </div>
@@ -205,12 +223,8 @@ export const HomepageComposition = {
           <div className="grid gap-6 lg:grid-cols-3">
             {marketingHighlights.map((highlight) => (
               <Card as="article" className="h-full p-6" key={highlight.title}>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
-                  {highlight.mamba}
-                </p>
-                <h3 className="mt-4 font-display text-2xl font-semibold text-white">
-                  {highlight.title}
-                </h3>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">{highlight.mamba}</p>
+                <h3 className="mt-4 font-display text-2xl font-semibold text-white">{highlight.title}</h3>
                 <p className="mt-4 leading-7 text-slate-400">{highlight.description}</p>
               </Card>
             ))}
@@ -245,9 +259,7 @@ export const HomepageComposition = {
                       <span className="text-sm text-slate-300">{moment.stat}</span>
                     </div>
                     <div>
-                      <h3 className="font-display text-3xl font-semibold tracking-tight text-white">
-                        {moment.title}
-                      </h3>
+                      <h3 className="font-display text-3xl font-semibold tracking-tight text-white">{moment.title}</h3>
                       <p className="mt-4 max-w-sm leading-7 text-slate-300">{moment.description}</p>
                     </div>
                   </div>
@@ -268,7 +280,13 @@ export const HomepageComposition = {
             {playerStories.map((story) => (
               <Card as="article" className="h-full p-6" key={story.name}>
                 <div className="flex items-center gap-4">
-                  <Avatar alt={`${story.name} testimonial avatar`} name={story.name} ringTone="blue" size="lg" src={story.avatar} />
+                  <Avatar
+                    alt={`${story.name} testimonial avatar`}
+                    name={story.name}
+                    ringTone="blue"
+                    size="lg"
+                    src={story.avatar}
+                  />
                   <div>
                     <h3 className="font-semibold text-white">{story.name}</h3>
                     <p className="text-sm text-slate-400">{story.role}</p>
@@ -293,9 +311,7 @@ export const HomepageComposition = {
                 <Card as="article" className="relative overflow-hidden p-0" key={plan.name}>
                   <div className={`absolute inset-0 bg-gradient-to-br ${plan.accent}`} />
                   <div className="relative flex h-full flex-col p-6">
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-300">
-                      {plan.name}
-                    </p>
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-300">{plan.name}</p>
                     <p className="mt-3 text-sm leading-6 text-slate-300">{plan.subtitle}</p>
                     <ul className="mt-6 flex-1 space-y-3 text-sm text-slate-200">
                       {plan.points.map((point) => (
@@ -305,7 +321,9 @@ export const HomepageComposition = {
                         </li>
                       ))}
                     </ul>
-                    <Button className="mt-8 w-full" variant="primary">{plan.cta}</Button>
+                    <Button className="mt-8 w-full" variant="primary">
+                      {plan.cta}
+                    </Button>
                   </div>
                 </Card>
               ))}
@@ -319,11 +337,16 @@ export const HomepageComposition = {
             The eventual Game Hub homepage can market the catalog without pretending it is a separate product.
           </h2>
           <p className="mt-6 text-lg leading-8 text-slate-300">
-            The most relevant Mamba marketing blocks already translate well into browse-first, game-first, and community-aware storytelling for the landing experience.
+            The most relevant Mamba marketing blocks already translate well into browse-first, game-first, and
+            community-aware storytelling for the landing experience.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Button className="px-6 py-3" variant="primary">Prototype the homepage</Button>
-            <Button className="px-6 py-3" variant="secondary">Review source categories</Button>
+            <Button className="px-6 py-3" variant="primary">
+              Prototype the homepage
+            </Button>
+            <Button className="px-6 py-3" variant="secondary">
+              Review source categories
+            </Button>
           </div>
         </section>
       </main>

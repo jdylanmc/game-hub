@@ -5,14 +5,8 @@ import { fileURLToPath } from 'node:url';
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const rootDirectory = path.resolve(scriptDirectory, '..');
 const gamesDirectory = path.join(rootDirectory, 'games');
-const publicManifestOutputPath = path.join(
-  rootDirectory,
-  'public/generated/games.manifest.json',
-);
-const importMapOutputPath = path.join(
-  rootDirectory,
-  'src/generated/game-import-map.ts',
-);
+const publicManifestOutputPath = path.join(rootDirectory, 'public/generated/games.manifest.json');
+const importMapOutputPath = path.join(rootDirectory, 'src/generated/game-import-map.ts');
 
 const requiredManifestFields = [
   'id',
@@ -72,27 +66,16 @@ function ensureStringArray(value, message) {
 }
 
 function validateManifest(manifest, workspaceDirectoryName) {
-  ensureObject(
-    manifest,
-    `Game manifest for ${workspaceDirectoryName} must be a JSON object.`,
-  );
+  ensureObject(manifest, `Game manifest for ${workspaceDirectoryName} must be a JSON object.`);
 
   for (const field of requiredManifestFields) {
     if (!(field in manifest)) {
-      throw new Error(
-        `Game manifest for ${workspaceDirectoryName} is missing required field "${field}".`,
-      );
+      throw new Error(`Game manifest for ${workspaceDirectoryName} is missing required field "${field}".`);
     }
   }
 
-  ensureString(
-    manifest.id,
-    `Game manifest for ${workspaceDirectoryName} must include a non-empty "id" string.`,
-  );
-  ensureString(
-    manifest.title,
-    `Game manifest for ${workspaceDirectoryName} must include a non-empty "title" string.`,
-  );
+  ensureString(manifest.id, `Game manifest for ${workspaceDirectoryName} must include a non-empty "id" string.`);
+  ensureString(manifest.title, `Game manifest for ${workspaceDirectoryName} must include a non-empty "title" string.`);
   ensureString(
     manifest.tagline,
     `Game manifest for ${workspaceDirectoryName} must include a non-empty "tagline" string.`,
@@ -113,10 +96,7 @@ function validateManifest(manifest, workspaceDirectoryName) {
     manifest.technology,
     `Game manifest for ${workspaceDirectoryName} must include a non-empty "technology" string.`,
   );
-  ensureNumber(
-    manifest.order,
-    `Game manifest for ${workspaceDirectoryName} must include a numeric "order" field.`,
-  );
+  ensureNumber(manifest.order, `Game manifest for ${workspaceDirectoryName} must include a numeric "order" field.`);
 
   if ('featured' in manifest) {
     ensureBoolean(
@@ -126,16 +106,11 @@ function validateManifest(manifest, workspaceDirectoryName) {
   }
 
   if (!Array.isArray(manifest.controls)) {
-    throw new Error(
-      `Game manifest for ${workspaceDirectoryName} must include a "controls" array.`,
-    );
+    throw new Error(`Game manifest for ${workspaceDirectoryName} must include a "controls" array.`);
   }
 
   manifest.controls.forEach((control, index) => {
-    ensureObject(
-      control,
-      `Game manifest for ${workspaceDirectoryName} controls[${index}] must be an object.`,
-    );
+    ensureObject(control, `Game manifest for ${workspaceDirectoryName} controls[${index}] must be an object.`);
     ensureString(
       control.action,
       `Game manifest for ${workspaceDirectoryName} controls[${index}].action must be a non-empty string.`,
@@ -156,24 +131,24 @@ function validateManifest(manifest, workspaceDirectoryName) {
 
 function sortGames(left, right) {
   return (
-    Number(Boolean(right.manifest.featured)) -
-      Number(Boolean(left.manifest.featured)) ||
+    Number(Boolean(right.manifest.featured)) - Number(Boolean(left.manifest.featured)) ||
     left.manifest.order - right.manifest.order ||
     left.manifest.title.localeCompare(right.manifest.title)
   );
 }
 
 function normalizeImportSpecifier(relativePath) {
-  const normalized = relativePath.split(path.sep).join('/').replace(/\.[cm]?[jt]sx?$/, '');
+  const normalized = relativePath
+    .split(path.sep)
+    .join('/')
+    .replace(/\.[cm]?[jt]sx?$/, '');
   return normalized.startsWith('.') ? normalized : `./${normalized}`;
 }
 
 async function writeIfChanged(filePath, content) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
-  const currentContent = (await pathExists(filePath))
-    ? await fs.readFile(filePath, 'utf8')
-    : undefined;
+  const currentContent = (await pathExists(filePath)) ? await fs.readFile(filePath, 'utf8') : undefined;
 
   if (currentContent === content) {
     return;
@@ -219,14 +194,8 @@ async function loadGameWorkspaces() {
     }
 
     const packageJson = await readJson(packageJsonPath);
-    ensureObject(
-      packageJson,
-      `Package definition for ${directoryEntry.name} must be a JSON object.`,
-    );
-    ensureObject(
-      packageJson.gameHub,
-      `Package ${directoryEntry.name} must define a "gameHub" object in package.json.`,
-    );
+    ensureObject(packageJson, `Package definition for ${directoryEntry.name} must be a JSON object.`);
+    ensureObject(packageJson.gameHub, `Package ${directoryEntry.name} must define a "gameHub" object in package.json.`);
     ensureString(
       packageJson.gameHub.manifest,
       `Package ${directoryEntry.name} must define a non-empty gameHub.manifest path.`,
@@ -247,10 +216,7 @@ async function loadGameWorkspaces() {
       throw new Error(`Game entry module not found for ${directoryEntry.name}: ${entryPath}`);
     }
 
-    const manifest = validateManifest(
-      await readJson(manifestPath),
-      directoryEntry.name,
-    );
+    const manifest = validateManifest(await readJson(manifestPath), directoryEntry.name);
 
     if (seenIds.has(manifest.id)) {
       throw new Error(`Duplicate game id detected: ${manifest.id}`);
@@ -279,10 +245,7 @@ async function main() {
   };
 
   await Promise.all([
-    writeIfChanged(
-      publicManifestOutputPath,
-      `${JSON.stringify(publicManifest, null, 2)}\n`,
-    ),
+    writeIfChanged(publicManifestOutputPath, `${JSON.stringify(publicManifest, null, 2)}\n`),
     writeIfChanged(importMapOutputPath, renderImportMap(workspaces)),
   ]);
 }
