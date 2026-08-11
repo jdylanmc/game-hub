@@ -5,6 +5,11 @@ You are one fresh iteration of the Game Hub Ralph Loop.
 The runner supplies `MEMORY_DIR`. Complete at most one bounded story and leave
 the repository in a clean, committed state.
 
+The current repository root must be
+`<primary-repository-parent>/<repository>-worktrees/issue-<issueNumber>`.
+Never read from, write to, or run commands in another issue's worktree. The
+outer orchestrator owns cross-issue scheduling and dependency decisions.
+
 ## Read Before Editing
 
 1. Read `/AGENTS.md`.
@@ -22,6 +27,14 @@ snapshot and stop so the next iteration can re-plan.
 The `repoNameWithOwner`, `issueNumber`, `issueUrl`, `branchName`, and
 `baseBranch` fields are immutable run identity. Do not change them. Use
 `repoNameWithOwner` explicitly for every GitHub CLI query.
+
+The plan's `orchestration` block is also durable coordination state. Do not
+broaden `changeScopes`, remove dependencies, or change priority merely to make
+the current issue eligible for parallel execution.
+
+The runner supplies a repository-owner `GH_TOKEN`. Use it for every GitHub CLI
+call and never run `gh auth switch`; the active account is shared machine state
+and another concurrent loop may be using it.
 
 ## Select One Story
 

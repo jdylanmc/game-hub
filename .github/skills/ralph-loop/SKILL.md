@@ -11,9 +11,11 @@ allowed-tools:
 
 # Game Hub Ralph Loop
 
-Prepare and launch the local Ralph Loop for one Game Hub GitHub Issue. GitHub
-Issues define scope, `docs/memories/` carries state between fresh contexts, and
-the bundled runner maintains a draft pull request without merging it.
+Prepare and launch one or more local Ralph Loops. Every GitHub Issue owns a
+deterministic issue branch and sibling Git worktree. Repository-backed memory
+carries state between fresh contexts, and the orchestrator may run independent
+issue worktrees concurrently while each runner maintains only a draft pull
+request.
 
 Constraint: Do not merge pull requests, push to the default branch, bypass
 failed checks, store secrets in memory, or run more than one issue in a shared
@@ -21,28 +23,33 @@ worktree.
 
 ## Prerequisites
 
-- Run from the Game Hub repository root.
+- Run from any Game Hub worktree.
 - Read `AGENTS.md`, `docs/architecture.md`, and `docs/ralph-loop.md`.
 - Require `git`, `gh`, `jq`, and `copilot`.
 - Require authenticated GitHub CLI access to the `origin` repository.
-- Start with a clean worktree.
+- Start with a clean worktree and never modify another issue's worktree.
 
 ## Phase 0: Bind the Repository Identity
 
 1. Resolve the repository root with `git rev-parse --show-toplevel`. Do not infer
    a repository from a sibling directory.
 2. Resolve `origin` and require it to identify `jdylanmc/game-hub`.
-3. Read the active GitHub CLI account with `gh api user --jq .login`.
-4. Switch to `jdylanmc` before any `gh repo`, `gh issue`, or `gh pr` operation:
+3. Resolve the repository owner's stored token without changing shared GitHub
+   CLI state:
 
    ```bash
-   gh auth switch --hostname github.com --user jdylanmc
+   GH_TOKEN="$(GH_TOKEN= GITHUB_TOKEN= gh auth token \
+     --hostname github.com --user jdylanmc)"
    ```
 
-5. Restore the original active account after setup or on any failure. The
-   bundled runner performs the same switch and restoration for unattended work.
+4. Use that token only in the current process environment and verify
+   `GH_TOKEN="$GH_TOKEN" gh api user --jq .login` returns `jdylanmc`.
+5. Never run `gh auth switch` from Ralph automation. It mutates shared global
+   state and races with concurrent loops. The orchestrator gives every child
+   runner its own environment copy, and standalone runners resolve the same
+   owner token without changing the user's active account.
 
-## Phase 1: Select the Issue
+## Phase 1: Select and Distill Issues
 
 1. If the user supplied an issue number or URL, retrieve that issue and use it.
 2. If no issue was supplied, check open Ralph pull requests before listing new
@@ -69,12 +76,35 @@ worktree.
    `priority:P3`, then by issue number. Adjust the recommendation when
    dependencies, existing pull requests, or repository state make the first
    issue unsafe or blocked.
-5. Show the recommended issue and rationale. Use `ask_user` to confirm it.
-6. Offer an explicit "continue by best judgment" choice. Record that delegation
+5. For every proposed issue, identify:
+   - issue dependencies that must be merged to `main` first;
+   - conservative repository-relative file or directory prefixes it may change;
+   - likely overlap with active issue branches or pull requests.
+6. Show the recommended issue or independent parallel set and rationale. Use
+   `ask_user` to confirm it.
+7. Offer an explicit "continue by best judgment" choice. Record that delegation
    for this invocation only. Without it, do not choose another issue without
    confirmation.
 
-## Phase 2: Prepare Durable Memory
+## Phase 2: Create or Resume the Issue Worktree
+
+1. Derive branch `ralph/issue-<number>-<slug>` and deterministic sibling path
+   `<primary-repository-parent>/<repository>-worktrees/issue-<number>`.
+2. Fetch `origin/main`, then run:
+
+   ```bash
+   node .github/skills/ralph-loop/scripts/prepare-ralph-worktree.mjs \
+     --issue <number> --branch ralph/issue-<number>-<slug>
+   ```
+
+3. The preparer must reject a branch checked out elsewhere, another branch at
+   the deterministic path, dirty state, and local/remote divergence. It never
+   removes a worktree. Do not delete any dirty or unmerged worktree
+   automatically.
+4. Change into the returned worktree before creating memory or launching the
+   first iteration. The primary checkout is coordination-only.
+
+## Phase 3: Prepare Durable Memory
 
 1. Derive `docs/memories/<issue>-<slug>/` using the numeric issue ID and a
    lowercase ASCII slug. Reject absolute paths, `.` or `..` components, and
@@ -96,6 +126,11 @@ worktree.
      "branchName": "ralph/issue-27-repository-wide-code-linting",
      "baseBranch": "main",
      "continuousByBestJudgment": false,
+     "orchestration": {
+       "priority": 1,
+       "dependencies": [],
+       "changeScopes": ["games/example-game"]
+     },
      "stories": [
        {
          "id": "US-001",
@@ -124,10 +159,11 @@ worktree.
    criteria, and continuous-mode choice. Require confirmation before committing
    memory or launching the runner.
 
-## Phase 3: Create the Issue Branch
+## Phase 4: Validate the Issue Branch
 
 1. Fetch `origin`.
-2. Create the `branchName` from the latest `origin/<baseBranch>`.
+2. Confirm the branch was created from the latest `origin/<baseBranch>` by the
+   worktree preparer.
 3. If the branch exists remotely, fetch it and verify that the remote branch is
    an ancestor of the local branch. Stop on behind or diverged state.
 4. Query existing pull requests for the branch with
@@ -136,7 +172,7 @@ worktree.
 5. Commit the issue memory before starting unattended iterations.
 6. Never reuse a branch whose pull request covers a different issue.
 
-## Phase 4: Launch Fresh Contexts
+## Phase 5: Launch Fresh Contexts
 
 Use the bundled runner:
 
@@ -153,7 +189,23 @@ The script uses
 `references/iteration-prompt.md` as the contract for each fresh Copilot
 invocation. Do not resume prior Copilot sessions.
 
-## Phase 5: Report the Run
+For multiple confirmed loops, create a local orchestration manifest based on
+`references/orchestration-manifest.example.json` and run:
+
+```bash
+node .github/skills/ralph-loop/scripts/orchestrate-ralph-loops.mjs \
+  --manifest <path> --max-parallel <count>
+```
+
+The orchestrator verifies dependency pull requests are merged to the base
+branch, sorts eligible work by priority and issue number, refuses duplicate
+ownership and overlapping eligible scopes, starts each runner in its own
+worktree, and emits coalesced status reports for loop launch, story completion,
+publication or continuous-integration state changes, blockers, and completion.
+Unchanged short-interval polls are silent; a longer rate-limited heartbeat
+reports continued work without flooding output.
+
+## Phase 6: Report the Run
 
 Report:
 
@@ -171,12 +223,15 @@ Do not describe an incomplete or failing pull request as ready.
 
 - Fail if the `jdylanmc` account is unavailable or `gh repo view
   jdylanmc/game-hub` fails.
-- Restore the original active account before asking the user to authenticate.
+- Do not fall back to `gh auth switch`; preserve global account state and ask
+  the user to restore the stored `jdylanmc` credential.
 
 ### Worktree is dirty
 
 - Fail before launching another context.
 - Preserve the changes and report the files. Do not reset or discard them.
+- Never remove the worktree automatically, even when its pull request is
+  merged; cleanup is an explicit human lifecycle action.
 
 ### Copilot exits unsuccessfully
 
@@ -199,6 +254,13 @@ Do not describe an incomplete or failing pull request as ready.
 - Stop before launching or pushing another iteration.
 - Preserve local and remote commits. Do not force-push, reset, rebase, or merge
   without a human decision.
+
+### Parallel ownership or scope collides
+
+- Stop before launching any colliding eligible loops.
+- Report the duplicate issue/branch/worktree or exact overlapping scopes.
+- A dependency edge may serialize overlapping work, but must not be removed
+  merely to make both loops eligible.
 
 ### Publication partially succeeds
 

@@ -22,6 +22,8 @@ state for one issue; they do not replace or silently broaden the issue.
 
 - Bind each plan to an exact `repoNameWithOwner`, issue URL, issue number,
   branch, and base branch.
+- Record orchestration priority, merged-issue dependencies, and conservative
+  repository-relative change scopes in `plan.json`.
 - Read and reconcile an existing issue directory before updating it.
 - Reject absolute paths, dot components, and paths that resolve outside this
   directory.

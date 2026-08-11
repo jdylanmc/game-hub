@@ -1,0 +1,90 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 33,
+  "issueTitle": "Make Ralph Loop parallelizable",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/33",
+  "branchName": "ralph/issue-33-make-ralph-loop-parallelizable",
+  "baseBranch": "main",
+  "continuousByBestJudgment": false,
+  "orchestration": {
+    "priority": 1,
+    "dependencies": [],
+    "changeScopes": ["."]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Isolate every Ralph issue in a deterministic worktree",
+      "description": "Add deterministic worktree creation, identity validation, scoped ownership locks, and safe lifecycle behavior.",
+      "acceptanceCriteria": [
+        "The first and subsequent issue loops use the issue's deterministic sibling worktree",
+        "Duplicate issue, branch, or worktree ownership is rejected",
+        "Dirty and diverged worktrees are preserved and rejected"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Deterministic preparation, runner path enforcement, scoped shared locks, and safety simulations are implemented."
+    },
+    {
+      "id": "US-002",
+      "title": "Orchestrate independent Ralph loops",
+      "description": "Add a priority-ordered concurrent orchestrator with explicit dependency and change-scope safety.",
+      "acceptanceCriteria": [
+        "Merged dependencies determine eligibility",
+        "Eligible loops are ordered by priority and issue number",
+        "Overlapping eligible scopes are refused before launch",
+        "Meaningful and periodic status is reported"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "The manifest orchestrator verifies merged dependencies, sorts eligible work, rejects overlap, launches concurrently, and reports status.",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-003",
+      "title": "Document and simulate the parallel model",
+      "description": "Update Ralph contracts and add executable focused simulations for concurrency and safety failures.",
+      "acceptanceCriteria": [
+        "Required repository and Ralph documentation describes worktree orchestration",
+        "Focused tests prove independent coexistence and requested safe failures",
+        "Current main validation commands pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Repository contracts and focused Node simulations are updated; current main validation commands pass.",
+      "dependencies": ["US-001", "US-002"]
+    },
+    {
+      "id": "US-004",
+      "title": "Report meaningful orchestration status without flooding",
+      "description": "Add event-driven transition reports plus a rate-limited heartbeat while suppressing unchanged status polls.",
+      "acceptanceCriteria": [
+        "Loop launch, story completion, publication or CI change, blocker, and completion emit status reports",
+        "Multiple changes observed in one poll are coalesced into one report",
+        "Unchanged polls emit nothing before the heartbeat interval",
+        "Long-running unchanged loops emit one rate-limited periodic heartbeat",
+        "Focused tests prove meaningful emissions and unchanged-poll suppression"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "A transition-aware reporter coalesces observed changes, deduplicates repeated terminal events, suppresses unchanged polls, and emits configurable heartbeats.",
+      "dependencies": ["US-002", "US-003"]
+    },
+    {
+      "id": "US-005",
+      "title": "Isolate GitHub identity for concurrent loops",
+      "description": "Replace shared GitHub CLI active-account switching with verified process-local authentication for the orchestrator and every child runner.",
+      "acceptanceCriteria": [
+        "Ralph automation never calls gh auth switch",
+        "The repository owner identity is verified before GitHub operations",
+        "Every child runner receives its own environment copy with the owner GH_TOKEN",
+        "Standalone runners bind the owner token without changing global GitHub CLI state",
+        "Focused concurrency tests prove loops cannot change each other's GitHub identity"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "The orchestrator and standalone runner resolve and verify the repository-owner credential without global account switching; concurrent fake-GitHub simulations prove process identities remain isolated.",
+      "dependencies": ["US-001", "US-002"]
+    }
+  ]
+}

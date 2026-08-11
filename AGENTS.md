@@ -95,12 +95,29 @@ account. Do not log out either account or replace its stored credential. Git
 pushes use the repository's SSH configuration and do not require changing the
 active GitHub CLI account.
 
+Ralph automation is the exception to interactive account switching: concurrent
+processes must resolve the repository owner's stored token once, pass it through
+their own `GH_TOKEN` environment, and never run `gh auth switch`. The active
+GitHub CLI account is shared machine state and is unsafe for parallel loops.
+
 ## Ralph Loop
 
 The Ralph Loop completes one bounded story in a fresh GitHub Copilot CLI context,
-persists its state, and starts another context only when work remains. GitHub
-Issues define product scope. The selected issue, a story plan, progress, and
-iteration logs live under `docs/memories/<issue>-<slug>/`.
+persists its state, and starts another context only when work remains. Every
+issue owns the branch `ralph/issue-<number>-<slug>` and deterministic sibling
+worktree `<repository>-worktrees/issue-<number>`, including its first iteration.
+GitHub Issues define product scope. The selected issue, a story plan, progress,
+and iteration logs live under `docs/memories/<issue>-<slug>/` in that worktree.
+
+The Ralph orchestrator may run clean, dependency-free issue worktrees in
+parallel only when their declared repository-relative change scopes do not
+overlap. Never edit another issue's worktree, automatically remove a dirty or
+unmerged worktree, or reuse an issue branch for another loop.
+
+Orchestrator status is transition-driven. Emit reports for launch, story,
+publication or continuous-integration changes, blocker, and completion;
+coalesce changes found in one observation, suppress unchanged polls, and use a
+longer heartbeat for periodic unchanged status.
 
 Before ranking an unassigned issue, run `yarn ralph:prioritize`. A blocking open
 Ralph pull request must map to exactly one matching issue memory; missing or
@@ -110,7 +127,8 @@ Follow [Ralph Loop](docs/ralph-loop.md) for the full model and safety rules.
 
 ### Iteration Rules
 
-1. Read the selected GitHub Issue, this file, `docs/architecture.md`, the
+1. Confirm the current path is the issue's deterministic worktree, then read
+   the selected GitHub Issue, this file, `docs/architecture.md`, the
    nearest workspace `AGENTS.md`, the issue memory, and recent Git history.
 2. Select one story that fits in one context window.
 3. Implement and verify that story.

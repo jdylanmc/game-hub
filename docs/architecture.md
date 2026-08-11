@@ -35,7 +35,7 @@ plus one statically analyzable Vite import map.
 | Component grounding | `.storybook/`, `src/stories/`, `src/storybook/` | Shared component and composition development |
 | Static hosting config | `public/staticwebapp.config.json` | Azure Static Web Apps routing and security headers |
 | Azure infrastructure | `infra/` when introduced | Idempotent Bicep resources and environment parameter files |
-| Autonomous development | `.github/skills/ralph-loop/`, `docs/memories/` | Fresh-context issue execution and persistent state |
+| Autonomous development | `.github/skills/ralph-loop/`, `docs/memories/`, sibling issue worktrees | Fresh-context issue execution, parallel-safe orchestration, and persistent state |
 
 The planned containerized application programming interface (API) remains
 outside the current runtime. Introduce its workspace, container boundary, and
@@ -159,6 +159,18 @@ must select the subscription explicitly before previewing or applying changes.
 8. **Azure infrastructure is idempotent and declarative.** Use Bicep with
    environment-specific parameter or configuration files; do not create
    long-lived Azure resources through undocumented imperative commands.
+9. **Autonomous issue work is isolated by branch and worktree.** Every Ralph
+   issue uses `ralph/issue-<number>-<slug>` in the deterministic sibling path
+   `<repository>-worktrees/issue-<number>`; concurrent loops must declare
+   non-overlapping change scopes and have no unmet issue dependencies.
+10. **Orchestration status is transition-driven and rate-limited.** Meaningful
+    loop, story, publication, continuous-integration, blocker, and completion
+    transitions emit coalesced reports; unchanged polling is silent except for
+    a longer periodic heartbeat.
+11. **Concurrent GitHub identity is process-local.** Ralph resolves the
+    repository owner's credential without changing GitHub CLI global state and
+    binds each orchestrator and child runner through its own `GH_TOKEN`
+    environment.
 
 ## Version Update Procedure
 

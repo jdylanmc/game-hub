@@ -12,3 +12,5 @@ test-results
 *.local
 *.tsbuildinfo
 docs/memories/**/iterations/*.log
+.ralph-test-work/
+.ralph-orchestration*.json
