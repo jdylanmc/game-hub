@@ -34,6 +34,29 @@ yarn build-storybook
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
 
+## GitHub CLI Account
+
+GitHub CLI stores both `dylanmccurry_microsoft` and `jdylanmc` credentials for
+`github.com`. The active account controls GitHub API operations such as
+`gh issue`, `gh pr`, and `gh repo`.
+
+Switch to the repository owner before operating on `jdylanmc/game-hub`:
+
+```bash
+gh auth switch --hostname github.com --user jdylanmc
+```
+
+Restore the primary work account after the GitHub operation completes:
+
+```bash
+gh auth switch --hostname github.com --user dylanmccurry_microsoft
+```
+
+Use a shell trap for unattended scripts so failures also restore the original
+account. Do not log out either account or replace its stored credential. Git
+pushes use the repository's SSH configuration and do not require changing the
+active GitHub CLI account.
+
 ## Ralph Loop
 
 The Ralph Loop completes one bounded story in a fresh GitHub Copilot CLI context,
