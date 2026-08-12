@@ -1,0 +1,9 @@
+{
+  "name": "@fixture/beta",
+  "private": true,
+  "type": "module",
+  "gameHub": {
+    "manifest": "./game.manifest.json",
+    "entry": "./src/index.mjs"
+  }
+}

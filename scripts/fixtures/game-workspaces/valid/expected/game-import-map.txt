@@ -4,27 +4,27 @@
 import type { GameModule } from '@game-hub/game-contract';
 import { createGameModuleLoader } from '../game-module-loader';
 
-export const registeredGameIds = ["floppy-bird","neon-drift","orbital-stack"] as const;
+export const registeredGameIds = ["featured","alpha","beta"] as const;
 
 export type RegisteredGameId = (typeof registeredGameIds)[number];
 
 const gameImportMap = {
-  'floppy-bird': async () => {
-    const module = await import('../../games/floppy-bird/src/index');
+  'featured': async () => {
+    const module = await import('../../games/z-featured/src/index');
     return {
       manifest: module.manifest,
       createGame: module.createGame,
     };
   },
-  'neon-drift': async () => {
-    const module = await import('../../games/neon-drift/src/index');
+  'alpha': async () => {
+    const module = await import('../../games/b-alpha/src/index');
     return {
       manifest: module.manifest,
       createGame: module.createGame,
     };
   },
-  'orbital-stack': async () => {
-    const module = await import('../../games/orbital-stack/src/index');
+  'beta': async () => {
+    const module = await import('../../games/c-beta/src/index');
     return {
       manifest: module.manifest,
       createGame: module.createGame,

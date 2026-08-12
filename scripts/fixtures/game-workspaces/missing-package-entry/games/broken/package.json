@@ -1,0 +1,8 @@
+{
+  "name": "@fixture/missing-package-entry",
+  "private": true,
+  "type": "module",
+  "gameHub": {
+    "manifest": "./game.manifest.json"
+  }
+}

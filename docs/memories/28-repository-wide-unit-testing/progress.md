@@ -32,9 +32,12 @@
 - Neon Drift injects its simulation clock and random source through
   `NeonDriftRuntimeOptions`; runtime start and disposal are idempotent, and
   resume resets frame sampling so the first resumed step has zero elapsed time.
-- Generated game discovery has committed outputs under `public/generated/` and
-  `src/generated/`, while generator implementation currently executes at module
-  load and is not directly unit-testable.
+- Generated game discovery exposes import-safe validation, workspace
+  discovery, and artifact rendering. Tests use read-only repository-local
+  fixtures and a fixture import-map path; only the command entry point writes
+  committed outputs under `public/generated/` and `src/generated/`.
+- Generated import maps delegate unknown-id and rejected-import handling to the
+  directly testable `src/game-module-loader.ts` boundary.
 - Issue #28 is orchestration priority 3 and remains blocked on issues #30 and
   #27 because adversarial test review and lint completion overlap package,
   configuration, source, test, documentation, and workflow-policy surfaces.
@@ -252,3 +255,34 @@
   `yarn typecheck`, and the full `yarn validate` contract.
 - Generator, contract, host, and later testing stories remain intentionally
   untouched.
+
+## 2026-08-12 - US-008: Test manifests and workspace generation
+
+- Refactored `scripts/generate-game-workspaces.mjs` so importing it has no side
+  effects and tests can call exported manifest validation, workspace discovery,
+  artifact rendering, and generation functions with explicit fixture paths.
+- Made workspace enumeration and title tie-breaking platform-stable, validated
+  the contract's required `Three.js` technology, and added actionable errors
+  naming malformed workspaces, duplicate owners, missing package entries,
+  missing manifests, and missing entry modules.
+- Added read-only repository-local fixtures covering valid, ignored,
+  malformed, duplicate, and incomplete workspaces. Exact expected manifest and
+  import-map text proves featured, order, and title sorting without writing
+  fixture outputs or either committed generated artifact.
+- Added `src/game-module-loader.ts`; generated import maps now delegate to this
+  tested boundary so unknown ids list registered games and rejected dynamic
+  import functions retain the requested id, original detail, and `Error.cause`.
+- Simplified `PlayableGame` to use the generated loader's single runtime
+  validation path.
+- Files changed: `AGENTS.md`,
+  `scripts/generate-game-workspaces.mjs`,
+  `scripts/generate-game-workspaces.test.mjs`,
+  `scripts/fixtures/game-workspaces/`,
+  `src/components/games/PlayableGame.tsx`,
+  `src/game-module-loader.ts`, `src/game-module-loader.test.ts`,
+  `src/generated/game-import-map.ts`, and this issue memory.
+- Checks passed: targeted Prettier and ESLint, ten focused generator and loader
+  tests, `yarn typecheck`, explicit `yarn generate:check`, and the complete
+  `yarn validate` contract with 311 Vitest tests.
+- Shared-contract, broader host/component, cleanup, coverage, integrity,
+  workflow-evidence, and documentation stories remain intentionally untouched.

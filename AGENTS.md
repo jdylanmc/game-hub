@@ -99,6 +99,11 @@ Run `yarn generate:check` after changing game workspace metadata or discovery
 logic. It fails when generation changes Git state or the committed catalog
 outputs are dirty.
 
+Test generator discovery and rendering through
+`generateGameWorkspaceArtifacts` with repository-local fixtures and a fixture
+import-map path. Unit tests must not invoke the writer against committed
+generated outputs.
+
 ## Continuous Integration
 
 `.github/workflows/continuous-integration.yml` runs the same root validation

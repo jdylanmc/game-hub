@@ -1,0 +1,12 @@
+{
+  "id": "missing-package-entry",
+  "title": "Missing Package Entry",
+  "tagline": "Missing package metadata",
+  "description": "This package intentionally omits gameHub.entry.",
+  "accent": "#111111",
+  "secondaryAccent": "#222222",
+  "technology": "Three.js",
+  "order": 1,
+  "controls": [],
+  "instructions": []
+}

@@ -1,6 +1,6 @@
 import type { GameEvent, GameInstance, GameManifest, GamePhase, GameScore } from '@game-hub/game-contract';
 import { useEffect, useRef, useState } from 'react';
-import { hasGameLoader, loadGameModule } from '../../generated/game-import-map';
+import { loadGameModule } from '../../generated/game-import-map';
 import { Button } from '../ui/Button';
 import { GameHudCard } from './GameHudCard';
 import { GameStageStatus } from './GameStageStatus';
@@ -88,11 +88,6 @@ export function PlayableGame({ game, onScore }: PlayableGameProps) {
     const startWorkspace = async () => {
       try {
         const gameId = game.id;
-
-        if (!hasGameLoader(gameId)) {
-          throw new Error(`No generated workspace loader exists for "${gameId}".`);
-        }
-
         const module = await loadGameModule(gameId);
 
         if (!active) {

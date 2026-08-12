@@ -1,0 +1,9 @@
+{
+  "name": "@fixture/missing-entry-file",
+  "private": true,
+  "type": "module",
+  "gameHub": {
+    "manifest": "./game.manifest.json",
+    "entry": "./src/missing.mjs"
+  }
+}

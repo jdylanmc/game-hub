@@ -136,8 +136,8 @@
         "Malformed manifests, duplicate identifiers, missing entries, unknown games, and dynamic import failures report actionable errors"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Refactored game workspace generation into import-safe exported validation, discovery, rendering, artifact, and writing functions while retaining the direct command entry point. Added repository-local read-only fixtures and ten deterministic tests for manifest types, workspace discovery and documented sorting, ignored non-packages, exact generated manifest and import-map text, committed-output isolation, duplicate ids, malformed manifests, missing metadata and files, unknown game ids, and genuine rejected dynamic import functions. Generated loaders now delegate to a tested helper that preserves the requested id, registered ids, original failure message, and Error cause. Targeted checks, yarn generate:check, and the full yarn validate contract passed with 311 Vitest tests.",
       "dependencies": ["US-001"]
     },
     {

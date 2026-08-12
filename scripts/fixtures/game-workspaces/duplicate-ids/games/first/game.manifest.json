@@ -1,0 +1,12 @@
+{
+  "id": "duplicate",
+  "title": "First",
+  "tagline": "First duplicate",
+  "description": "The first duplicate identifier fixture.",
+  "accent": "#111111",
+  "secondaryAccent": "#222222",
+  "technology": "Three.js",
+  "order": 1,
+  "controls": [],
+  "instructions": []
+}

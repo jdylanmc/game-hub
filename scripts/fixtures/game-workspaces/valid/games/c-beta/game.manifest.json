@@ -1,0 +1,17 @@
+{
+  "id": "beta",
+  "title": "Beta",
+  "tagline": "Beta fixture",
+  "description": "A deterministic fixture game named Beta.",
+  "accent": "#333333",
+  "secondaryAccent": "#444444",
+  "technology": "Three.js",
+  "order": 2,
+  "controls": [
+    {
+      "action": "Start",
+      "inputs": ["Enter"]
+    }
+  ],
+  "instructions": ["Start the Beta fixture."]
+}
