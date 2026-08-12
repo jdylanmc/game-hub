@@ -208,3 +208,21 @@
 - No Azure sign-in, validation deployment, `what-if`, resource deployment,
   asset upload, cache purge, endpoint reachability check, or live deployment
   evidence was performed or claimed.
+
+## 2026-08-12 — Protected-check refresh after main merge
+
+- Fetched and merged `origin/main` at `53aa66a` without rebasing or
+  force-pushing. The add/add `infra/README.md` conflict retained both the Game
+  Hub hosting guidance and the adversarial-review infrastructure guidance.
+- Published merge head `1b3add8`. Genuine pull-request continuous integration
+  ran on that exact commit and failed because issue #1's reviewed
+  `docs/architecture.md` changes intentionally invalidated the promoted
+  adversarial calibration fingerprint.
+- Selected Azure subscription
+  `11213dbd-39fe-46ba-87db-5f5e8c449aed` explicitly and ran the repository's
+  real Azure calibration through Microsoft Entra ID. The refreshed report is
+  promotable with full blocking-pattern detection, no false positives, no
+  errors, and agreement across both required repetitions.
+- Added `Adversarial Review / unit-test-reviewer` to the issue publication
+  contract now supplied by the protected main-branch workflow.
+- No Azure infrastructure or application deployment was performed.

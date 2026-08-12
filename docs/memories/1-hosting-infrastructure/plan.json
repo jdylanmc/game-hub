@@ -22,7 +22,7 @@
   },
   "publication": {
     "requiredStatusChecks": ["Continuous integration"],
-    "adversarialStatusChecks": []
+    "adversarialStatusChecks": ["Adversarial Review / unit-test-reviewer"]
   },
   "stories": [
     {
