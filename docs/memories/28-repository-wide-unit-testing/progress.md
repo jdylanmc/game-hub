@@ -408,3 +408,34 @@
 - Coverage-regression mutation proofs, workflow policy/evidence, and the
   broader unit-test contract remain intentionally deferred to US-013 through
   US-015.
+
+## 2026-08-12 - US-013: Prove test failures and integrity gates
+
+- Extended the existing repository-local detached-worktree harness from one
+  representative test assertion to nine canonical `yarn test:ci` proofs.
+- Proved probe-specific nonzero failures for a false assertion, a required
+  package suite with no test files, focused/exclusive, skipped, todo, and
+  quarantined tests, an unexpected global property, the configured 10-second
+  timeout, and a measured authored-source coverage regression.
+- Every proof requires its intended diagnostic and identifying file or
+  threshold evidence, rejecting unrelated dependency, policy, discovery, or
+  setup failures.
+- Shared teardown now removes and fails on unexpected global properties after
+  Vitest stubs are restored. React's test-environment marker and Three.js's
+  module marker remain explicit framework-owned exceptions.
+- Workflow policy now requires the complete nine-label proof matrix and its
+  canonical-command wiring. The broader continuous-integration harness verifies
+  22 representative failures.
+- The harness copies the current uncommitted policy and test-cleanup sources
+  into its isolated worktree, restores every mutation, force-removes only that
+  detached proof worktree, and deletes its ignored repository-local fixture
+  root in `finally`.
+- Files changed: `AGENTS.md`, `scripts/prove-ci-fail-closed.mjs`,
+  `scripts/check-workflow-policy.mjs`,
+  `scripts/check-workflow-policy.test.mjs`, `src/test/setup.ts`, and this issue
+  memory.
+- Checks passed: targeted formatting, lint, cleanup tests, and workflow-policy
+  tests; all nine canonical failure proofs; and the complete `yarn validate`
+  contract.
+- Test-specific workflow evidence and the broader unit-test contract remain
+  intentionally deferred to US-014 and US-015.

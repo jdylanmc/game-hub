@@ -186,11 +186,20 @@ describe('test integration policy', () => {
       },
     ],
     [
-      'the representative test proof',
+      'the canonical test failure proof count',
       {
         continuousIntegrationFailureProof: continuousIntegrationFailureProof.replace(
           "runSandbox(yarnExecutable, ['test:ci'])",
           "runSandbox(yarnExecutable, ['test:coverage'])",
+        ),
+      },
+    ],
+    [
+      'the canonical test failure proof matrix',
+      {
+        continuousIntegrationFailureProof: continuousIntegrationFailureProof.replace(
+          "label: 'coverage regression'",
+          "label: 'coverage drift'",
         ),
       },
     ],

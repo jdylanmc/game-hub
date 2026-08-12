@@ -14,6 +14,8 @@ const initialDocumentState =
         ),
         title: document.title,
       };
+const initialGlobalProperties = new Set(Reflect.ownKeys(globalThis));
+const allowedDynamicGlobalProperties = new Set<PropertyKey>(['IS_REACT_ACT_ENVIRONMENT', '__THREE__']);
 
 function restoreAttributes(element: Element, attributes: ReadonlyArray<readonly [string, string]>): void {
   for (const attribute of [...element.attributes]) {
@@ -44,6 +46,22 @@ function clearStorage(): void {
   }
 }
 
+function restoreUnexpectedGlobalProperties(): PropertyKey[] {
+  const leakedProperties = Reflect.ownKeys(globalThis).filter(
+    (property) => !initialGlobalProperties.has(property) && !allowedDynamicGlobalProperties.has(property),
+  );
+
+  for (const property of leakedProperties) {
+    Reflect.deleteProperty(globalThis, property);
+  }
+
+  return leakedProperties;
+}
+
+function formatPropertyKey(property: PropertyKey): string {
+  return property.toString();
+}
+
 export function resetTestEnvironment(): void {
   cleanup();
   if (vi.isFakeTimers()) {
@@ -55,9 +73,14 @@ export function resetTestEnvironment(): void {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
+  const leakedProperties = restoreUnexpectedGlobalProperties();
   installForbiddenNetworkGuard();
   clearStorage();
   restoreDocument();
+
+  if (leakedProperties.length > 0) {
+    throw new Error(`Test leaked global properties: ${leakedProperties.map(formatPropertyKey).join(', ')}`);
+  }
 }
 
 installForbiddenNetworkGuard();

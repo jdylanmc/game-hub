@@ -369,13 +369,28 @@ function validateTestIntegrationPolicy({
       testViolations.push(`Automatic test-integrity discovery is missing or weakened: ${fragment}`);
     }
   }
-  for (const fragment of [
-    'run: yarn test:ci 2>&1 | tee continuous-integration-evidence/test.log',
-    "runSandbox(yarnExecutable, ['test:ci'])",
+  const workflowTestCommand = 'run: yarn test:ci 2>&1 | tee continuous-integration-evidence/test.log';
+  if (!workflowSource.includes(workflowTestCommand)) {
+    testViolations.push(`Continuous-integration test execution is missing or weakened: ${workflowTestCommand}`);
+  }
+
+  const proofTestCommand = "runSandbox(yarnExecutable, ['test:ci'])";
+  if (occurrences(failureProofSource, proofTestCommand) !== 6) {
+    testViolations.push('Canonical command wiring for nine continuous-integration test failure proofs is required.');
+  }
+  for (const label of [
+    'test assertion',
+    'missing suite or no tests',
+    'focused or exclusive test',
+    'skipped test',
+    'todo test',
+    'quarantined test',
+    'leaked global',
+    'test timeout',
+    'coverage regression',
   ]) {
-    const source = fragment.startsWith('run:') ? workflowSource : failureProofSource;
-    if (!source.includes(fragment)) {
-      testViolations.push(`Continuous-integration test execution is missing or weakened: ${fragment}`);
+    if (occurrences(failureProofSource, `label: '${label}'`) !== 1) {
+      testViolations.push(`Canonical continuous-integration test failure proof is missing: ${label}`);
     }
   }
 

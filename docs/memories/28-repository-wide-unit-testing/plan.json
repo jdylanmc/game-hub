@@ -206,8 +206,8 @@
         "Proofs run in isolated repository-local worktrees or fixtures and leave the issue worktree clean"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Extended the repository-local detached-worktree harness with nine deterministic proofs that invoke yarn test:ci and require nonzero, probe-specific evidence for an assertion failure, a required suite with no tests, focused/exclusive, skipped, todo, and quarantined tests, an unexpected leaked global, the bounded 10-second timeout, and an authored-source coverage regression. Shared cleanup now removes and rejects unexpected global properties while allowing framework-owned React and Three.js markers. Workflow policy requires the complete proof matrix and canonical command wiring. The harness restores every mutation, removes its worktree and fixture root, and now verifies 22 representative continuous-integration failures overall.",
       "dependencies": ["US-011", "US-012"]
     },
     {
