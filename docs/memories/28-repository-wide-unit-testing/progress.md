@@ -29,6 +29,9 @@
   mocked at their browser boundaries.
 - FloppyBird paused and game-over phases preserve every simulation field, and
   runtime start and disposal are idempotent.
+- Neon Drift injects its simulation clock and random source through
+  `NeonDriftRuntimeOptions`; runtime start and disposal are idempotent, and
+  resume resets frame sampling so the first resumed step has zero elapsed time.
 - Generated game discovery has committed outputs under `public/generated/` and
   `src/generated/`, while generator implementation currently executes at module
   load and is not directly unit-testable.
@@ -201,3 +204,28 @@
   Vitest tests and the newly merged infrastructure policy suites.
 - Neon Drift and Orbital Stack remain intentionally untouched for US-006 and
   US-007.
+
+## 2026-08-12 - US-006: Test Neon Drift lifecycle
+
+- Safely merged latest `origin/main` at `2bb2fc0` before implementation,
+  preserving the completed US-001 through US-005 work without rebasing or
+  force-pushing.
+- Added Node-environment tests for explicit-time boost activation and decay,
+  combo and pulse floors, immutable initial state, and repeatable state
+  progression without ambient clocks, randomness, rendering, or browser APIs.
+- Added deterministic lifecycle tests with a manual simulation clock, seeded
+  random source, controlled animation-frame queue, and mocked WebGL renderer.
+- Proved start creates exactly one animation loop with a zero-delta first frame,
+  including when the injected clock begins at zero.
+- Proved repeated pause and resume calls emit exactly one matching phase and
+  announcement per transition, paused frames and input do not advance
+  simulation, and the first resumed frame has zero elapsed time.
+- Made start and disposal idempotent, guarded input and lifecycle calls after
+  disposal, canceled the pending animation frame, removed the pointer listener,
+  disposed rendering once, and blocked retained stale callbacks.
+- Files changed: `games/neon-drift/src/index.ts`,
+  `games/neon-drift/src/index.test.ts`,
+  `games/neon-drift/src/simulation.test.ts`, and this issue memory.
+- Checks passed: targeted Prettier and ESLint, all six Neon Drift tests,
+  `yarn typecheck`, and the full `yarn validate` contract.
+- Orbital Stack remains intentionally untouched for US-007.

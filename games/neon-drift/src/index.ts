@@ -1,4 +1,11 @@
-import { createSeededRandomSource, type GameHost, type GameInstance, type GameManifest } from '@game-hub/game-contract';
+import {
+  createSeededRandomSource,
+  type GameHost,
+  type GameInstance,
+  type GameManifest,
+  type RandomSource,
+  type SimulationClock,
+} from '@game-hub/game-contract';
 import manifestData from '../game.manifest.json';
 import { createNeonDriftSimulationState, stepNeonDriftSimulation } from './simulation';
 import {
@@ -22,6 +29,11 @@ import {
 
 const manifest = manifestData as GameManifest;
 const VIEW_HEIGHT = 22;
+
+export interface NeonDriftRuntimeOptions {
+  clock?: SimulationClock;
+  random?: RandomSource;
+}
 
 function disposeMaterial(material: Material | Material[]): void {
   if (Array.isArray(material)) {
@@ -64,7 +76,11 @@ function resizeRenderer(camera: OrthographicCamera, renderer: WebGLRenderer, can
 
 export { manifest };
 
-export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInstance {
+export function createGame(
+  canvas: HTMLCanvasElement,
+  host: GameHost,
+  runtime: Readonly<NeonDriftRuntimeOptions> = {},
+): GameInstance {
   const renderer = new WebGLRenderer({ antialias: true, canvas });
   const scene = new Scene();
   const camera = new OrthographicCamera(-16, 16, VIEW_HEIGHT / 2, -VIEW_HEIGHT / 2, 0.1, 100);
@@ -77,13 +93,18 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   const laneMarkers: Mesh[] = [];
   const stars: Mesh[] = [];
 
-  let animationFrameId = 0;
+  const clock: SimulationClock = runtime.clock ?? {
+    nowMilliseconds: () => performance.now(),
+  };
+  const random = runtime.random ?? createSeededRandomSource(0x4e454f4e);
+
+  let animationFrameId: number | null = null;
   let disposed = false;
+  let started = false;
   let phase: 'running' | 'paused' = 'running';
-  let lastFrame = 0;
+  let lastFrame: number | null = null;
   let nextHudUpdateAt = 0;
   let simulation = createNeonDriftSimulationState();
-  const random = createSeededRandomSource(0x4e454f4e);
 
   renderer.setClearColor(new Color('#020617'));
   camera.position.z = 24;
@@ -150,7 +171,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   };
 
   const onPointerDown = () => {
-    if (phase === 'paused') {
+    if (disposed || phase === 'paused') {
       return;
     }
 
@@ -167,7 +188,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
     animationFrameId = window.requestAnimationFrame(render);
     resizeRenderer(camera, renderer, canvas);
 
-    const delta = lastFrame === 0 ? 0 : Math.min((timestamp - lastFrame) / 1000, 0.05);
+    const delta = lastFrame === null ? 0 : Math.min((timestamp - lastFrame) / 1000, 0.05);
     lastFrame = timestamp;
 
     if (phase !== 'paused') {
@@ -216,10 +237,15 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
 
   return {
     start() {
-      render(performance.now());
+      if (disposed || started) {
+        return;
+      }
+
+      started = true;
+      render(clock.nowMilliseconds());
     },
     pause() {
-      if (phase === 'paused') {
+      if (disposed || phase === 'paused') {
         return;
       }
 
@@ -232,12 +258,12 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       emitAnnouncement('Neon Drift paused.');
     },
     resume() {
-      if (phase !== 'paused') {
+      if (disposed || phase !== 'paused') {
         return;
       }
 
       phase = 'running';
-      lastFrame = 0;
+      lastFrame = null;
       host.emitEvent({
         type: 'phase',
         phase: 'running',
@@ -246,9 +272,15 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       emitAnnouncement('Neon Drift resumed.');
     },
     dispose() {
+      if (disposed) {
+        return;
+      }
+
       disposed = true;
       canvas.removeEventListener('pointerdown', onPointerDown);
-      window.cancelAnimationFrame(animationFrameId);
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
       disposeSceneGraph(scene);
       renderer.dispose();
     },

@@ -108,8 +108,8 @@
         "Start and dispose behavior does not leak animation frames or input listeners"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added Node-environment tests for explicit-time boost pulses, decay, floors, immutability, and repeatable state progression. Added deterministic lifecycle coverage with an injected clock and random source plus mocked rendering and controlled animation frames. Start, pause, resume, announcements, boost input, disposal, animation cancellation, stale callbacks, and pointer-listener cleanup are idempotent and require no real browser rendering.",
       "dependencies": ["US-002"]
     },
     {
