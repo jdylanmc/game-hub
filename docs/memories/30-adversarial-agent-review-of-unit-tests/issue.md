@@ -125,3 +125,46 @@ as successful. Remediation must:
 - policy-test and failure-probe both invariants; and
 - keep issue #30 open until the remediation is merged and protected-main
   post-merge verification succeeds.
+
+## Second Reopened Remediation Scope
+
+After PR #40 merged, protected-main run
+[`31560385215`](https://github.com/jdylanmc/game-hub/actions/runs/31560385215)
+reached Azure login but Microsoft Entra ID rejected the token. GitHub emitted
+the immutable subject
+`repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review`,
+while the deployed credential still trusted the legacy name-only subject.
+
+This remediation must:
+
+- define the exact immutable protected-environment subjects declaratively;
+- reconcile inference, test deployment, and production deployment credentials
+  in subscription `11213dbd-39fe-46ba-87db-5f5e8c449aed`;
+- policy-test immutable owner/repository IDs and explicit subscription
+  selection; and
+- prove a fresh protected-main workflow authenticates and publishes the
+  genuine exact-head adversarial check on an affected pull request.
+
+## Shared Resolver Defect
+
+PR #37 exact head `ac2f41696798b03cacbd9ccb051b6730462f4826`
+passed Continuous Integration in run `31560643929`, but protected adversarial
+run
+[`31560833700`](https://github.com/jdylanmc/game-hub/actions/runs/31560833700)
+failed during metadata resolution with
+`Pull request must identify exactly one source issue`.
+
+The normal Ralph pull request had three agreeing source signals for issue #27:
+its canonical `ralph-issue:27` marker, `Tracks #27`, and
+`ralph/issue-27-...` branch. Its body also described an integrated dependency as
+`issue #30`; GitHub reported no linked closing issues. The resolver incorrectly
+treated that incidental dependency prose as a second source identity.
+
+This remediation must:
+
+- resolve source identity only from canonical Ralph markers, issue branches,
+  and explicit close/fix/resolve/track/address declarations;
+- keep conflicting canonical signals fail-closed;
+- policy-test the real PR #37 ambiguity and weakening mutations; and
+- restore genuine exact-head adversarial publication on PR #37 without
+  weakening OpenID Connect identity or protected-main execution.

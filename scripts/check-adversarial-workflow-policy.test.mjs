@@ -8,9 +8,15 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const workflow = readFileSync(path.join(root, '.github/workflows/adversarial-review.yml'), 'utf8');
 const config = JSON.parse(readFileSync(path.join(root, 'config/adversarial-agents/workflow.json'), 'utf8'));
 const packageJson = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+const resolver = readFileSync(path.join(root, 'scripts/prepare-adversarial-workflow.ts'), 'utf8');
 
-function violations({ workflowValue = workflow, configValue = config, packageValue = packageJson } = {}) {
-  return validateAdversarialWorkflowPolicy(workflowValue, configValue, packageValue);
+function violations({
+  workflowValue = workflow,
+  configValue = config,
+  packageValue = packageJson,
+  resolverValue = resolver,
+} = {}) {
+  return validateAdversarialWorkflowPolicy(workflowValue, configValue, packageValue, resolverValue);
 }
 
 describe('adversarial workflow policy', () => {
@@ -68,5 +74,27 @@ describe('adversarial workflow policy', () => {
         configValue: { ...config, maxConcurrentReviews: 4 },
       }),
     ).toContain('Adversarial workflow configuration was weakened.');
+  });
+
+  it('rejects treating generic dependency issue prose as source identity', () => {
+    expect(
+      violations({
+        resolverValue: resolver.replace(
+          'fix(?:e[sd])?|resolve[sd]?|track(?:s|ed)?',
+          'fix(?:e[sd])?|resolve[sd]?|issue|track(?:s|ed)?',
+        ),
+      }),
+    ).toContain('Generic issue prose must not be treated as a source-issue declaration.');
+  });
+
+  it('rejects removing canonical Ralph marker and branch agreement checks', () => {
+    expect(
+      violations({
+        resolverValue: resolver.replace(
+          'signalGroups.some((references) => references.size > 1)',
+          'signalGroups.every((references) => references.size > 1)',
+        ),
+      }),
+    ).not.toEqual([]);
   });
 });

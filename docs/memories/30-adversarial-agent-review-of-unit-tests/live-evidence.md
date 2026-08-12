@@ -28,10 +28,11 @@ stored here.
 
 - Separate Microsoft Entra ID applications exist for inference, test
   deployment, and production deployment.
-- Federated subjects are exact protected environments:
-  `repo:jdylanmc/game-hub:environment:adversarial-review`,
-  `repo:jdylanmc/game-hub:environment:test`, and
-  `repo:jdylanmc/game-hub:environment:prod`.
+- Federated subjects are exact protected environments with immutable GitHub
+  owner and repository IDs:
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review`,
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:test`, and
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:prod`.
 - `test` and `prod` require a reviewer and protected branches. The
   `adversarial-review` environment is restricted to protected branches.
 - Environment variables contain only client, tenant, reviewer-principal, and
@@ -118,3 +119,102 @@ dependency to registry-available `4.4.1`. The isolated proof installs with Yarn
 hardened mode enabled and global cache disabled before running all 14 failure
 probes. The complete local validation gate passed again. Exact-head GitHub
 checks after this correction remain the publication authority.
+
+## Immutable identity remediation
+
+Post-merge protected run
+[`31560385215`](https://github.com/jdylanmc/game-hub/actions/runs/31560385215)
+proved the workflow and environment were correct but Microsoft Entra ID still
+trusted the legacy name-only subject. The failed token metadata was:
+
+- issuer: `https://token.actions.githubusercontent.com`
+- subject:
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review`
+- audience: `api://AzureADTokenExchange`
+- workflow:
+  `jdylanmc/game-hub/.github/workflows/adversarial-review.yml@refs/heads/main`
+
+Read-only Azure inspection found one credential on each application, all using
+the legacy `repo:jdylanmc/game-hub:environment:*` subject. The existing
+applications were onboarded once with immutable Microsoft Graph `uniqueName`
+values, as required for managing resources created outside Bicep. The pinned
+Microsoft Graph Bicep extension then reconciled all three credentials through
+subscription-scoped deployments:
+
+- adversarial review:
+  `5e2d230b-94e7-49bb-a490-70aba25d371b`
+- test deployment: `e3662315-40f1-40da-a806-0a0a2cb8da9b`
+- production deployment: `48887ec1-2e0d-46da-b668-673314cfed4d`
+- repeat adversarial reconciliation:
+  `3d6cac37-d473-4285-afa1-9b6d56bf9780`
+
+All deployments succeeded in subscription
+`11213dbd-39fe-46ba-87db-5f5e8c449aed`. Readback showed exactly one credential
+per application with the exact immutable subject, issuer, and audience. Azure
+what-if completed with the expected `ExtensibleResourceNotSupported` warning
+for the Graph resource, so repeat deployment plus readback is the authoritative
+convergence evidence.
+
+Continuous Integration run
+[`31557612517`](https://github.com/jdylanmc/game-hub/actions/runs/31557612517)
+attempt 3 passed again for PR #39 head
+`49240626b04f5a85828edb2bfcdaf16366309a5e`. That completion triggered fresh
+protected-main run
+[`31561212543`](https://github.com/jdylanmc/game-hub/actions/runs/31561212543).
+Azure login succeeded with the immutable subject, the bounded reviewer returned
+`PASS`, and exact-head check
+[`94003877768`](https://github.com/jdylanmc/game-hub/runs/94003877768)
+completed successfully with zero findings on that exact pull-request head.
+
+## Ralph source-issue resolver remediation
+
+PR #37 head `ac2f41696798b03cacbd9ccb051b6730462f4826` had genuine
+Continuous Integration success, but protected run
+[`31560833700`](https://github.com/jdylanmc/game-hub/actions/runs/31560833700)
+failed before model access with
+`Pull request must identify exactly one source issue`.
+
+Inspection found:
+
+- canonical body marker `ralph-issue:27`;
+- explicit body declaration `Tracks #27`;
+- branch `ralph/issue-27-repository-wide-code-linting`;
+- incidental dependency prose `issue #30`; and
+- zero GitHub linked closing issues.
+
+The old resolver unioned every `issue #N` phrase with canonical signals, so the
+dependency prose incorrectly made the set `{27, 30}`. The corrected resolver
+uses only canonical Ralph markers, issue branches, and explicit
+close/fix/resolve/track/address declarations. It still rejects multiple or
+disagreeing canonical signals. Repository policy rejects restoring generic
+issue matching or removing agreement checks.
+
+Protected `main` cannot execute an unmerged resolver change. To restore the
+affected pull request without bypassing that boundary, PR #37's body was
+normalized from `Integrated dependency issue #30` to
+`Integrated the adversarial review dependency`; its canonical issue #27 marker,
+declaration, branch, head SHA, and code were unchanged.
+
+Continuous Integration run
+[`31560643929`](https://github.com/jdylanmc/game-hub/actions/runs/31560643929)
+then passed again on the exact head and triggered protected run
+[`31562174681`](https://github.com/jdylanmc/game-hub/actions/runs/31562174681).
+The resolver selected issue #27, immutable OpenID Connect authentication
+succeeded, and exact-head check
+[`94006743369`](https://github.com/jdylanmc/game-hub/runs/94006743369)
+published `PASS` with zero findings on
+`ac2f41696798b03cacbd9ccb051b6730462f4826`.
+
+OIDC PR #41 was merged by `jdylanmc` during the resolver remediation as main
+commit `f8ad8715f13edc9bb5ecb737f695461a311848e1`. GitHub closed issue #30 at
+merge; it was reopened immediately because the resolver correction still
+requires review and merge. The resolver commit was rebased onto that exact main
+head on branch `fix/issue-30-ralph-source-resolution`.
+
+Continuous Integration attempt 3 on the unchanged PR #37 head triggered a
+second, fully post-merge protected run
+[`31562408350`](https://github.com/jdylanmc/game-hub/actions/runs/31562408350).
+It checked out main `f8ad8715f13edc9bb5ecb737f695461a311848e1`,
+resolved issue #27, authenticated through the merged immutable credential, and
+updated exact-head check `94006743369` to `PASS` with zero findings. This is the
+authoritative combined post-merge OIDC and live resolver-workaround proof.

@@ -455,3 +455,66 @@
   it must validate and fetch the committed dependency graph.
 - Re-ran the complete `yarn validate` gate successfully after the lock repair.
   Exact-head checks on the corrected commit remain pending.
+
+## 2026-08-11 - Immutable OpenID Connect identity remediation
+
+- Read the exact failed run `31560385215`, protected workflow environment/ref,
+  GitHub environment controls, repository OpenID Connect settings, and deployed
+  Microsoft Entra ID federated credentials before making changes.
+- Confirmed GitHub emitted immutable subject
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review`,
+  while inference, test deployment, and production deployment identities each
+  trusted a legacy name-only subject.
+- Added a pinned Microsoft Graph Bicep resource and three exact environment
+  parameter files. The subscription-guarded deployment script previews and
+  applies only to `11213dbd-39fe-46ba-87db-5f5e8c449aed`.
+- Onboarded the three preexisting applications once with immutable Graph
+  `uniqueName` values, then deployed all three credentials declaratively. A
+  repeat inference deployment succeeded and readback retained exactly one
+  credential per application. Azure what-if warned that Graph extensible
+  resources are not introspectable, so repeat apply plus exact readback is the
+  convergence proof.
+- Added a mandatory identity policy and seven focused mutation tests rejecting
+  mutable subjects, incorrect numeric IDs, wrong environment mapping, an
+  unpinned Graph extension, and missing explicit subscription verification.
+  Policy, lint, focused tests, all Bicep builds, shell syntax, and diff checks
+  passed.
+- The complete `yarn validate` run reached the isolated hardened bootstrap proof
+  but failed because current public-registry metadata normalized unchanged
+  executable paths with `./`, which would rewrite existing lockfile entries.
+  No dependency or lockfile change is part of this identity remediation.
+- Re-ran exact-head Continuous Integration for affected PR #39. Attempt 3
+  passed, fresh protected-main run `31561212543` authenticated successfully,
+  and check `94003877768` published `PASS` on exact head
+  `49240626b04f5a85828edb2bfcdaf16366309a5e`.
+
+## 2026-08-12 - Ralph source-issue resolver remediation
+
+- Inspected PR #37 body, branch, GitHub linked closing issues, exact-head
+  Continuous Integration evidence, protected run `31560833700`, and the exact
+  resolver failure log.
+- Found three agreeing issue #27 signals: canonical Ralph marker, `Tracks #27`,
+  and the `issue-27` branch. GitHub linked no closing issue. Incidental body
+  prose naming dependency `issue #30` was captured by the generic source regex,
+  producing false ambiguity before model access.
+- Replaced generic issue matching with bounded canonical signal groups:
+  Ralph marker, issue branch, and explicit
+  close/fix/resolve/track/address declarations. Multiple values within a group
+  or disagreement across groups still fail closed.
+- Added exact PR #37 regression coverage and policy mutations for generic issue
+  matching and removed canonical agreement. Focused resolver/policy tests,
+  lint, full policy, 162 Vitest tests, and 26 Ralph tests passed.
+- Protected main cannot use the unmerged resolver implementation. Normalized
+  only PR #37's incidental dependency wording, preserved its marker, source
+  declaration, code, and exact head, then reran genuine Continuous Integration.
+- Fresh protected run `31562174681` resolved issue #27, authenticated with the
+  immutable subject, and published successful exact-head adversarial check
+  `94006743369` on `ac2f41696798b03cacbd9ccb051b6730462f4826`.
+- While this correction was in progress, `jdylanmc` merged OIDC PR #41 as
+  `f8ad8715f13edc9bb5ecb737f695461a311848e1`. The resolver commit was rebased
+  onto that exact main head in `fix/issue-30-ralph-source-resolution`, and issue
+  #30 was reopened after GitHub closed it at merge.
+- A later Continuous Integration attempt on the unchanged PR #37 head triggered
+  post-merge protected run `31562408350` from main `f8ad871`. It resolved issue
+  #27, authenticated with the merged immutable credential, and updated exact
+  check `94006743369` to `PASS` with zero findings.
