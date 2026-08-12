@@ -135,15 +135,17 @@ describe('evaluateAdversarialFanIn', () => {
     ).toMatchObject({ valid: false, conclusion: 'failure' });
   });
 
-  it('accepts structurally complete exact-head PASS evidence and preserves INCONCLUSIVE as neutral', () => {
-    const acceptedV2 = evaluateAdversarialFanIn({
+  it('keeps v2 evidence dormant until explicit activation', () => {
+    const dormantV2 = evaluateAdversarialFanIn({
       repoRoot: '.',
       headSha,
       enabledReviewers: ['unit-test-reviewer'],
       evidence: [evidence()],
     });
-    expect(acceptedV2.reasons).toEqual([]);
-    expect(acceptedV2).toMatchObject({ conclusion: 'success', valid: true });
+    expect(dormantV2).toMatchObject({ conclusion: 'failure', valid: false });
+    expect(dormantV2.reasons).toEqual(
+      expect.arrayContaining(['Reviewer v2 evidence is dormant until explicit activation: unit-test-reviewer.']),
+    );
 
     const inconclusive = evidence({
       check: {
@@ -159,7 +161,7 @@ describe('evaluateAdversarialFanIn', () => {
         enabledReviewers: ['unit-test-reviewer'],
         evidence: [inconclusive],
       }),
-    ).toMatchObject({ conclusion: 'neutral', valid: true });
+    ).toMatchObject({ conclusion: 'failure', valid: false });
   });
 
   it.each([

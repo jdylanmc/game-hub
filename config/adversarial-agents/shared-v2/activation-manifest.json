@@ -1,0 +1,21 @@
+{
+  "contractVersion": "2.0.0",
+  "state": "dormant-bootstrap-boundary",
+  "activeReviewerContractVersion": "1.0.0",
+  "activationIssue": 58,
+  "requires": [
+    "fresh-real-azure-calibration",
+    "protected-attestation",
+    "protected-main-exact-head-proof",
+    "fan-in-proof"
+  ],
+  "capabilities": [
+    "pass-fail-compute-inconclusive-contract",
+    "critic-confirm-reject-inconclusive",
+    "neutral-persona-fallback",
+    "registry-matrix",
+    "legacy-aware-fan-in",
+    "exact-head-waiver",
+    "additive-branch-protection-promotion"
+  ]
+}

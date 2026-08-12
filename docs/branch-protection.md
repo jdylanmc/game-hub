@@ -39,19 +39,3 @@ the applicable human review requirements.
 
 The protection is a GitHub repository setting and requires no Azure
 infrastructure.
-
-## Additive reviewer promotion
-
-`yarn promotion:branch-protection <reviewed-input.json>` is an audited,
-process-local `GH_TOKEN` compare-and-swap tool for software-factory. It reads
-the owner identity and live protection, requires the committed expected old
-protection and promotion manifests, verifies an exact-head PASS proof and
-retained evidence digests, then adds exactly one reviewer check. Removal,
-rename, duplicate requirements, INCONCLUSIVE proof, waiver use, stale proof,
-or drift stops the transaction. If convergence fails after an update,
-automation freezes and forward-fixes the stronger state; it never rolls
-protection back.
-
-The current bootstrap configuration does **not** add fan-in to live branch
-protection. A later human-reviewed proof pull request uses the same command
-after protected `main` has published fan-in on an exact head.

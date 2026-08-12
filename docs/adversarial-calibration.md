@@ -1,10 +1,5 @@
 # Adversarial reviewer calibration
 
-> A shared schema, policy, engine, critic, or presentation-contract change
-> invalidates the active calibration fingerprint. Run a complete real Azure
-> calibration and replace the report through the protected attestation path;
-> fixture output is never promotion evidence.
-
 US-005 adds an evaluation and promotion gate; it does not promote, publish, or
 require a GitHub check.
 

@@ -56,12 +56,10 @@ API keys, unexpected deployments, tools, and endpoints outside
 `https://*.openai.azure.com`.
 
 Pull-request numbers map deterministically to three GitHub concurrency lanes.
-The enabled reviewer registry produces the protected-base primary matrix; each
-reviewer retains its own exact-head check. Each lane permits one active review,
-so at most three primary reviews execute simultaneously without shared mutable
-state. Proposed blockers alone enter the sequential critic pass for their
-lane. Queued stale runs revalidate the current head before Azure access, and
-every run revalidates again immediately before publication.
+Each lane permits one active review, so at most three reviews execute
+simultaneously without shared mutable state. Queued stale runs revalidate the
+current head before Azure access, and every run revalidates again immediately
+before publication.
 
 ## Fail-closed ordering
 
@@ -79,9 +77,7 @@ The workflow:
 10. independently fails the workflow when the published, exception-aware
     conclusion is `failure`.
 
-Reviewer FAIL and compute-only INCONCLUSIVE results are published before the
-workflow completes. Platform failures are published as FAIL. The downstream
-fan-in job publishes its own structural check even when a reviewer fails.
+Reviewer `FAIL` and `ERROR` results are published before the workflow fails.
 Unexpected errors, missing output, artifact failures, timeouts, and publication
 failures also fail the workflow. The downstream check cannot replace, override,
 or run without the successful deterministic check for the same SHA.
@@ -112,15 +108,6 @@ Validate the protected registry locally:
 ```bash
 yarn exceptions:validate
 ```
-
-## Exact-head outage waivers
-
-An INCONCLUSIVE reviewer is not a PASS and disables autonomous merge. A human
-may only authorize that exact head through one unedited, machine-readable
-pull-request comment from an authorized owner. It binds repository, pull
-request, reviewer, exact head SHA, outage evidence, rationale, authorizer, and
-an expiry no later than 24 hours. It cannot override FAIL, platform error,
-missing evidence, or promotion proof, and is never promotion evidence.
 
 ## Operations and reproduction
 

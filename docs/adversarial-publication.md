@@ -16,9 +16,8 @@ The publisher:
 - creates the check when none exists or updates the sole matching check;
 - fails closed when duplicate checks, stale commits, invalid attribution, or
   GitHub application programming interface (API) failures are observed;
-- maps PASS to `success`, critic-confirmed or platform FAIL to `failure`, and
-  compute-only INCONCLUSIVE to `neutral`; advisory findings remain warnings on
-  a successful PASS;
+- maps validated high-confidence blocking findings to `failure` annotations and
+  advisory findings to `warning` annotations;
 - sends at most 50 annotations per Checks API request, as required by
   [GitHub's check-run documentation](https://docs.github.com/rest/checks/runs);
 - deduplicates finding content by stable SHA-256 fingerprints;
@@ -68,13 +67,3 @@ yarn publish:adversarial \
 
 US-007 owns workflow orchestration. Publication must not begin until complete
 deterministic continuous integration succeeds for the same head SHA.
-
-## Fan-in
-
-`Adversarial Review / fan-in` is a separate protected-base structural check.
-It validates the enabled reviewer set, exact head, check and artifact
-provenance, configuration fingerprints, digest shape, reviewer result, and
-conclusion mapping. Missing, duplicate, stale, malformed, mismatched, failed,
-or provenance-invalid evidence fails fan-in. Valid INCONCLUSIVE evidence keeps
-fan-in neutral; it never authorizes an autonomous merge and never replaces an
-individual reviewer check.

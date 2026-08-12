@@ -5,7 +5,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AdversarialFindingValidator } from './validate-adversarial-finding.ts';
 import { validateAgentRegistry } from './validate-adversarial-agent-registry.ts';
-import { AdversarialFindingValidator as SharedV2FindingValidator } from './shared-v2/validate-adversarial-finding.ts';
 
 type JsonObject = Record<string, unknown>;
 
@@ -118,10 +117,11 @@ function evaluateAdversarialFanIn(options: {
       continue;
     }
     const schemaVersion = isObject(entry.result) ? entry.result.schemaVersion : undefined;
-    const validation =
-      schemaVersion === '2.0.0'
-        ? new SharedV2FindingValidator(options.repoRoot, entry.agentName).validate(entry.result)
-        : new AdversarialFindingValidator(options.repoRoot, entry.agentName).validate(entry.result);
+    if (schemaVersion === '2.0.0') {
+      reasons.push(`Reviewer v2 evidence is dormant until explicit activation: ${entry.agentName}.`);
+      continue;
+    }
+    const validation = new AdversarialFindingValidator(options.repoRoot, entry.agentName).validate(entry.result);
     if (!validation.valid || !isObject(entry.result) || !isObject(entry.result.verdict)) {
       reasons.push(
         `Reviewer result is invalid for ${entry.agentName}: ${
