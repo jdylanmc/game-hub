@@ -189,3 +189,21 @@
   `yarn agents:validate`; `yarn policy:adversarial`.
 - The failed live report was discarded after using its diagnostics; it is not
   retained as active calibration evidence.
+
+## Calibration named-scenario scope repair
+
+- **Confirmed seam:** the versioned unit-test-reviewer prompt and the
+  `mocked-away-strong` calibration fixture.
+- **Red:** `yarn vitest run scripts/evaluate-adversarial-reviewer.test.mjs
+  --coverage.enabled=false` showed the prompt lacked a mandatory rule requiring
+  a real-behavior strong test to PASS when it covers its named scenario.
+- **Green:** Prompt version 1.0.5 now requires blockers to be directly
+  evidenced gaps in the named calibration scenario and forbids hypothetical
+  null, negative, boundary, or other unrelated requirements. It applies to
+  every named scenario; no benchmark ID, detection metric, or threshold was
+  special-cased or weakened.
+- **Broader checks:** `yarn vitest run
+  scripts/evaluate-adversarial-reviewer.test.mjs
+  --coverage.enabled=false`; follow-up reviewer, registry, policy, lint, and
+  type checks are recorded with this commit.
+- The third failed real report was discarded and is not active evidence.

@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -70,6 +71,24 @@ function refreshRunFingerprint(run) {
 }
 
 describe('adversarial benchmark corpus', () => {
+  it('requires named-scenario strong calibration tests to pass when they exercise real behavior', () => {
+    const strong = loadCorpus(repoRoot).cases.find((benchmark) => benchmark.id === 'mocked-away-strong');
+    const prompt = fs.readFileSync(
+      path.join(repoRoot, '.github/adversarial-agents/unit-test-reviewer/prompt.md'),
+      'utf8',
+    );
+
+    expect(strong).toMatchObject({
+      scenario: 'ineffective-mock',
+      strength: 'strong',
+    });
+    expect(strong.test).toContain('load');
+    expect(prompt).toMatch(
+      /A strong\s+calibration test that invokes real production behavior and directly covers the\s+named scenario must PASS\./,
+    );
+    expect(prompt).toMatch(/Do not block it for hypothetical edge cases outside the explicit\s+named requirement,/);
+  });
+
   it('supplies the engine with a v2 context identity so calibration invokes the reviewer', async () => {
     const benchmark = loadCorpus(repoRoot).cases[0];
     const packet = benchmarkPacket(benchmark, 0);
@@ -436,7 +455,7 @@ describe('calibration promotion gate', () => {
     expect(fingerprint.components).toMatchObject({
       modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
       modelVersion: '2025-04-14',
-      promptVersion: '1.0.4',
+      promptVersion: '1.0.5',
       toolsVersion: '1.0.1',
       testFramework: 'vitest@4.1.10',
       schemaVersion: '2.0.0',

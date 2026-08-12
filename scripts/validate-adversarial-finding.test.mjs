@@ -21,7 +21,7 @@ function resultWithFinding() {
       agentName: 'unit-test-reviewer',
       agentVersion: '1.0.0',
       modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
-      promptVersion: '1.0.4',
+      promptVersion: '1.0.5',
       promptContentHash: promptHash,
       policyVersion: '1.0.0',
       toolsVersion: '1.0.1',
