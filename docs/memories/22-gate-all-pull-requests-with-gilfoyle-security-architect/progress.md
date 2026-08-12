@@ -194,10 +194,16 @@
   sequence, least permissions, retained evidence, failure handling, and local
   deterministic commands. The workflow and new Azure calibration remain
   intentionally deferred to US-004B.
+- Safely merged `origin/main` at
+  `9199590dded564337554718ab095e056f7438006`, preserving both the new
+  repository-wide lint contract and Gilfoyle's deterministic security policy.
+  Combined their workflow policy/tests and taught detached fail-closed proofs
+  to copy the current lint inputs before exercising uncommitted merge state.
 - Checks passed: focused Prettier and ESLint, calibration-attestation policy,
   29 focused tests, complete repository policy, and complete `yarn validate`
-  including 17 fail-closed simulations, dependency audit, 216 tests, coverage,
-  generation, type checking, production build, bundle budgets, and Storybook.
+  including 20 lint proofs, 17 fail-closed simulations, dependency audit, 246
+  tests, coverage, generation, type checking, production build, bundle budgets,
+  and Storybook.
 - Gilfoyle remains disabled and `promotionAllowed` remains false. US-004B is
   blocked on a new authorized calibration budget and must meet the existing
   detection, false-positive, advisory-escalation, error, and agreement

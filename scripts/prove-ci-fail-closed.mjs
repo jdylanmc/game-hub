@@ -30,7 +30,8 @@ try {
     expected: /no-unused-vars/,
     label: 'lint',
     prepare: () => createProbeFile('scripts/ci-failure-probe.mjs', 'const unused = 1;\n'),
-    run: () => runSandbox(yarnExecutable, ['lint']),
+    run: () => runPipedSandbox(yarnExecutable, ['lint'], 'continuous-integration-evidence/lint.log'),
+    verify: () => assertActionableLintEvidence('continuous-integration-evidence/lint.log'),
   });
 
   await proveFailure({
@@ -234,7 +235,8 @@ async function proveFreshBootstrap() {
   runRequired('install proof dependencies immutably', yarnExecutable, ['install', '--immutable'], {
     env: {
       YARN_ENABLE_GLOBAL_CACHE: '0',
-      YARN_ENABLE_HARDENED_MODE: process.env.GITHUB_ACTIONS === 'true' ? '1' : '0',
+      // The real workflow install already performs registry hardening before this synthetic proof.
+      YARN_ENABLE_HARDENED_MODE: '0',
     },
   });
   await fs.access(statePath);
@@ -243,50 +245,62 @@ async function proveFreshBootstrap() {
 
 async function syncCurrentPolicySources() {
   for (const relativePath of [
+    '.github/skills/ralph-loop/references/iteration-prompt.md',
     '.github/workflows/adversarial-review.yml',
     '.github/workflows/continuous-integration.yml',
     'config/adversarial-agents/agents-config.json',
     'config/adversarial-agents/gilfoyle-security-architect/context.json',
     'config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json',
+    'eslint.config.js',
+    'games/floppy-bird/src/index.test.ts',
+    'games/neon-drift/src/index.ts',
     'package.json',
+    'packages/game-contract/src/index.test.ts',
     'scripts/build-deterministic-security-evidence.ts',
     'scripts/check-adversarial-workflow-policy.mjs',
     'scripts/check-adversarial-policy.mjs',
     'scripts/check-bicep-security.ts',
     'scripts/check-container-security-surface.ts',
+    'scripts/check-lint-scope.mjs',
+    'scripts/check-lint-suppressions.mjs',
     'scripts/check-secret-exposure.ts',
     'scripts/check-workflow-policy.mjs',
     'scripts/collect-adversarial-context.ts',
+    'scripts/prove-ci-fail-closed.mjs',
+    'scripts/prove-lint-behavior.mjs',
+    'scripts/tsconfig.json',
     'scripts/validate-gilfoyle-security-contract.ts',
+    'src/components/Link.tsx',
+    'tailwind.config.ts',
+    'tsconfig.app.json',
+    'tsconfig.node.json',
     'yarn.lock',
   ]) {
     await fs.copyFile(path.join(rootDirectory, relativePath), sandboxPath(relativePath));
   }
 }
 
-async function proveFailure({ env = {}, expected, label, prepare = async () => undefined, run }) {
+async function proveFailure({ env = {}, expected, label, prepare = async () => undefined, run, verify }) {
   const restore = await prepare();
-  let result;
 
   try {
-    result = run(env);
+    const result = run(env);
+    if (result.error) {
+      throw result.error;
+    }
+
+    const output = `${result.stdout}${result.stderr}`;
+    if (result.status === 0) {
+      throw new Error(`${label} failure probe unexpectedly succeeded.`);
+    }
+    if (!expected.test(output)) {
+      throw new Error(`${label} probe failed for an unexpected reason:\n${output.slice(-4000)}`);
+    }
+    await verify?.({ output, result });
+    console.log(`Verified ${label} fails closed.`);
   } finally {
     await restore?.();
   }
-
-  if (result.error) {
-    throw result.error;
-  }
-
-  const output = `${result.stdout}${result.stderr}`;
-  if (result.status === 0) {
-    throw new Error(`${label} failure probe unexpectedly succeeded.`);
-  }
-  if (!expected.test(output)) {
-    throw new Error(`${label} probe failed for an unexpected reason:\n${output.slice(-4000)}`);
-  }
-
-  console.log(`Verified ${label} fails closed.`);
 }
 
 async function createProbeFile(relativePath, content) {
@@ -324,6 +338,16 @@ function runPipedSandbox(command, args, evidencePath) {
       env: { EVIDENCE_PATH: sandboxPath(evidencePath) },
     },
   );
+}
+
+async function assertActionableLintEvidence(relativePath) {
+  const output = await fs.readFile(sandboxPath(relativePath), 'utf8');
+  if (!output.includes('scripts/ci-failure-probe.mjs')) {
+    throw new Error('Retained lint evidence does not identify the failing file.');
+  }
+  if (!/\b1:7\s+error\s+.+\sno-unused-vars\b/.test(output)) {
+    throw new Error(`Retained lint evidence is missing an actionable line, column, severity, and rule:\n${output}`);
+  }
 }
 
 function runRequired(label, command, args, options = {}) {

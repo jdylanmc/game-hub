@@ -181,7 +181,7 @@ function registeredAgent(
   }
   const registration = validation.agents.find((agent) => agent.name === agentName);
   if (!registration) throw new Error(`Adversarial agent is not registered: ${agentName}`);
-  return { registry, registration: registration as JsonObject };
+  return { registry, registration };
 }
 
 function expectedReportFingerprintComponents(repoRoot: string, agentName: string): JsonObject {

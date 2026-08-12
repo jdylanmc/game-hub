@@ -1025,21 +1025,23 @@ function collectSecurityContext(
   }
 
   const trustModel = isObject(securityConfig.trustModel) ? securityConfig.trustModel : {};
-  const trustBoundaries = Array.isArray(trustModel.trustBoundaries)
-    ? trustModel.trustBoundaries.map((boundary) => {
-        const boundaryObject = isObject(boundary) ? boundary : {};
-        const patterns = isNonEmptyStringArray(boundaryObject.changePatterns) ? boundaryObject.changePatterns : [];
-        const affectedFiles = changed
-          .flatMap(changedPaths)
-          .filter((filePath) => matchesAny(filePath, patterns))
-          .sort(comparePaths);
-        return {
-          ...boundaryObject,
-          affectedFiles: [...new Set(affectedFiles)],
-          changed: affectedFiles.length > 0,
-        };
-      })
-    : [];
+  const trustBoundaryValues: unknown[] = Array.isArray(trustModel.trustBoundaries) ? trustModel.trustBoundaries : [];
+  const trustBoundaries =
+    trustBoundaryValues.length > 0
+      ? trustBoundaryValues.map((boundary) => {
+          const boundaryObject = isObject(boundary) ? boundary : {};
+          const patterns = isNonEmptyStringArray(boundaryObject.changePatterns) ? boundaryObject.changePatterns : [];
+          const affectedFiles = changed
+            .flatMap(changedPaths)
+            .filter((filePath) => matchesAny(filePath, patterns))
+            .sort(comparePaths);
+          return {
+            ...boundaryObject,
+            affectedFiles: [...new Set(affectedFiles)],
+            changed: affectedFiles.length > 0,
+          };
+        })
+      : [];
   const controlChanges = Array.isArray(securityConfig.controlDomains)
     ? securityConfig.controlDomains.map((domain) => {
         const patterns = isNonEmptyStringArray(domain.patterns) ? domain.patterns : [];
