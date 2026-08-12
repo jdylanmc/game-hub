@@ -20,6 +20,7 @@
           "name",
           "version",
           "enabled",
+          "promoted",
           "promptFile",
           "promptVersion",
           "promptContentHash",
@@ -59,6 +60,9 @@
             "$ref": "#/$defs/semanticVersion"
           },
           "enabled": {
+            "type": "boolean"
+          },
+          "promoted": {
             "type": "boolean"
           },
           "promptFile": {

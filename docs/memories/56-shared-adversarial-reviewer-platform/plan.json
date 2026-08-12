@@ -67,7 +67,7 @@
         "Workflow policy tests prove the primary matrix is registry-driven, runs only after successful exact-head Continuous Integration, preserves protected-main checkout and least privilege, and retains the existing unit-test reviewer check."
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Public test seams: registry validation CLI and adversarial workflow policy CLI. Workflow YAML is non-executable configuration covered by deterministic policy tests."
     },
     {

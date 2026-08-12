@@ -16,6 +16,16 @@ describe('validateAgentRegistry', () => {
     expect(validateAgentRegistry(repoRoot, registry)).toMatchObject({ valid: true, errors: [] });
   });
 
+  it('requires explicit enabled and promoted state and refuses promotion of a disabled reviewer', () => {
+    const missingPromotion = structuredClone(registry);
+    delete missingPromotion.agents[0].promoted;
+    expect(validateAgentRegistry(repoRoot, missingPromotion).valid).toBe(false);
+
+    const weakened = structuredClone(registry);
+    weakened.agents[1].promoted = true;
+    expect(validateAgentRegistry(repoRoot, weakened).valid).toBe(false);
+  });
+
   it('rejects tampered registered policy content', () => {
     const validation = validateAgentRegistry(repoRoot, registry, (filePath) => {
       if (filePath.endsWith('/policy.json')) return Buffer.from('tampered policy');

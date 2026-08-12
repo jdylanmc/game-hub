@@ -32,6 +32,7 @@ jobs:
       head_repository: ${{ steps.resolve.outputs.head_repository }}
       head_repository_url: ${{ steps.resolve.outputs.head_repository_url }}
       capacity_slot: ${{ steps.resolve.outputs.capacity_slot }}
+      reviewer_matrix: ${{ steps.matrix.outputs.reviewer_matrix }}
 
     steps:
       - name: Check out protected base workflow code
@@ -70,12 +71,19 @@ jobs:
             --output workflow-input.json \
             --github-output "$GITHUB_OUTPUT"
 
+      - name: Resolve enabled primary reviewer matrix
+        id: matrix
+        run: node scripts/resolve-adversarial-reviewer-matrix.ts --github-output "$GITHUB_OUTPUT"
+
   review:
-    name: Adversarial review
+    name: Adversarial review / ${{ matrix.agentName }}
     needs:
       - resolve
     if: needs.resolve.outputs.eligible == 'true'
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve.outputs.reviewer_matrix) }}
     timeout-minutes: 20
     environment: adversarial-review
     permissions:
@@ -89,9 +97,9 @@ jobs:
       cancel-in-progress: false
     env:
       AZURE_CORE_OUTPUT: none
-      ADVERSARIAL_AGENT_NAME: unit-test-reviewer
-      AZURE_OPENAI_DEPLOYMENT_ID: game-hub-unit-test-reviewer
-      ACTIVE_CALIBRATION_REPORT: config/adversarial-agents/active-calibration-unit-test-reviewer.json
+      ADVERSARIAL_AGENT_NAME: ${{ matrix.agentName }}
+      AZURE_OPENAI_DEPLOYMENT_ID: ${{ matrix.deploymentId }}
+      ACTIVE_CALIBRATION_REPORT: ${{ matrix.calibrationReport }}
 
     steps:
       - name: Check out protected base workflow code

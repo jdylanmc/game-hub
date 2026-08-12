@@ -11,6 +11,7 @@ interface AgentRegistration extends JsonObject {
   name: string;
   version: string;
   enabled: boolean;
+  promoted: boolean;
   promptFile: string;
   promptVersion: string;
   promptContentHash: string;
@@ -47,6 +48,7 @@ const REQUIRED_AGENT_FIELDS = [
   'name',
   'version',
   'enabled',
+  'promoted',
   'promptFile',
   'promptVersion',
   'promptContentHash',
@@ -153,6 +155,8 @@ function validateAgentRegistry(
       typeof candidate.contextConfigVersion !== 'string' ||
       !/^\d+\.\d+\.\d+$/.test(candidate.contextConfigVersion) ||
       typeof candidate.enabled !== 'boolean' ||
+      typeof candidate.promoted !== 'boolean' ||
+      (candidate.promoted === true && candidate.enabled !== true) ||
       typeof candidate.checkName !== 'string' ||
       candidate.checkName !== `Adversarial Review / ${candidate.name}` ||
       candidate.stateNamespace !== `adversarial/${candidate.name}` ||

@@ -44,3 +44,21 @@
   scripts/review-adversarial-context.test.mjs
   scripts/validate-adversarial-finding.test.mjs
   --coverage.enabled=false`; `yarn typecheck`; `yarn agents:validate`.
+
+### US-003 — Introduce enabled and promoted reviewer orchestration
+
+- **Confirmed seams:** `agents:validate`, the reviewer-matrix resolver, and
+  the protected-base workflow policy command.
+- **Red:** The registry-state test failed because a reviewer could be promoted
+  without an explicit state, including while disabled.
+- **Green:** Each registration now records `enabled` and `promoted`; promotion
+  requires enablement. The protected-base workflow obtains its primary matrix,
+  agent identity, deployment, and calibration report from the validated
+  registry while retaining protected `main` checkout and no pull-request
+  execution.
+- **Broader checks:** `yarn vitest run
+  scripts/check-adversarial-workflow-policy.test.mjs
+  scripts/validate-adversarial-agent-registry.test.mjs
+  scripts/resolve-adversarial-reviewer-matrix.test.mjs
+  --coverage.enabled=false`; `yarn policy:adversarial-workflow`; `yarn
+  agents:validate`; `yarn typecheck`.

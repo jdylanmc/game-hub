@@ -37,6 +37,12 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson, resolv
     'cancel-in-progress: false',
     'timeout-minutes: 10',
     'timeout-minutes: 20',
+    'Resolve enabled primary reviewer matrix',
+    'node scripts/resolve-adversarial-reviewer-matrix.ts --github-output "$GITHUB_OUTPUT"',
+    'reviewer_matrix: ${{ steps.matrix.outputs.reviewer_matrix }}',
+    'matrix: ${{ fromJSON(needs.resolve.outputs.reviewer_matrix) }}',
+    'ADVERSARIAL_AGENT_NAME: ${{ matrix.agentName }}',
+    'ACTIVE_CALIBRATION_REPORT: ${{ matrix.calibrationReport }}',
     '--require-eligible',
     '--expected-head-sha "$EXPECTED_HEAD_SHA"',
     'yarn calibration:check --report "$ACTIVE_CALIBRATION_REPORT"',
@@ -58,6 +64,12 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson, resolv
   ];
   for (const fragment of requiredFragments) {
     if (!workflow.includes(fragment)) violations.push(`Missing adversarial workflow invariant: ${fragment}`);
+  }
+  if (
+    workflow.includes('ADVERSARIAL_AGENT_NAME: unit-test-reviewer') ||
+    workflow.includes('ACTIVE_CALIBRATION_REPORT: config/adversarial-agents/active-calibration-unit-test-reviewer.json')
+  ) {
+    violations.push('Primary reviewer execution must be registry-driven, not hardcoded.');
   }
 
   const calibrationPosition = workflow.indexOf('Validate promoted calibration before model access');
