@@ -24,6 +24,10 @@
   exact-head attributable, count/byte bounded, and treated as inert input.
 - An absent container surface is explicit `NOT_APPLICABLE`; introducing a
   container definition blocks as `UNSUPPORTED` until a reviewed scanner exists.
+- Disabled agents may be exercised only through an explicit calibration-only
+  runtime option; registration alone must not imply live workflow enforcement.
+- Prompt-injection calibration must pair an injected safe case with an injected
+  blocking vulnerability so obeying the attack cannot satisfy promotion.
 
 ## 2026-08-11 - Planning
 
@@ -144,3 +148,18 @@
   enforced.
 - US-004 is next and owns Gilfoyle implementation and real calibration. Gilfoyle
   remains disabled in this story.
+
+## 2026-08-12 - US-004 blocked and cleaned up
+
+- Exhausted the authorized two-attempt limit using keyless Azure identity. The
+  final run was not promotable: 27.27% blocking detection, 9.09% safe false
+  positives, 50% advisory escalation, 6.25% errors, and 93.75% agreement.
+- Adversarial security review found a separate provenance blocker: a
+  self-asserted Azure run mode plus an unkeyed report hash can be forged.
+  Promotion needs non-forgeable attestation bound to a protected calibration
+  run, exact commit, deployment, and artifact digest.
+- Removed every incomplete US-004 implementation file and failed calibration
+  report. No reviewer, workflow, required check, or status configuration was
+  changed.
+- US-004 remains unpassed. Resume only with a reviewed provenance design and a
+  newly authorized calibration budget.

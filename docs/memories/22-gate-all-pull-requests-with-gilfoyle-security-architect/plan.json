@@ -70,7 +70,7 @@
       ],
       "priority": 4,
       "passes": false,
-      "notes": "",
+      "notes": "Blocked after two authorized keyless Azure calibration attempts. The final attempt was not promotable: 27.27% blocking detection, 9.09% safe false positives, 50% advisory escalation, 6.25% errors, and 93.75% agreement. Security review also found that self-asserted Azure mode plus an unkeyed report hash cannot prove calibration provenance; promotion needs non-forgeable protected-run attestation. All incomplete US-004 code and failed reports were removed. US-004 remains unpassed.",
       "dependencies": ["US-001", "US-002", "US-003"]
     },
     {
