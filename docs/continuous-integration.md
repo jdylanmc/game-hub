@@ -15,8 +15,10 @@ corepack enable
 yarn validate
 ```
 
-`yarn validate` and `.github/workflows/continuous-integration.yml` run these
-canonical root commands in the same order:
+`yarn validate` and `.github/workflows/continuous-integration.yml` invoke the
+same canonical root gates. The fresh GitHub runner bootstraps with direct
+`yarn install --immutable`; local validation uses `yarn install:check` after
+dependencies already exist:
 
 | Command | Expected output |
 | --- | --- |
@@ -24,7 +26,7 @@ canonical root commands in the same order:
 | `yarn format:check` | Prettier reports all covered files formatted. |
 | `yarn lint` | ESLint completes with zero errors and zero warnings. |
 | `yarn policy:check` | Lint suppressions are approved and workflow and Code Owner invariants remain intact. |
-| `yarn test:ci-fail-closed` | All 11 representative failure probes fail for their expected reason. |
+| `yarn test:ci-fail-closed` | Canonical lint behavior proofs pass, then all 14 representative continuous integration failure probes fail for their expected reason. |
 | `yarn security:audit` | The recursive dependency audit reports no high-severity findings; an unavailable registry fails the command. |
 | `yarn test:coverage` | Test integrity, Ralph orchestration simulations, deterministic Vitest execution, JUnit output, and configured coverage thresholds pass. |
 | `yarn generate:check` | Workspace generation leaves the committed manifest and import map unchanged and clean. |
@@ -51,11 +53,15 @@ without suppressing the command's exit status.
   regressions fail `yarn bundle:check`.
 - `yarn policy:check` rejects missing mandatory commands or evidence, weakened
   triggers, permissions, concurrency, timeout, action pinning, artifact
-  retention, or Code Owner rules.
+  retention, Code Owner rules, lint runtime or dependency pins, canonical lint
+  scripts, representative lint proofs, or Ralph lint completion instructions.
 - `yarn test:ci-fail-closed` uses an isolated detached worktree to prove that
   formatting, lint, type, test, generation, production build, bundle budget,
-  missing build output, missing workflow command, unavailable security audit,
-  and Storybook browser-build failures cannot complete successfully.
+  missing build output, missing workflow command, masked pipeline failure,
+  invalid fresh-runner bootstrap, unavailable security audit, and Storybook
+  browser-build failures cannot complete successfully. Its lint probe runs the
+  exact `yarn lint` plus `tee` pipeline from the workflow and verifies the
+  retained log identifies the file, line, column, severity, and rule.
 
 The required job has a 30-minute timeout and concurrency cancellation enabled.
 An error, cancellation, timeout, stale generated output, unavailable mandatory
@@ -117,6 +123,7 @@ The workflow uploads one
 after a failed gate. Missing evidence makes artifact upload fail. It contains:
 
 - per-gate logs, including dependency-security audit and fail-closed proof;
+- actionable lint diagnostics retained in `continuous-integration-evidence/lint.log`;
 - JUnit test results and coverage reports;
 - the production `dist/` output; and
 - the static `storybook-static/` browser output.
@@ -134,9 +141,11 @@ workflow change from self-approving reduced protection.
 Ralph checks open Ralph pull requests with `yarn ralph:prioritize` before
 ranking new issues. A failed or absent check is routed to its uniquely matched
 issue memory, branch, and draft pull request; ambiguous ownership stops the
-loop. Ralph and GitHub Agentic Workflows may treat the protected
-`Continuous integration` result as completion evidence, but neither may bypass
-the review or merge requirements.
+loop. Ralph runs the same canonical root `yarn lint` command for local completion and
+requires `yarn test:lint` plus policy validation for lint-contract changes.
+Ralph and future GitHub Agentic Workflows may treat the protected
+`Continuous integration` result as completion evidence, but neither may
+substitute a direct ESLint command or bypass the review or merge requirements.
 
 ## Infrastructure decision
 
@@ -155,7 +164,7 @@ group and cost limits, and document the new requirement separately.
 | Complete gates on pull requests and protected-branch updates | Workflow `pull_request` and `main` push triggers plus the 12-command contract above |
 | Missing, pending, failed, canceled, or stale checks block merge | Strict `main` branch protection bound to `Continuous integration` and app ID `15368` |
 | Clean checkouts reproduce every gate | Pinned Node.js and Yarn plus `corepack enable && yarn validate` |
-| Representative failures block completion | Eleven isolated probes in `scripts/prove-ci-fail-closed.mjs` |
+| Representative failures block completion | Fourteen isolated probes in `scripts/prove-ci-fail-closed.mjs`, including the retained exact workflow lint pipeline |
 | Forks need no privileged credentials | Read-only permissions, no secrets, no persisted checkout credentials, and no `pull_request_target` |
 | Workflow protection cannot self-approve weakening | Code Owner review, non-last-pusher approval, and policy-checked ownership and workflow invariants |
 | Outputs and security evidence have defined retention | Fail-closed 14-day evidence artifact containing logs, tests, coverage, production, and Storybook output |

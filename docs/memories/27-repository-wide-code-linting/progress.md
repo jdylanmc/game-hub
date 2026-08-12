@@ -47,6 +47,12 @@
   structured ESLint diagnostics for rule failures, exercises canonical
   zero-warning and fix commands, and rejects fatal, setup, warning-only,
   unexpected-rule, or mixed-error false evidence.
+- Workflow policy pins the local and GitHub Actions lint runtime, direct
+  dependencies, canonical scripts, representative proofs, retained evidence,
+  and Ralph instructions as one completion contract.
+- The protected lint failure probe runs the exact Bash `pipefail`,
+  `yarn lint`, and `tee` pipeline used by continuous integration and requires
+  the retained log to identify the file, line, column, severity, and rule.
 
 ## 2026-08-11 - Planning
 
@@ -329,3 +335,47 @@ Current inspection found these issue #27 gaps:
   and Storybook.
 - US-007 is next. It should reconcile the completed lint behavior proof with
   local, workflow, retained-evidence, and protected merge-gate contracts.
+
+## 2026-08-12 - US-007
+
+- Extended workflow policy across `package.json`, the pull-request and `main`
+  workflow, lint behavior and fail-closed proof sources, and the Ralph
+  iteration contract. It now rejects runtime drift, unpinned direct lint
+  dependencies, changed canonical scripts, missing immutable bootstrap,
+  removed retained logs, weakened representative proofs, and alternate
+  workspace-only or direct ESLint completion commands.
+- Added eight focused mutation cases proving policy rejection of warning
+  tolerance, dependency ranges, workflow-only linting, removed local or
+  workflow proofs, weakened actionable diagnostics, unretained protected lint
+  output, and a weakened Ralph command.
+- Strengthened the isolated protected-check simulation so its representative
+  lint failure executes the exact `yarn lint` plus `tee` workflow pipeline
+  under Bash `pipefail`. The retained log must report
+  `scripts/ci-failure-probe.mjs` with line 1, column 7, error severity, and the
+  `no-unused-vars` rule before the proof can pass.
+- Updated the continuous integration contract for 14 fail-closed probes,
+  actionable retained lint evidence, canonical Ralph behavior, and future
+  GitHub Agentic Workflow reuse of the protected check rather than direct
+  ESLint substitutions.
+- Live repository protection was reverified through the process-local
+  repository-owner token: `main` is strict and requires
+  `Continuous integration` from GitHub Actions app `15368` plus
+  `Adversarial Review / unit-test-reviewer`. Therefore the simulated lint
+  pipeline failure makes the required protected check fail rather than
+  producing mergeable evidence.
+- Files changed:
+  `.github/skills/ralph-loop/references/iteration-prompt.md`,
+  `scripts/check-workflow-policy.mjs`,
+  `scripts/check-workflow-policy.test.mjs`,
+  `scripts/prove-ci-fail-closed.mjs`, `docs/continuous-integration.md`, and the
+  issue plan and progress.
+- Focused checks passed:
+  `yarn test:lint`, 20 lint-policy and behavior tests,
+  `yarn policy:workflow`, and the second fail-closed proof attempt after the
+  first correctly exposed an overly specific diagnostic-rule assertion.
+- The complete `yarn validate` gate passed on the first full attempt:
+  immutable install, formatting, lint and policy, 14 fail-closed probes,
+  dependency audit, 26 Ralph tests, 191 Vitest tests with coverage, generated
+  state, typecheck, production build, bundle budgets, and Storybook.
+- US-008 remains next. Keep pull request #37 draft and do not describe issue
+  #27 as complete or ready.

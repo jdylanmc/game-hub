@@ -137,8 +137,8 @@
         "Ralph and future agentic workflows use the same lint completion contract"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Pull request #32 integrated yarn lint into the required composite Continuous integration check and policy guard. Re-verify live protected-check behavior and update the contract only after the completed issue #27 rules and proofs exist.",
+      "passes": true,
+      "notes": "Reconciled the completed lint implementation with local validation, every pull request and main Continuous integration run, retained evidence, fail-closed policy, Ralph, and the live protected merge gate. Workflow policy pins Node, Yarn, every direct lint dependency, canonical lint and proof scripts, the exact immutable workflow bootstrap, retained lint and fail-closed logs, representative actionable/zero-warning/fix proofs, and Ralph completion instructions. Eight mutation cases reject warning tolerance, dependency ranges, workflow-only commands, removed proofs/evidence, weakened diagnostics, and alternate Ralph lint commands. The protected failure harness now runs the exact pipefail yarn lint plus tee pipeline and requires retained file, line, column, severity, and rule output. Live main protection was reverified strict with Continuous integration app 15368 and the adversarial exact-head check required.",
       "dependencies": ["US-006"]
     },
     {
