@@ -67,3 +67,5 @@ export interface GameModule {
   manifest: GameManifest;
   createGame: (canvas: HTMLCanvasElement, host: GameHost) => GameInstance;
 }
+
+export * from './simulation';

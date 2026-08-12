@@ -1,5 +1,6 @@
-import type { GameHost, GameInstance, GameManifest } from '@game-hub/game-contract';
+import { createSeededRandomSource, type GameHost, type GameInstance, type GameManifest } from '@game-hub/game-contract';
 import manifestData from '../game.manifest.json';
+import { createNeonDriftSimulationState, stepNeonDriftSimulation } from './simulation';
 import {
   AmbientLight,
   BoxGeometry,
@@ -81,9 +82,8 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   let phase: 'running' | 'paused' = 'running';
   let lastFrame = 0;
   let nextHudUpdateAt = 0;
-  let time = 0;
-  let driftCombo = 18;
-  let boostPulse = 0;
+  let simulation = createNeonDriftSimulationState();
+  const random = createSeededRandomSource(0x4e454f4e);
 
   renderer.setClearColor(new Color('#020617'));
   camera.position.z = 24;
@@ -141,7 +141,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       type: 'hud',
       detail,
       label: 'Drift combo',
-      score: Math.round(driftCombo),
+      score: Math.round(simulation.driftCombo),
     });
   };
 
@@ -154,8 +154,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       return;
     }
 
-    boostPulse = 1;
-    driftCombo = Math.min(99, driftCombo + 7);
+    simulation = stepNeonDriftSimulation(simulation, { boost: true }, 0, random);
     emitHud('Boost pulse engaged.');
     emitAnnouncement('Boost pulse engaged.');
   };
@@ -172,21 +171,23 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
     lastFrame = timestamp;
 
     if (phase !== 'paused') {
-      time += delta;
-      driftCombo = Math.max(12, driftCombo - delta * 1.8);
-      boostPulse = Math.max(0, boostPulse - delta * 1.9);
+      simulation = stepNeonDriftSimulation(simulation, { boost: false }, delta, random);
     }
 
-    ship.position.set(Math.sin(time * 1.4) * 4.1, Math.sin(time * 2.1) * 0.55, 0);
-    ship.rotation.z = Math.sin(time * 1.4) * 0.24;
-    glow.rotation.z = time * 0.06;
-    glow.material.opacity = 0.05 + boostPulse * 0.08;
+    ship.position.set(
+      Math.sin(simulation.elapsedSeconds * 1.4) * 4.1,
+      Math.sin(simulation.elapsedSeconds * 2.1) * 0.55,
+      0,
+    );
+    ship.rotation.z = Math.sin(simulation.elapsedSeconds * 1.4) * 0.24;
+    glow.rotation.z = simulation.elapsedSeconds * 0.06;
+    glow.material.opacity = 0.05 + simulation.boostPulse * 0.08;
 
     laneMarkers.forEach((marker, index) => {
       const lane = (index % 3) - 1;
-      const offset = (time * (7.2 + boostPulse * 2.6) + index * 1.8) % 30;
+      const offset = (simulation.elapsedSeconds * (7.2 + simulation.boostPulse * 2.6) + index * 1.8) % 30;
       marker.position.set(15 - offset, lane * 2.4, -0.2);
-      marker.scale.x = 1 + boostPulse * 0.7;
+      marker.scale.x = 1 + simulation.boostPulse * 0.7;
     });
 
     stars.forEach((star, index) => {
@@ -196,9 +197,9 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       }
     });
 
-    if (time >= nextHudUpdateAt) {
-      emitHud(`${Math.round(280 + driftCombo * 4)} km/h lane energy`);
-      nextHudUpdateAt = time + 0.2;
+    if (simulation.elapsedSeconds >= nextHudUpdateAt) {
+      emitHud(`${Math.round(280 + simulation.driftCombo * 4)} km/h lane energy`);
+      nextHudUpdateAt = simulation.elapsedSeconds + 0.2;
     }
     renderer.render(scene, camera);
   };

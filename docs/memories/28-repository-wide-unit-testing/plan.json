@@ -52,8 +52,8 @@
         "Simulation helpers run in Node without a canvas, browser animation loop, or WebGL context"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added dependency-free SimulationClock, manual clock, seeded RandomSource, clock sampling, and generic state stepping primitives to @game-hub/game-contract. Extracted pure simulation modules for FloppyBird, Neon Drift, and Orbital Stack; their Three.js/browser adapters now advance state from explicit input, elapsed time, and supplied randomness. Added Node-environment deterministic primitive tests covering clock control, replayable seeds, explicit reducer inputs, immutable state progression, clamping, and invalid-input rejection.",
       "dependencies": ["US-001"]
     },
     {

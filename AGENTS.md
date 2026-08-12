@@ -20,6 +20,12 @@ Read [Game Hub Architecture](docs/architecture.md) before planning a change. It
 defines the system boundaries, pinned technology versions, official
 documentation links, and required architectural invariants.
 
+Pure game state progression belongs in each workspace's `src/simulation.ts`.
+Keep it independent of Three.js, canvas, browser animation loops, and ambient
+random or timing globals; pass state, input, elapsed time, and a shared
+`@game-hub/game-contract` random source explicitly. `src/index.ts` adapts that
+state to rendering, browser input, and host events.
+
 ## Required Commands
 
 Run the smallest commands that cover the files you changed. The repository

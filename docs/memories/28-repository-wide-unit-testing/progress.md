@@ -13,8 +13,11 @@
   timeouts, `allowOnly: false`, and `passWithNoTests: false`.
 - Browser-oriented tests use JSDOM and Testing Library setup from
   `src/test/setup.ts`.
-- Game rendering, input, timing, and simulation currently coexist in each
-  workspace's `src/index.ts`; pure simulation boundaries are not yet present.
+- Dependency-free simulation clocks, seeded random sources, clock sampling, and
+  generic state stepping are exported by `@game-hub/game-contract`.
+- Each game keeps pure state progression in `src/simulation.ts`; its
+  `src/index.ts` adapts browser input, animation-frame elapsed time, Three.js
+  rendering, and host effects without placing those dependencies in simulation.
 - Generated game discovery has committed outputs under `public/generated/` and
   `src/generated/`, while generator implementation currently executes at module
   load and is not directly unit-testable.
@@ -82,3 +85,29 @@
   no-test/focused-test failure probes, and the full `yarn validate` contract.
 - Reusable discovery and command conventions were added to root `AGENTS.md`.
   Later stories remain intentionally untouched.
+
+## 2026-08-12 - US-002: Extract deterministic simulation primitives
+
+- Added an explicit `SimulationClock`, controllable manual clock, bounded clock
+  sampling, seeded `RandomSource`, and generic `stepSimulation` reducer helper
+  to the shared contract workspace. The helpers reject invalid time and seed
+  inputs and never read or replace ambient globals.
+- Added pure `src/simulation.ts` boundaries for FloppyBird, Neon Drift, and
+  Orbital Stack. Each boundary advances immutable state from explicit input,
+  elapsed seconds, and a supplied random source without importing Three.js or
+  browser APIs.
+- Updated each `src/index.ts` adapter to render returned state and preserve
+  browser input, host events, pause behavior, and scene disposal. FloppyBird
+  obstacle recycling now consumes a seeded source instead of `Math.random`.
+- Added Node-environment unit tests for deterministic clock advancement,
+  elapsed-time clamping, repeatable random sequences, explicit reducer inputs,
+  unchanged prior state, and invalid-input rejection.
+- Updated architecture and workspace guidance with the pure-simulation
+  boundary. Later game-specific physics, obstacle, scoring, and lifecycle test
+  stories remain intentionally unimplemented.
+- Checks passed: targeted simulation lint, `yarn typecheck`, primitive tests
+  (4), canonical `yarn test:ci` (26 Ralph tests and 204 Vitest tests), and the
+  complete `yarn validate` contract. The first validation attempt correctly
+  rejected a fingerprinted architecture edit as stale calibration; restoring
+  the unchanged architecture contract allowed the second and final attempt to
+  pass.

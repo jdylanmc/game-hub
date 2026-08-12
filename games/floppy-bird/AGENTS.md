@@ -6,7 +6,10 @@
 
 ## Workspace Contract
 
-- Keep game code in `src/index.ts` and game-owned assets in `assets/`.
+- Keep Three.js rendering, browser input, and host effects in `src/index.ts`;
+  keep pure state progression in `src/simulation.ts`.
+- Advance simulation from explicit state, input, elapsed time, and a supplied
+  random source without reading browser or Three.js state.
 - Keep `game.manifest.json`, the exported manifest, and controls synchronized.
 - Use `@game-hub/game-contract` for host lifecycle, events, and score reporting.
 - Keep Three.js as a direct workspace dependency.
@@ -18,4 +21,3 @@
 Read the selected issue memory under `docs/memories/` before changing the game.
 Complete one bounded story per iteration. Store story results in the issue
 memory and add only reusable FloppyBird conventions to this file.
-
