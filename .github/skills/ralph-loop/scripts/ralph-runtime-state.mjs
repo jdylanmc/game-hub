@@ -247,7 +247,13 @@ export function acquireLock(
       existingMetadata?.host === host && Number.isInteger(existingMetadata?.pid)
         ? processProbe(existingMetadata.pid)
         : null;
-    const activelyOwned = existingLeaseState.state === 'active' || (!existingLease && existingPidAlive === true);
+    const metadataStartedAt = Date.parse(existingMetadata?.startedAt ?? '');
+    const metadataFresh = !Number.isNaN(metadataStartedAt) && Math.max(0, now - metadataStartedAt) <= staleAfterMs;
+    const takeoverInProgress =
+      Boolean(existingMetadata?.runId) &&
+      existingMetadata.runId !== existingLease?.runId &&
+      (existingPidAlive === true || (existingMetadata?.host !== host && metadataFresh));
+    const activelyOwned = existingLeaseState.state === 'active' || existingPidAlive === true || takeoverInProgress;
 
     if (activelyOwned) {
       throw new Error(

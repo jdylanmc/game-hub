@@ -585,14 +585,25 @@ async function waitForCheckOutcome({ deadlineAt, githubEnvironment, loop, repoRo
     });
 
     if (Date.now() >= deadlineAt.getTime()) {
+      const nextResumableAction =
+        'Inspect the pending exact-head checks, then resume from the last verified checkpoint.';
       runtimeState.stopLease({
         lastKnownHead: snapshot.localCommit,
         outcome: 'timed-out',
         reason: 'Iteration timed out while waiting for pull-request checks.',
       });
+      runtimeState.updateCheckpoint({
+        checkState: {
+          adversarial: snapshot.adversarialState,
+          required: snapshot.ciState,
+        },
+        lastVerifiedHead: snapshot.localCommit,
+        nextResumableAction,
+        phase: 'check-wait',
+      });
       return {
         ...snapshot,
-        nextAction: 'Inspect the pending exact-head checks, then resume from the last verified checkpoint.',
+        nextAction: nextResumableAction,
         status: 'timed-out',
       };
     }

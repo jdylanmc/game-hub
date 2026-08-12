@@ -253,6 +253,47 @@ test('lock release refuses to delete a successor owner', () => {
   releaseLock(lockDir, 'second-run');
 });
 
+test('a recovery owner cannot be preempted before publishing its lease', () => {
+  const fixture = createRalphFixture('takeover-window');
+  mkdirSync(path.dirname(fixture.leasePath), { recursive: true });
+  writeFileSync(
+    fixture.leasePath,
+    `${JSON.stringify(
+      {
+        childPid: null,
+        host: os.hostname(),
+        lastHeartbeatAt: '2026-08-11T00:00:00.000Z',
+        phase: 'agent-execution',
+        pid: 999999,
+        runId: 'stale-run',
+        startedAt: '2026-08-11T00:00:00.000Z',
+        stop: null,
+        version: 1,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  const firstLock = acquireLock(fixture.commonDir, {
+    identity: 'takeover ownership',
+    leasePath: fixture.leasePath,
+    lockName: 'takeover-window',
+    runId: 'first-run',
+  });
+  assert.throws(
+    () =>
+      acquireLock(fixture.commonDir, {
+        identity: 'takeover ownership',
+        leasePath: fixture.leasePath,
+        lockName: 'takeover-window',
+        runId: 'second-run',
+      }),
+    /owns takeover ownership/,
+  );
+  releaseLock(firstLock, 'first-run');
+});
+
 test('a predecessor cannot overwrite successor runtime state after takeover', () => {
   const fixture = createRalphFixture('runtime-owner');
   const lockName = 'runtime-owner';
@@ -288,6 +329,12 @@ test('a predecessor cannot overwrite successor runtime state after takeover', ()
       null,
       2,
     )}\n`,
+  );
+  const oldMetadataPath = path.join(oldLock, 'metadata.json');
+  const oldMetadata = JSON.parse(readFileSync(oldMetadataPath, 'utf8'));
+  writeFileSync(
+    oldMetadataPath,
+    `${JSON.stringify({ ...oldMetadata, pid: 999999, startedAt: '2026-08-11T00:00:00.000Z' }, null, 2)}\n`,
   );
 
   const newLock = acquireLock(fixture.commonDir, {
@@ -391,4 +438,5 @@ test('pending checks time out with a truthful check-wait checkpoint', async () =
   assert.match(lease.stop.reason, /waiting for pull-request checks/);
   assert.equal(checkpoint.phase, 'check-wait');
   assert.equal(checkpoint.checkState.required, 'pending');
+  assert.match(checkpoint.nextResumableAction, /inspect the pending exact-head checks/i);
 });
