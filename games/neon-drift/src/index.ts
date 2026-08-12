@@ -180,7 +180,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
     ship.position.set(Math.sin(time * 1.4) * 4.1, Math.sin(time * 2.1) * 0.55, 0);
     ship.rotation.z = Math.sin(time * 1.4) * 0.24;
     glow.rotation.z = time * 0.06;
-    (glow.material as MeshBasicMaterial).opacity = 0.05 + boostPulse * 0.08;
+    glow.material.opacity = 0.05 + boostPulse * 0.08;
 
     laneMarkers.forEach((marker, index) => {
       const lane = (index % 3) - 1;

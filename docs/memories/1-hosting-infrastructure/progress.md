@@ -392,7 +392,7 @@
   non-secret resource contracts while the subscription template remains below
   Azure Resource Manager's 64-output limit.
 - Added `scripts/check-operational-infrastructure.mjs` to `yarn infra:check`
-  plus ten fail-closed tests. The complete suite now reports 187 tests.
+  plus ten fail-closed tests.
 - Live validation explicitly selected subscription
   `11213dbd-39fe-46ba-87db-5f5e8c449aed`; both development and production
   `az deployment sub validate` commands passed.
@@ -400,9 +400,13 @@
   normalized executable paths differently on macOS than the Linux runner.
   Restored the reviewed lockfile and aligned the bootstrap proof with the
   immutable install semantics used by Continuous Integration.
+- Merged latest `origin/main` commit `9199590`, which added the repository-wide
+  linting story and expanded the complete suite to 216 tests. The only conflict
+  was the same fresh-bootstrap hardening fix, resolved by retaining main's
+  explanatory comment and the shared non-hardened proof behavior.
 - Validation passed: pinned Bicep lint/build/parameter compilation and
   infrastructure policies; immutable install; formatting; lint; policy;
-  fail-closed continuous integration simulation; security audit; 187 tests with
+  fail-closed continuous integration simulation; security audit; 216 tests with
   coverage; generated-state check; type check; production build; bundle budget;
   Storybook build; and `git diff --check`.
 - No Azure resource deployment, secret publication, frontend or application

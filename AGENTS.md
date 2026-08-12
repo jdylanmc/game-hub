@@ -125,11 +125,14 @@ Keep the exact protected-environment mappings in
 subscription-guarded Bicep path; never restore name-only repository subjects.
 
 `yarn policy:check` rejects unapproved lint suppressions and weakened workflow
-invariants. Record an exceptional suppression with a specific rationale in
-`config/lint-suppressions.json`. `yarn bundle:check` enforces the reviewed
-raw-byte entry, async chunk, JavaScript, stylesheet, and total budgets in
-`config/bundle-budgets.json` after `yarn build`; budget increases require an
-explained review.
+invariants. An exceptional suppression must use the narrowest practical
+`eslint-disable-next-line` or `eslint-disable-line` directive, name exactly one
+rule, include its durable reason inline, and have one exact matching entry in
+`config/lint-suppressions.json`. Review the code and allowlist change together;
+broad, duplicate, reasonless, stale, or temporary exceptions are forbidden.
+`yarn bundle:check` enforces the reviewed raw-byte entry, async chunk,
+JavaScript, stylesheet, and total budgets in `config/bundle-budgets.json` after
+`yarn build`; budget increases require an explained review.
 
 `yarn test:ci-fail-closed` creates an isolated detached worktree and injects
 representative failures into every mandatory gate. Keep each probe tied to the

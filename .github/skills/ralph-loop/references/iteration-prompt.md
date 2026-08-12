@@ -68,6 +68,8 @@ must exist before the issue can be complete.
 - Follow existing repository patterns and all relevant `AGENTS.md` files.
 - Keep the change within the selected issue and story.
 - Run the smallest existing checks that cover the change.
+- Run the canonical root `yarn lint` command; direct `eslint` or workspace-only commands are not completion evidence.
+- When changing lint configuration, dependencies, workflow integration, policy, proofs, or agent contracts, run `yarn test:lint` and `yarn policy:check`.
 - Run `yarn typecheck` and `yarn build` for code changes.
 - Run root `lint` and `test` scripts when they exist.
 - Verify user-visible changes in a browser with available browser automation.

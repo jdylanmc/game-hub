@@ -30,7 +30,8 @@ try {
     expected: /no-unused-vars/,
     label: 'lint',
     prepare: () => createProbeFile('scripts/ci-failure-probe.mjs', 'const unused = 1;\n'),
-    run: () => runSandbox(yarnExecutable, ['lint']),
+    run: () => runPipedSandbox(yarnExecutable, ['lint'], 'continuous-integration-evidence/lint.log'),
+    verify: () => assertActionableLintEvidence('continuous-integration-evidence/lint.log'),
   });
 
   await proveFailure({
@@ -200,6 +201,7 @@ async function proveFreshBootstrap() {
   runRequired('install proof dependencies immutably', yarnExecutable, ['install', '--immutable'], {
     env: {
       YARN_ENABLE_GLOBAL_CACHE: '0',
+      // The real workflow install already performs registry hardening before this synthetic proof.
       YARN_ENABLE_HARDENED_MODE: '0',
     },
   });
@@ -220,29 +222,27 @@ async function syncCurrentPolicySources() {
   }
 }
 
-async function proveFailure({ env = {}, expected, label, prepare = async () => undefined, run }) {
+async function proveFailure({ env = {}, expected, label, prepare = async () => undefined, run, verify }) {
   const restore = await prepare();
-  let result;
 
   try {
-    result = run(env);
+    const result = run(env);
+    if (result.error) {
+      throw result.error;
+    }
+
+    const output = `${result.stdout}${result.stderr}`;
+    if (result.status === 0) {
+      throw new Error(`${label} failure probe unexpectedly succeeded.`);
+    }
+    if (!expected.test(output)) {
+      throw new Error(`${label} probe failed for an unexpected reason:\n${output.slice(-4000)}`);
+    }
+    await verify?.({ output, result });
+    console.log(`Verified ${label} fails closed.`);
   } finally {
     await restore?.();
   }
-
-  if (result.error) {
-    throw result.error;
-  }
-
-  const output = `${result.stdout}${result.stderr}`;
-  if (result.status === 0) {
-    throw new Error(`${label} failure probe unexpectedly succeeded.`);
-  }
-  if (!expected.test(output)) {
-    throw new Error(`${label} probe failed for an unexpected reason:\n${output.slice(-4000)}`);
-  }
-
-  console.log(`Verified ${label} fails closed.`);
 }
 
 async function createProbeFile(relativePath, content) {
@@ -280,6 +280,16 @@ function runPipedSandbox(command, args, evidencePath) {
       env: { EVIDENCE_PATH: sandboxPath(evidencePath) },
     },
   );
+}
+
+async function assertActionableLintEvidence(relativePath) {
+  const output = await fs.readFile(sandboxPath(relativePath), 'utf8');
+  if (!output.includes('scripts/ci-failure-probe.mjs')) {
+    throw new Error('Retained lint evidence does not identify the failing file.');
+  }
+  if (!/\b1:7\s+error\s+.+\sno-unused-vars\b/.test(output)) {
+    throw new Error(`Retained lint evidence is missing an actionable line, column, severity, and rule:\n${output}`);
+  }
 }
 
 function runRequired(label, command, args, options = {}) {
