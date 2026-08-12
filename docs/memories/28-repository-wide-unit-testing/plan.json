@@ -164,8 +164,8 @@
         "Tests avoid implementation-detail assertions and broad snapshots"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added behavior-focused JSDOM coverage for App routing, landing and game pages, catalog loading and failure transitions, missing routes, successful module loading, PlayableGame loading/ready/running/paused/game-over/error/retry transitions, HUD and score callbacks, game-stage actions, presentation cards, internal links, advertisement states, avatar fallbacks, and avatar upload validation, replacement, and reset. Assertions use visible copy, accessible roles/names/descriptions, callbacks, history changes, and user interactions without broad snapshots or production-only test hooks. Full yarn validate passed with 344 Vitest tests.",
       "dependencies": ["US-001", "US-008", "US-009"]
     },
     {

@@ -317,3 +317,32 @@
   runtime tests, `yarn typecheck`, explicit `yarn generate:check`, and the full
   `yarn validate` contract with 313 Vitest tests.
 - Broader host/component state remains intentionally deferred to US-010.
+
+## 2026-08-12 - US-010: Cover host and component state
+
+- Added behavior-focused JSDOM tests for root routing, internal-link history
+  transitions, landing-page catalog loading/error/ready states, direct game
+  route loading/error states, missing games, game details, and visible local
+  score reporting.
+- Covered the playable host from lazy-module loading through ready, running,
+  paused, game-over, loader failure, retry, HUD updates, announcements, score
+  callbacks, pause/resume actions, restart, and controller disposal.
+- Expanded game-stage coverage across loading, ready, error, paused, and
+  game-over states, including accessible headings, messages, formatted scores,
+  and action callbacks.
+- Added reusable component coverage for game cards, manifest/control/HUD
+  panels, advertisement populated/loading/unavailable semantics, avatar image
+  and initials states, avatar upload validation/replacement/reset, and
+  cancelable internal links.
+- Added one successful dynamic-loader test alongside the existing unknown-game
+  and rejected-import cases. Existing catalog tests continue to prove parsing,
+  caching, hook state, request failure, and retry behavior.
+- Assertions use visible behavior, accessibility roles and descriptions, user
+  interactions, callbacks, and transitions. No broad snapshots, production
+  test hooks, global cleanup framework, coverage ratchet, or later integrity
+  work was added.
+- Files changed: host and reusable-component test files under `src/`, the
+  shared `src/test/game-fixture.ts`, and this issue memory.
+- Checks passed: targeted Prettier and ESLint, 50 catalog/loader/host/component
+  tests, `yarn typecheck`, and the full `yarn validate` contract on the first
+  attempt with 43 test files and 344 Vitest tests.
