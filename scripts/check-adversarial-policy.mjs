@@ -337,6 +337,7 @@ if (
   workflowSources.some(
     (source) =>
       !source.startsWith('name: Adversarial review') &&
+      !source.startsWith('name: Adversarial calibration') &&
       (source.includes('review:adversarial') ||
         source.includes('calibrate:adversarial') ||
         source.includes('evaluate-adversarial-reviewer') ||

@@ -52,6 +52,13 @@ The report records:
 - latency and error rate;
 - exact case evidence and a tamper-evident report hash.
 
+The report hash detects byte changes but does not prove signer provenance.
+Gilfoyle additionally requires the protected-run GitHub artifact attestation
+documented in
+[Adversarial calibration attestation](adversarial-calibration-attestation.md).
+A repository-authored JSON claim, fixture report, feature-branch run, or
+unsigned Azure report cannot promote the reviewer.
+
 ## Promotion policy
 
 `config/adversarial-agents/promotion-policy.json` requires:
@@ -78,6 +85,21 @@ version/hash, tools version, test framework, finding schema version/hash,
 verdict policy version/hash, system policy, reviewer engine configuration,
 benchmark corpus, or architecture fingerprint changes. Re-run calibration
 before any later story can make the model-backed check required.
+
+## Protected Gilfoyle calibration
+
+Gilfoyle is registered disabled with a separate prompt, schema, policy, bounded
+tools contract, engine configuration, 24-case corpus, and strict promotion
+policy. The corpus contains vulnerable and safe pairs for the required security
+scenarios plus medium advisory controls. Fixture mode exercises these rules but
+remains non-promotable.
+
+Only `.github/workflows/adversarial-calibration.yml` may create trusted
+calibration evidence. It is manually dispatched from protected `main`, uses the
+`adversarial-review` environment and Microsoft Entra ID/OpenID Connect, checks
+the dedicated deployment identity, enforces thresholds before signing, and
+verifies the same-run attestation. This prerequisite installs that inert
+capability only; it does not enable Gilfoyle or publish a pull-request check.
 
 Model-backed evaluation remains downstream of complete deterministic
 continuous integration. No workflow invokes it in US-005.

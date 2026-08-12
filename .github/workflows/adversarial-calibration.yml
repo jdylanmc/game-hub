@@ -1,0 +1,182 @@
+name: Adversarial calibration
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: adversarial-calibration-protected
+  cancel-in-progress: false
+
+jobs:
+  calibrate:
+    name: Calibrate Gilfoyle
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: adversarial-review
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    env:
+      ADVERSARIAL_AGENT_NAME: gilfoyle-security-architect
+      ADVERSARIAL_CALIBRATION_MODE: 'true'
+      AZURE_CORE_OUTPUT: none
+      AZURE_OPENAI_DEPLOYMENT_ID: game-hub-gilfoyle-security-architect
+      AZURE_OPENAI_DEPLOYMENT_RESOURCE_ID: /subscriptions/11213dbd-39fe-46ba-87db-5f5e8c449aed/resourceGroups/game-hub-adversarial-agents-prod/providers/Microsoft.CognitiveServices/accounts/game-hub-adversarial-openai/deployments/game-hub-gilfoyle-security-architect
+      CALIBRATION_ENVIRONMENT: adversarial-review
+      CALIBRATION_REPORT: calibration-evidence/calibration-report.json
+
+    steps:
+      - name: Check out exact protected workflow commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.13.0
+
+      - name: Verify protected run identity
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'jdylanmc/game-hub'
+          test "$GITHUB_REPOSITORY_ID" = '1330993568'
+          test "$GITHUB_REPOSITORY_OWNER_ID" = '6954990'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$GITHUB_EVENT_NAME" = 'workflow_dispatch'
+          test "$GITHUB_WORKFLOW" = 'Adversarial calibration'
+          test "$GITHUB_WORKFLOW_SHA" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -n "$AZURE_CLIENT_ID"
+          test -n "$AZURE_TENANT_ID"
+          test "$AZURE_OPENAI_ENDPOINT" = 'https://game-hub-adversarial-openai.openai.azure.com'
+          printf 'WORKFLOW_STARTED_AT=%s\n' "$(node -e 'process.stdout.write(new Date().toISOString())')" >> "$GITHUB_ENV"
+
+      - name: Enable pinned Yarn
+        run: corepack enable
+
+      - name: Install exact protected dependencies
+        run: yarn install --immutable
+
+      - name: Sign in to Azure with OpenID Connect
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: 11213dbd-39fe-46ba-87db-5f5e8c449aed
+
+      - name: Verify dedicated registered deployment
+        run: |
+          set -euo pipefail
+          az account set --subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed
+          test "$(az account show --query id -o tsv)" = '11213dbd-39fe-46ba-87db-5f5e8c449aed'
+          test "$(az cognitiveservices account deployment show \
+            --resource-group game-hub-adversarial-agents-prod \
+            --name game-hub-adversarial-openai \
+            --deployment-name game-hub-gilfoyle-security-architect \
+            --query properties.model.name -o tsv)" = 'gpt-4.1-mini'
+          test "$(az cognitiveservices account deployment show \
+            --resource-group game-hub-adversarial-agents-prod \
+            --name game-hub-adversarial-openai \
+            --deployment-name game-hub-gilfoyle-security-architect \
+            --query properties.model.version -o tsv)" = '2025-04-14'
+          test "$(az cognitiveservices account deployment show \
+            --resource-group game-hub-adversarial-agents-prod \
+            --name game-hub-adversarial-openai \
+            --deployment-name game-hub-gilfoyle-security-architect \
+            --query sku.name -o tsv)" = 'GlobalStandard'
+
+      - name: Run bounded real-Azure calibration
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p calibration-evidence
+          yarn calibrate:adversarial \
+            --mode azure \
+            --agent gilfoyle-security-architect \
+            --repetitions 2 \
+            --output "$CALIBRATION_REPORT"
+
+      - name: Enforce strict promotion thresholds
+        run: |
+          set -euo pipefail
+          yarn calibration:check \
+            --agent gilfoyle-security-architect \
+            --report "$CALIBRATION_REPORT"
+
+      - name: Upload threshold-passing report
+        id: report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gilfoyle-calibration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: calibration-evidence/calibration-report.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Create exact protected-run predicate
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          set -euo pipefail
+          yarn calibration:attestation:create \
+            --agent gilfoyle-security-architect \
+            --report "$CALIBRATION_REPORT" \
+            --artifact-id '${{ steps.report.outputs.artifact-id }}' \
+            --artifact-name 'gilfoyle-calibration-${{ github.run_id }}-${{ github.run_attempt }}' \
+            --artifact-digest '${{ steps.report.outputs.artifact-digest }}' \
+            --workflow-started-at "$WORKFLOW_STARTED_AT" \
+            --output calibration-evidence/predicate.json
+
+      - name: Attest exact calibration report
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: calibration-evidence/calibration-report.json
+          predicate-type: https://jdylanmc.github.io/game-hub/attestations/adversarial-calibration/v1
+          predicate-path: calibration-evidence/predicate.json
+          show-summary: true
+
+      - name: Verify same-run cryptographic attestation
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp '${{ steps.attest.outputs.bundle-path }}' calibration-evidence/attestation.bundle.json
+          yarn calibration:attestation:verify \
+            --agent gilfoyle-security-architect \
+            --report "$CALIBRATION_REPORT" \
+            --artifact-id '${{ steps.report.outputs.artifact-id }}' \
+            --artifact-name 'gilfoyle-calibration-${{ github.run_id }}-${{ github.run_attempt }}' \
+            --artifact-digest '${{ steps.report.outputs.artifact-digest }}' \
+            --workflow-started-at "$WORKFLOW_STARTED_AT" \
+            --bundle calibration-evidence/attestation.bundle.json \
+            > calibration-evidence/verification.json
+
+      - name: Retain sanitized calibration evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gilfoyle-calibration-attestation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            calibration-evidence/calibration-report.json
+            calibration-evidence/predicate.json
+            calibration-evidence/attestation.bundle.json
+            calibration-evidence/verification.json
+          if-no-files-found: error
+          retention-days: 90

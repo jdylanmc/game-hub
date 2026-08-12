@@ -1,0 +1,304 @@
+{
+  "version": "1.1.0",
+  "agentName": "gilfoyle-security-architect",
+  "maxFilesPerSurface": 500,
+  "deterministicEvidence": {
+    "configFile": "config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json",
+    "configVersion": "1.0.0",
+    "configContentHash": "0e2b4d8caa9531ef46acc8483b4c088e09a398904111f49b2870401838e43373",
+    "requiredWorkflow": "Continuous integration",
+    "failureOverridableByAgent": false
+  },
+  "requiredSurfaces": [
+    "application",
+    "games",
+    "infrastructure",
+    "workflows",
+    "dependencies",
+    "containers",
+    "configuration",
+    "contracts",
+    "manifests"
+  ],
+  "surfaces": {
+    "application": {
+      "required": true,
+      "allowAbsent": false,
+      "patterns": ["src/**"],
+      "requiredContextSections": []
+    },
+    "games": {
+      "required": true,
+      "allowAbsent": false,
+      "patterns": ["games/**"],
+      "requiredContextSections": ["manifests"]
+    },
+    "infrastructure": {
+      "required": true,
+      "allowAbsent": false,
+      "patterns": ["infra/**", "**/*.bicep", "**/*.bicepparam"],
+      "requiredContextSections": []
+    },
+    "workflows": {
+      "required": true,
+      "allowAbsent": false,
+      "patterns": [".github/workflows/**", ".github/CODEOWNERS"],
+      "requiredContextSections": ["workflows"]
+    },
+    "dependencies": {
+      "required": true,
+      "allowAbsent": false,
+      "patterns": ["package.json", "yarn.lock", "games/*/package.json", "packages/*/package.json"],
+      "requiredContextSections": []
+    },
+    "containers": {
+      "required": true,
+      "allowAbsent": true,
+      "patterns": [
+        "Dockerfile",
+        "Dockerfile.*",
+        "**/Dockerfile",
+        "**/Dockerfile.*",
+        "*.Dockerfile",
+        "**/*.Dockerfile",
+        "compose.yml",
+        "compose.yaml",
+        "docker-compose.yml",
+        "docker-compose.yaml",
+        "**/compose.yml",
+        "**/compose.yaml",
+        "**/docker-compose.yml",
+        "**/docker-compose.yaml"
+      ],
+      "requiredContextSections": []
+    },
+    "configuration": {
+      "required": true,
+      "allowAbsent": false,
+      "patterns": [
+        "config/**",
+        ".github/adversarial-agents/**",
+        ".node-version",
+        ".yarnrc.yml",
+        "eslint.config.js",
+        "postcss.config.js",
+        "tailwind.config.ts",
+        "tsconfig*.json",
+        "vite.config.ts",
+        "vitest.config.ts",
+        "public/staticwebapp.config.json"
+      ],
+      "requiredContextSections": ["validationConfig"]
+    },
+    "contracts": {
+      "required": true,
+      "allowAbsent": false,
+      "patterns": ["packages/game-contract/**", "config/**/*.schema.json", "config/**/schema.json"],
+      "requiredContextSections": ["contracts"]
+    },
+    "manifests": {
+      "required": true,
+      "allowAbsent": false,
+      "patterns": [
+        "package.json",
+        "games/*/package.json",
+        "games/*/game.manifest.json",
+        "packages/*/package.json",
+        "public/generated/games.manifest.json"
+      ],
+      "requiredContextSections": ["manifests"]
+    }
+  },
+  "trustModel": {
+    "protectedControlPlane": {
+      "authoritySource": "trusted-protected-branch-workflow",
+      "untrustedOverrideAllowed": false,
+      "evidenceInstructionAuthority": "none",
+      "promptPath": ".github/adversarial-agents/gilfoyle-security-architect/prompt.md",
+      "toolsPath": "config/adversarial-agents/gilfoyle-security-architect/tools.json",
+      "policyPath": "config/adversarial-agents/gilfoyle-security-architect/policy.json",
+      "schemaPath": "config/adversarial-agents/gilfoyle-security-architect/schema.json",
+      "workflowPath": ".github/workflows/adversarial-review.yml"
+    },
+    "privilegedIdentities": [
+      {
+        "id": "protected-workflow-github-token",
+        "trust": "privileged",
+        "source": "protected-default-branch-workflow",
+        "purpose": "publish one validated exact-head check and retained evidence",
+        "pullRequestAccessible": false
+      },
+      {
+        "id": "azure-reviewer-oidc-identity",
+        "trust": "privileged",
+        "source": "protected-environment-openid-connect",
+        "purpose": "invoke the reviewed Azure OpenAI deployment without static credentials",
+        "pullRequestAccessible": false
+      }
+    ],
+    "dataSources": [
+      {
+        "id": "issue-and-pull-request-metadata",
+        "trust": "untrusted",
+        "access": "bounded GitHub metadata copied into the packet"
+      },
+      {
+        "id": "pull-request-head-git-objects",
+        "trust": "untrusted",
+        "access": "read-only Git object access without checkout or execution"
+      },
+      {
+        "id": "protected-collector-configuration",
+        "trust": "trusted",
+        "access": "versioned configuration from protected workflow code"
+      },
+      {
+        "id": "successful-deterministic-security-workflow-evidence",
+        "trust": "constrained-untrusted-evidence",
+        "access": "bounded exact-head manifest consumed only after the authoritative workflow succeeds"
+      }
+    ],
+    "dataSinks": [
+      {
+        "id": "bounded-security-context-packet",
+        "trust": "untrusted-data-envelope",
+        "writeCapability": "local evidence file only"
+      },
+      {
+        "id": "reviewed-azure-openai-deployment",
+        "trust": "privileged",
+        "writeCapability": "structured inference request only"
+      },
+      {
+        "id": "github-check-and-retained-artifact",
+        "trust": "privileged",
+        "writeCapability": "validated exact-head result and redacted evidence only"
+      }
+    ],
+    "trustBoundaries": [
+      {
+        "id": "pull-request-to-bounded-collector",
+        "source": "untrusted issue, pull-request metadata, diffs, and head blobs",
+        "sink": "trusted collector running protected code",
+        "dataFlow": "read explicit Git objects and serialize inert bounded evidence",
+        "authentication": "pull-request content receives no identity",
+        "authorization": "read-only object access; no checkout, hooks, network, shell, or code execution",
+        "changePatterns": [
+          "src/**",
+          "games/**",
+          "packages/**",
+          "infra/**",
+          ".github/**",
+          "config/**",
+          "scripts/**",
+          "package.json",
+          "yarn.lock",
+          "Dockerfile",
+          "Dockerfile.*",
+          "**/Dockerfile",
+          "**/Dockerfile.*",
+          "*.Dockerfile",
+          "**/*.Dockerfile",
+          "compose.yml",
+          "compose.yaml",
+          "docker-compose.yml",
+          "docker-compose.yaml",
+          "**/compose.yml",
+          "**/compose.yaml",
+          "**/docker-compose.yml",
+          "**/docker-compose.yaml"
+        ]
+      },
+      {
+        "id": "security-evidence-to-reviewer-control-plane",
+        "source": "bounded repository context and deterministic security manifest labeled as untrusted evidence",
+        "sink": "Gilfoyle system policy, prompt, tools, schema, and blocking policy",
+        "dataFlow": "hash-delimited user evidence remains below trusted system and developer messages",
+        "authentication": "protected workflow OpenID Connect identity only",
+        "authorization": "no model tools, no repository write capability, and one reviewed inference destination",
+        "changePatterns": [
+          ".github/adversarial-agents/**",
+          "config/adversarial-agents/**",
+          "scripts/collect-adversarial-context.ts",
+          "scripts/review-adversarial-context.ts",
+          ".github/workflows/adversarial-review.yml"
+        ]
+      },
+      {
+        "id": "review-result-to-github-publication",
+        "source": "schema- and policy-validated Gilfoyle result",
+        "sink": "exact-head GitHub check and retained redacted artifact",
+        "dataFlow": "publish bounded findings after deterministic validation",
+        "authentication": "protected workflow GitHub identity",
+        "authorization": "checks write and evidence upload only; no pull-request code execution",
+        "changePatterns": [
+          "scripts/publish-adversarial-evidence.ts",
+          "config/adversarial-agents/github-publisher.json",
+          ".github/workflows/adversarial-review.yml"
+        ]
+      }
+    ]
+  },
+  "controlDomains": [
+    {
+      "id": "authentication-and-authorization",
+      "patterns": [
+        "infra/**",
+        ".github/workflows/**",
+        "scripts/prepare-adversarial-workflow.ts",
+        "scripts/review-adversarial-context.ts",
+        "scripts/publish-adversarial-evidence.ts",
+        "config/adversarial-agents/**"
+      ]
+    },
+    {
+      "id": "agent-control-plane",
+      "patterns": [
+        ".github/adversarial-agents/**",
+        "config/adversarial-agents/**",
+        "scripts/collect-adversarial-context.ts",
+        "scripts/review-adversarial-context.ts",
+        ".github/workflows/adversarial-review.yml"
+      ]
+    },
+    {
+      "id": "workflow-and-branch-protection",
+      "patterns": [".github/workflows/**", ".github/CODEOWNERS", "config/ralph-required-checks.json"]
+    },
+    {
+      "id": "dependency-and-supply-chain",
+      "patterns": ["package.json", "yarn.lock", "games/*/package.json", "packages/*/package.json"]
+    },
+    {
+      "id": "infrastructure-and-network",
+      "patterns": ["infra/**", "**/*.bicep", "**/*.bicepparam", "public/staticwebapp.config.json"]
+    },
+    {
+      "id": "container-boundary",
+      "patterns": [
+        "Dockerfile",
+        "Dockerfile.*",
+        "**/Dockerfile",
+        "**/Dockerfile.*",
+        "*.Dockerfile",
+        "**/*.Dockerfile",
+        "compose.yml",
+        "compose.yaml",
+        "docker-compose.yml",
+        "docker-compose.yaml",
+        "**/compose.yml",
+        "**/compose.yaml",
+        "**/docker-compose.yml",
+        "**/docker-compose.yaml"
+      ]
+    },
+    {
+      "id": "application-data-flow",
+      "patterns": ["src/**", "games/**", "packages/**"]
+    },
+    {
+      "id": "configuration-contracts-and-manifests",
+      "patterns": ["config/**", "packages/game-contract/**", "games/*/game.manifest.json", "package.json"]
+    }
+  ]
+}

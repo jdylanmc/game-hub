@@ -49,6 +49,13 @@ only a complete real-Azure report that passes
 after any fingerprinted model, prompt, tool, framework, schema, policy, or
 architecture change.
 
+Gilfoyle calibration additionally requires a GitHub artifact attestation from
+the exact protected `main` workflow run. The agent stays disabled and
+`promotionAllowed` stays false until a threshold-passing Azure report is created
+and verified in the same protected run. Never use a feature-branch workflow,
+fixture report, unsigned report, or repository-authored claim as promotion
+evidence.
+
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
 

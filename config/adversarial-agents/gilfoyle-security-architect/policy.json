@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jdylanmc/game-hub/config/adversarial-agents/gilfoyle-security-architect/policy.json",
+  "title": "Gilfoyle Security Architect Blocking Policy",
+  "version": "1.0.0",
+  "agentName": "gilfoyle-security-architect",
+  "decisionRules": {
+    "minimumBlockingFindings": 1,
+    "blockingSecuritySeverities": ["CRITICAL", "HIGH"],
+    "advisorySecuritySeverities": ["MEDIUM", "LOW"],
+    "blockingSecurityControlBypassAssessments": ["CONFIRMED", "UNCERTAIN"],
+    "confidenceRequired": true,
+    "confidenceAffectsBlocking": false,
+    "mediumFindingsAreAdvisory": true
+  },
+  "failureBehavior": {
+    "missingContext": "ERROR",
+    "malformedOutput": "ERROR",
+    "invalidAttribution": "ERROR",
+    "timeout": "ERROR",
+    "cancellation": "ERROR",
+    "serviceOutage": "ERROR",
+    "internalFailure": "ERROR",
+    "errorBlocksMerge": true
+  },
+  "requiredFindingFields": [
+    "confidence",
+    "category",
+    "citations",
+    "exploitOrFailureScenario",
+    "impact",
+    "remediation",
+    "verificationGuidance"
+  ],
+  "citationRequirements": {
+    "exactPath": true,
+    "exactLineRange": true,
+    "minimumCitations": 1,
+    "secretValuesForbidden": true
+  }
+}
