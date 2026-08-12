@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0.0",
+  "workflow": {
+    "name": "Adversarial calibration",
+    "runId": 31575384182,
+    "runAttempt": 1,
+    "url": "https://github.com/jdylanmc/game-hub/actions/runs/31575384182",
+    "event": "workflow_dispatch",
+    "protectedRef": "refs/heads/main",
+    "headSha": "2bb2fc0485c0fc6b17912410fad17677be4d59f8",
+    "createdAt": "2026-08-12T07:46:19Z",
+    "completedAt": "2026-08-12T07:54:21Z",
+    "conclusion": "failure",
+    "failedStep": "Enforce strict promotion thresholds"
+  },
+  "azure": {
+    "subscriptionId": "11213dbd-39fe-46ba-87db-5f5e8c449aed",
+    "deploymentId": "game-hub-gilfoyle-security-architect",
+    "model": "gpt-4.1-mini",
+    "modelVersion": "2025-04-14",
+    "sku": "GlobalStandard",
+    "observedMetricWindow": {
+      "start": "2026-08-12T07:46:00Z",
+      "end": "2026-08-12T07:55:00Z"
+    },
+    "http200ModelRequests": 47,
+    "inputTokens": 133702,
+    "outputTokens": 29295,
+    "estimatedCostUsd": 0.100353,
+    "costBasis": {
+      "inputUsdPerMillionTokens": 0.4,
+      "outputUsdPerMillionTokens": 1.6
+    }
+  },
+  "calibration": {
+    "intendedEvaluations": 48,
+    "repetitionsPerCase": 2,
+    "caseCount": 24,
+    "metrics": {
+      "blockingPatternDetectionRate": 0,
+      "strongFalsePositiveRate": 0,
+      "advisoryEscalationRate": 0,
+      "errorRate": 1,
+      "reviewerAgreementRate": 1,
+      "p95LatencyMs": 13552,
+      "truePositiveCount": 0,
+      "falsePositiveCount": 0,
+      "missedCriticalScenarioCount": 11,
+      "missedControlBypassCaseCount": 7,
+      "reportedTotalTokens": 0,
+      "reportedTotalCostUsd": 0
+    },
+    "thresholdFailures": [
+      "Blocking-pattern detection threshold failed.",
+      "Critical scenarios were missed.",
+      "Security-control bypass cases were missed.",
+      "Reviewer error-rate threshold failed."
+    ]
+  },
+  "attestation": {
+    "created": false,
+    "verified": false,
+    "reason": "Threshold enforcement failed before report upload, predicate creation, signing, and verification."
+  },
+  "retention": {
+    "sanitizedWorkflowLogsRetainedByGitHub": true,
+    "reportArtifactCreated": false,
+    "note": "Azure metrics observed 47 successful model HTTP responses while all 48 evaluator results failed closed. The report normalized errored results to zero tokens and cost, so Azure token telemetry is the cost authority for this checkpoint."
+  }
+}

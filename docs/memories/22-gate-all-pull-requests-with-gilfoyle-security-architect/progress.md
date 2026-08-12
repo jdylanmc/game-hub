@@ -257,3 +257,43 @@
   publication sequence that first places the reviewed calibration workflow and
   fingerprinted configuration on protected main without bypassing the draft
   issue's unfinished later stories. Gilfoyle remains disabled and unpromoted.
+
+## 2026-08-12 - US-004B protected calibration blocker
+
+- Fetched protected `main` through attestation bootstrap commit
+  `2bb2fc0485c0fc6b17912410fad17677be4d59f8` and safely merged it into the
+  issue branch as `b372040c22009c5007bebd7b03ee95483be16b1b`, preserving issue
+  work without rebasing or force-pushing. Merge conflict resolution retained
+  both the issue's Gilfoyle policy and main's hosting infrastructure.
+- Dispatched protected workflow run
+  [31575384182](https://github.com/jdylanmc/game-hub/actions/runs/31575384182)
+  on exact `main` head `2bb2fc0485c0fc6b17912410fad17677be4d59f8`.
+  Protected identity, immutable checkout, keyless Microsoft Entra ID sign-in,
+  subscription selection, and the dedicated GPT-4.1 mini `2025-04-14`
+  GlobalStandard deployment verification all succeeded.
+- The bounded real-Azure calibration completed 48 evaluator executions over 24
+  cases with sequential concurrency. Strict threshold enforcement then failed
+  closed: 0% blocking detection, 0% safe false positives, 0% advisory
+  escalation, 100% evaluator errors, 100% agreement across identical errors,
+  13.552-second p95 latency, 11 missed critical scenarios, and 7 missed
+  control-bypass cases.
+- The threshold report normalized errored evaluations to zero tokens and cost.
+  Azure deployment telemetry for the exact run window instead observed 47 HTTP
+  200 model requests, 133,702 input tokens, and 29,295 output tokens. At the
+  reviewed $0.40/M input and $1.60/M output rates, the telemetry-estimated cost
+  was `$0.100353`.
+- Threshold failure occurred before report upload, predicate generation,
+  `actions/attest`, same-run verification, or evidence-artifact upload.
+  Therefore no attestation exists and promotion is invalid. Sanitized run,
+  metric, cost, and attestation-state evidence is retained in
+  `evidence/protected-calibration-run-31575384182.json`; GitHub retains the
+  workflow logs.
+- This was the final materially distinct real-Azure configuration after the
+  original pre-attestation configuration failed. Both generations have now
+  failed, so the materially distinct final-run allowance is exhausted. No
+  threshold, severity, control-bypass, cost, or error policy was weakened, and
+  no unprotected rerun was attempted.
+- US-004B remains incomplete and blocked. Gilfoyle stays disabled and
+  unpromoted. A future attempt requires separately authorized diagnosis,
+  dedicated prompt/policy/runtime tuning, publication of the new fingerprinted
+  configuration to protected `main`, and a fresh protected attested run.
