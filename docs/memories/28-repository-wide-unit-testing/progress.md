@@ -420,6 +420,10 @@
 - Every proof requires its intended diagnostic and identifying file or
   threshold evidence, rejecting unrelated dependency, policy, discovery, or
   setup failures.
+- Repeated canonical runs exposed a pre-existing race in the Ralph heartbeat
+  fixture: `agent-execution` is written immediately before the spawned child
+  process identifier. The fixture now waits for both values atomically instead
+  of treating the transient phase-only lease as ready.
 - Shared teardown now removes and fails on unexpected global properties after
   Vitest stubs are restored. React's test-environment marker and Three.js's
   module marker remain explicit framework-owned exceptions.
@@ -430,7 +434,9 @@
   into its isolated worktree, restores every mutation, force-removes only that
   detached proof worktree, and deletes its ignored repository-local fixture
   root in `finally`.
-- Files changed: `AGENTS.md`, `scripts/prove-ci-fail-closed.mjs`,
+- Files changed: `AGENTS.md`,
+  `.github/skills/ralph-loop/tests/ralph-runner.test.mjs`,
+  `scripts/prove-ci-fail-closed.mjs`,
   `scripts/check-workflow-policy.mjs`,
   `scripts/check-workflow-policy.test.mjs`, `src/test/setup.ts`, and this issue
   memory.
