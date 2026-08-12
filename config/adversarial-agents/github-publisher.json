@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "artifactVersion": "1.0.0",
+  "manifestVersion": "1.0.0",
+  "checkNamePrefix": "Adversarial Review",
+  "githubApiVersion": "2022-11-28",
+  "retentionDays": 90,
+  "limits": {
+    "maxAnnotationsPerRequest": 50,
+    "maxAnnotationsTotal": 1000,
+    "maxAnnotationTitleCharacters": 255,
+    "maxAnnotationMessageBytes": 4096,
+    "maxAnnotationDetailsBytes": 16384,
+    "maxCheckSummaryBytes": 32768,
+    "maxCheckTextBytes": 32768
+  }
+}

@@ -34,6 +34,13 @@ yarn policy:check
 yarn bundle:check
 ```
 
+Adversarial reviewer calibration is versioned and fail-closed. Use
+`yarn calibrate:adversarial --mode fixture` for deterministic local evaluation;
+only a complete real-Azure report that passes
+`yarn calibration:check --report <path>` is eligible for promotion. Recalibrate
+after any fingerprinted model, prompt, tool, framework, schema, policy, or
+architecture change.
+
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
 
@@ -48,6 +55,37 @@ commands as local development. Keep action references pinned to full commit
 SHAs, preserve least-privilege permissions and fork safety, and retain the
 workflow's logs, test results, coverage, production build, and Storybook
 evidence.
+
+Order deterministic gates from cheapest to most expensive so formatting,
+linting, policy, generation, type, and test failures stop work before builds,
+Storybook, fail-closed simulations, or model-backed review. Adversarial-agent
+workflows must depend on the complete deterministic workflow succeeding; they
+must not consume model capacity while any deterministic gate is missing,
+pending, canceled, or failing.
+
+`yarn context:collect` creates bounded adversarial-review evidence from local
+Git objects and explicit issue/pull-request metadata. It treats every collected
+value as inert untrusted data and must never check out, import, install, build,
+test, or execute pull-request content.
+
+`yarn review:adversarial` consumes only a ready context packet. Keep its
+versioned system policy separate from the human review prompt, authenticate with
+Microsoft Entra ID, register no model tools, restrict Azure OpenAI destinations,
+and return schema-valid blocking errors whenever bounded execution cannot
+produce a policy-safe verdict.
+
+`yarn publish:adversarial` validates reviewer output again before publishing one
+agent-specific GitHub check for the exact head commit. It writes a retained,
+redacted evidence bundle; the artifact is authoritative when repeated runs
+supersede annotations. Publication must remain downstream of complete
+deterministic continuous integration.
+
+`.github/workflows/adversarial-review.yml` runs only from protected default-
+branch code after the exact pull-request head passes complete deterministic
+continuous integration. Never check out or execute pull-request code in that
+workflow. Preserve its three deterministic capacity lanes, two exact-head
+revalidations, least-privilege job permissions, promoted-calibration gate, and
+90-day evidence retention.
 
 `yarn policy:check` rejects unapproved lint suppressions and weakened workflow
 invariants. Record an exceptional suppression with a specific rationale in
@@ -119,9 +157,16 @@ publication or continuous-integration changes, blocker, and completion;
 coalesce changes found in one observation, suppress unchanged polls, and use a
 longer heartbeat for periodic unchanged status.
 
+Use `yarn ralph:status -- --memory-dir docs/memories/<issue>-<slug>` when you
+need a truthful Ralph status. The runner's live lease, heartbeat, and
+checkpoint state live under the repository's shared git common directory and
+must not be committed.
+
 Before ranking an unassigned issue, run `yarn ralph:prioritize`. A blocking open
 Ralph pull request must map to exactly one matching issue memory; missing or
 ambiguous identity stops selection rather than falling through to new work.
+Ralph completion and prioritization use `config/ralph-required-checks.json`;
+every listed check must exist exactly once and succeed for the current head SHA.
 
 Follow [Ralph Loop](docs/ralph-loop.md) for the full model and safety rules.
 

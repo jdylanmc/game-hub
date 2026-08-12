@@ -15,7 +15,7 @@ import {
 import { RalphStatusReporter } from '../scripts/ralph-status-reporter.mjs';
 import { createIsolatedGitHubEnvironment, verifyGitHubIdentity } from '../scripts/ralph-github-auth.mjs';
 
-const scratchRoot = path.resolve('.ralph-test-work');
+const scratchRoot = path.resolve('.ralph-test-work/parallel');
 const execFileAsync = promisify(execFile);
 
 function command(commandName, args, cwd) {

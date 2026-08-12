@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadRequiredChecks } from './check-required-pull-request-gates.mjs';
 
 const failingStates = new Set([
   'ACTION_REQUIRED',
@@ -18,9 +19,13 @@ function checkState(check) {
   return check.conclusion ?? check.state ?? '';
 }
 
-function isBlockingPullRequest(pullRequest) {
+function isBlockingPullRequest(pullRequest, requiredChecks) {
   const checks = pullRequest.statusCheckRollup ?? [];
-  return checks.length === 0 || checks.some((check) => failingStates.has(checkState(check)));
+  const requiredCheckBlocked = requiredChecks.some((requiredCheck) => {
+    const matches = checks.filter((check) => (check.name ?? check.context) === requiredCheck);
+    return matches.length !== 1 || checkState(matches[0]) !== 'SUCCESS';
+  });
+  return requiredCheckBlocked || checks.some((check) => failingStates.has(checkState(check)));
 }
 
 function issueNumberFromPullRequest(pullRequest) {
@@ -28,9 +33,17 @@ function issueNumberFromPullRequest(pullRequest) {
   return match ? Number(match[1]) : null;
 }
 
-export function selectFailingRalphPullRequest(pullRequests, memories, repoNameWithOwner) {
+export function selectFailingRalphPullRequest(
+  pullRequests,
+  memories,
+  repoNameWithOwner,
+  requiredChecks = loadRequiredChecks(),
+) {
   const blockingPullRequests = pullRequests
-    .filter((pullRequest) => pullRequest.headRefName?.startsWith('ralph/') && isBlockingPullRequest(pullRequest))
+    .filter(
+      (pullRequest) =>
+        pullRequest.headRefName?.startsWith('ralph/') && isBlockingPullRequest(pullRequest, requiredChecks),
+    )
     .sort((left, right) => left.number - right.number);
 
   if (blockingPullRequests.length === 0) {

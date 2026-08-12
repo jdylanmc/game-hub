@@ -1,0 +1,281 @@
+name: Adversarial review
+
+on:
+  workflow_run:
+    workflows:
+      - Continuous integration
+    types:
+      - completed
+
+permissions: {}
+
+jobs:
+  resolve:
+    name: Resolve successful deterministic review input
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.status == 'completed' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      eligible: ${{ steps.resolve.outputs.eligible }}
+      reason: ${{ steps.resolve.outputs.reason }}
+      pull_request_number: ${{ steps.resolve.outputs.pull_request_number }}
+      issue_number: ${{ steps.resolve.outputs.issue_number }}
+      base_sha: ${{ steps.resolve.outputs.base_sha }}
+      head_sha: ${{ steps.resolve.outputs.head_sha }}
+      head_repository: ${{ steps.resolve.outputs.head_repository }}
+      head_repository_url: ${{ steps.resolve.outputs.head_repository_url }}
+      capacity_slot: ${{ steps.resolve.outputs.capacity_slot }}
+
+    steps:
+      - name: Check out protected base workflow code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.13.0
+
+      - name: Verify protected base checkout
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF" = 'refs/heads/main'
+
+      - name: Enable pinned Yarn
+        run: corepack enable
+
+      - name: Install protected base dependencies
+        run: yarn install:check
+
+      - name: Resolve exact pull request and issue metadata
+        id: resolve
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/prepare-adversarial-workflow.ts \
+            --event "$GITHUB_EVENT_PATH" \
+            --repository "$GITHUB_REPOSITORY" \
+            --output workflow-input.json \
+            --github-output "$GITHUB_OUTPUT"
+
+  review:
+    name: Adversarial review
+    needs:
+      - resolve
+    if: needs.resolve.outputs.eligible == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: adversarial-review
+    permissions:
+      checks: write
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
+    concurrency:
+      group: adversarial-review-capacity-${{ needs.resolve.outputs.capacity_slot }}
+      cancel-in-progress: false
+    env:
+      AZURE_CORE_OUTPUT: none
+      ADVERSARIAL_AGENT_NAME: unit-test-reviewer
+      AZURE_OPENAI_DEPLOYMENT_ID: game-hub-unit-test-reviewer
+      ACTIVE_CALIBRATION_REPORT: config/adversarial-agents/active-calibration-unit-test-reviewer.json
+
+    steps:
+      - name: Check out protected base workflow code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.13.0
+
+      - name: Verify protected base checkout
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF" = 'refs/heads/main'
+
+      - name: Enable pinned Yarn
+        run: corepack enable
+
+      - name: Install protected base dependencies
+        run: yarn install:check
+
+      - name: Revalidate exact current pull request head
+        id: verify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EXPECTED_BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
+          EXPECTED_HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+          EXPECTED_ISSUE_NUMBER: ${{ needs.resolve.outputs.issue_number }}
+          EXPECTED_PULL_REQUEST_NUMBER: ${{ needs.resolve.outputs.pull_request_number }}
+        run: |
+          set -euo pipefail
+          node scripts/prepare-adversarial-workflow.ts \
+            --event "$GITHUB_EVENT_PATH" \
+            --repository "$GITHUB_REPOSITORY" \
+            --output workflow-input.json \
+            --github-output "$GITHUB_OUTPUT" \
+            --require-eligible \
+            --expected-base-sha "$EXPECTED_BASE_SHA" \
+            --expected-head-sha "$EXPECTED_HEAD_SHA" \
+            --expected-issue-number "$EXPECTED_ISSUE_NUMBER" \
+            --expected-pull-request-number "$EXPECTED_PULL_REQUEST_NUMBER"
+
+      - name: Validate promoted calibration before model access
+        run: |
+          set -euo pipefail
+          test -f "$ACTIVE_CALIBRATION_REPORT"
+          yarn calibration:check --report "$ACTIVE_CALIBRATION_REPORT"
+
+      - name: Create evidence directory
+        run: mkdir -p adversarial-review-evidence
+
+      - name: Fetch untrusted pull request Git objects without checkout
+        env:
+          BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
+          HEAD_REPOSITORY_URL: ${{ needs.resolve.outputs.head_repository_url }}
+          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          git -c core.hooksPath=/dev/null -c credential.helper= -c protocol.ext.allow=never \
+            fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git -c core.hooksPath=/dev/null -c credential.helper= -c protocol.ext.allow=never \
+            fetch --no-tags --depth=1 "$HEAD_REPOSITORY_URL" "$HEAD_SHA"
+          test "$(git rev-parse "$BASE_SHA^{commit}")" = "$BASE_SHA"
+          test "$(git rev-parse "$HEAD_SHA^{commit}")" = "$HEAD_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Collect bounded untrusted evidence
+        run: |
+          set -euo pipefail
+          yarn context:collect \
+            --input workflow-input.json \
+            --output adversarial-context.json
+          test -s adversarial-context.json
+
+      - name: Verify narrow inference configuration
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$AZURE_CLIENT_ID"
+          test -n "$AZURE_TENANT_ID"
+          case "$AZURE_OPENAI_ENDPOINT" in
+            https://*.openai.azure.com) ;;
+            *) exit 1 ;;
+          esac
+
+      - name: Sign in to Azure with OpenID Connect
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Invoke bounded Azure reviewer
+        id: reviewer
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          set -euo pipefail
+          set +e
+          yarn review:adversarial \
+            --input adversarial-context.json \
+            --output reviewer-result.json
+          review_exit=$?
+          set -e
+          test -s reviewer-result.json
+          case "$review_exit" in
+            0|2|3) ;;
+            *) exit "$review_exit" ;;
+          esac
+          echo "review-exit=$review_exit" >> "$GITHUB_OUTPUT"
+
+      - name: Revalidate head immediately before publication
+        id: prepublish
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EXPECTED_HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          node scripts/prepare-adversarial-workflow.ts \
+            --event "$GITHUB_EVENT_PATH" \
+            --repository "$GITHUB_REPOSITORY" \
+            --output prepublish-workflow-input.json \
+            --github-output "$GITHUB_OUTPUT" \
+            --require-eligible \
+            --expected-head-sha "$EXPECTED_HEAD_SHA"
+
+      - name: Publish exact-head check and retained evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+          ISSUE_NUMBER: ${{ needs.resolve.outputs.issue_number }}
+        run: |
+          set -euo pipefail
+          yarn publish:adversarial \
+            --result reviewer-result.json \
+            --repository "$GITHUB_REPOSITORY" \
+            --issue "$ISSUE_NUMBER" \
+            --head "$HEAD_SHA" \
+            --calibration-report "$ACTIVE_CALIBRATION_REPORT" \
+            --exceptions config/adversarial-agents/exceptions.json \
+            --output-dir adversarial-review-evidence \
+            > publication-result.json
+
+      - name: Retain adversarial review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: adversarial-review-${{ needs.resolve.outputs.head_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            adversarial-review-evidence/
+            adversarial-context.json
+            reviewer-result.json
+            workflow-input.json
+            prepublish-workflow-input.json
+            publication-result.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce validated reviewer conclusion
+        if: always()
+        env:
+          EXPECTED_HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          test -s reviewer-result.json
+          test -s publication-result.json
+          node scripts/validate-adversarial-finding.ts reviewer-result.json
+          node - "$EXPECTED_HEAD_SHA" <<'NODE'
+          const fs = require('node:fs');
+          const expectedHead = process.argv[2];
+          const result = JSON.parse(fs.readFileSync('reviewer-result.json', 'utf8'));
+          const publication = JSON.parse(fs.readFileSync('publication-result.json', 'utf8'));
+          if (result.attribution.repositoryCommit !== expectedHead) process.exit(1);
+          if (publication.conclusion === 'failure') process.exit(1);
+          if (!['success', 'neutral'].includes(publication.conclusion)) process.exit(1);
+          NODE
