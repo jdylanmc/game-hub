@@ -105,7 +105,7 @@
         "The command emits a bounded non-secret evidence record and never rolls protection back after a partial failure."
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Public test seam: a new branch-protection promotion CLI/library with a fake GitHub transport."
     },
     {

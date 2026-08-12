@@ -92,3 +92,18 @@
   refuses promotion use.
 - **Broader checks:** `yarn vitest run
   scripts/validate-adversarial-waiver.test.mjs --coverage.enabled=false`.
+
+### US-006 — Add monotonic branch-protection promotion
+
+- **Confirmed seam:** `promoteAdversarialBranchProtection` with an injected
+  GitHub branch-protection transport.
+- **Red:** The promotion test could not import a compare-and-swap
+  implementation.
+- **Green:** The owner-authenticated process-local command verifies the exact
+  old live state, an additive one-check/one-reviewer transition, exact-head
+  PASS proof and evidence digests, performs one update, and verifies
+  convergence without rollback. It rejects authentication failure, drift,
+  removal, rename, duplication, stale or neutral proof, and manifest drift.
+- **Broader checks:** `yarn vitest run
+  scripts/promote-adversarial-branch-protection.test.mjs
+  --coverage.enabled=false`.
