@@ -35,7 +35,7 @@ plus one statically analyzable Vite import map.
 | Component grounding | `.storybook/`, `src/stories/`, `src/storybook/` | Shared component and composition development |
 | Static hosting config | `public/staticwebapp.config.json` | Azure Static Web Apps routing and security headers |
 | Azure infrastructure | `infra/` when introduced | Idempotent Bicep resources and environment parameter files |
-| Autonomous development | `.github/skills/ralph-loop/`, `docs/memories/`, sibling issue worktrees | Fresh-context issue execution, parallel-safe orchestration, and persistent state |
+| Autonomous development | `.github/skills/ralph-loop/`, `docs/memories/`, sibling issue worktrees, and git-local Ralph runtime state | Fresh-context issue execution, parallel-safe orchestration, durable memory, and truthful runtime recovery |
 
 The planned containerized application programming interface (API) remains
 outside the current runtime. Introduce its workspace, container boundary, and
@@ -77,6 +77,7 @@ version.
 | `@types/react` | `18.3.20` | React TypeScript declarations | [DefinitelyTyped package](https://www.npmjs.com/package/@types/react) |
 | `@types/react-dom` | `18.3.5` | React DOM TypeScript declarations | [DefinitelyTyped package](https://www.npmjs.com/package/@types/react-dom) |
 | `@types/three` | `0.185.4` | Three.js TypeScript declarations used by the root build | [DefinitelyTyped package](https://www.npmjs.com/package/@types/three) |
+| `@azure/identity` | `4.13.1` | Microsoft Entra ID authentication for the Azure adversarial reviewer engine | [Azure Identity for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/identity-readme) |
 
 Keep Three.js itself declared by each game workspace. Do not move it into the
 root website dependency list.
@@ -118,6 +119,27 @@ kit (SDK) version.
 
 Read the [Azure Static Web Apps documentation](https://learn.microsoft.com/azure/static-web-apps/)
 before changing deployment behavior.
+
+### Adversarial review runs only after deterministic CI
+
+The model-backed review workflow is triggered by the completed canonical
+continuous integration (CI) workflow, not directly by pull-request code.
+GitHub loads the workflow from protected `main`; both jobs explicitly check out
+that protected commit. Pull-request Git objects are fetched without checkout
+and are consumed only by the bounded untrusted-data collector.
+
+Three deterministic concurrency lanes cap shared model work at three active
+reviews. A successful deterministic result, current exact head SHA, promoted
+calibration, protected-environment OpenID Connect identity, restricted Azure
+endpoint, and revalidated structured output are mandatory before publication.
+The downstream model check never replaces the deterministic CI check.
+
+Protected `main` requires both `Continuous integration` and
+`Adversarial Review / unit-test-reviewer`. Ralph reads the same versioned
+required-check configuration and cannot complete or prioritize past a missing,
+pending, canceled, timed-out, stale, duplicated, malformed, or unsuccessful
+adversarial result. Each required result must be uniquely bound to the current
+pull-request head SHA.
 
 ### Azure infrastructure uses Bicep
 
@@ -167,7 +189,11 @@ must select the subscription explicitly before previewing or applying changes.
     loop, story, publication, continuous-integration, blocker, and completion
     transitions emit coalesced reports; unchanged polling is silent except for
     a longer periodic heartbeat.
-11. **Concurrent GitHub identity is process-local.** Ralph resolves the
+11. **Ralph runtime recovery is git-local and authoritative.** The runner owns
+    an atomic lease, heartbeat, checkpoint, and lock set under the shared git
+    common directory. Status and recovery derive from that state plus live git
+    and pull-request checks, not from todo rows or shell history.
+12. **Concurrent GitHub identity is process-local.** Ralph resolves the
     repository owner's credential without changing GitHub CLI global state and
     binds each orchestrator and child runner through its own `GH_TOKEN`
     environment.

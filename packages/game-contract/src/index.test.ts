@@ -19,7 +19,7 @@ describe('game contract', () => {
         host.submitScore({ gameId: 'contract-test', occurredAt: '2026-08-11T00:00:00.000Z', score: 42 });
       },
     };
-    const module = {
+    const module: GameModule = {
       createGame: () => instance,
       manifest: {
         accent: '#ffffff',
@@ -33,7 +33,7 @@ describe('game contract', () => {
         technology: 'Three.js',
         title: 'Contract Test',
       },
-    } satisfies GameModule;
+    };
 
     const game = module.createGame(document.createElement('canvas'), host);
     game.start();

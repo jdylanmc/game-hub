@@ -4,7 +4,7 @@ interface LinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string;
 }
 
-export function Link({ href, onClick, ...props }: LinkProps) {
+export function Link({ children, href, onClick, ...props }: LinkProps) {
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event);
 
@@ -25,5 +25,9 @@ export function Link({ href, onClick, ...props }: LinkProps) {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
-  return <a href={href} onClick={handleClick} {...props} />;
+  return (
+    <a href={href} onClick={handleClick} {...props}>
+      {children}
+    </a>
+  );
 }

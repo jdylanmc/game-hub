@@ -1,11 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import { promises as fs } from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'game-hub-ci-proof-'));
+const temporaryRoot = await fs.mkdtemp(path.join(rootDirectory, '.ci-fail-closed-proof-'));
 const sandboxDirectory = path.join(temporaryRoot, 'repository');
 const yarnExecutable = process.platform === 'win32' ? 'yarn.cmd' : 'yarn';
 let worktreeCreated = false;
@@ -16,20 +15,23 @@ try {
     cwd: rootDirectory,
   });
   worktreeCreated = true;
-  runRequired('install proof dependencies immutably', yarnExecutable, ['install', '--immutable']);
+  await syncCurrentPolicySources();
+  await proveFreshBootstrap();
+  await fs.mkdir(sandboxPath('continuous-integration-evidence'), { recursive: true });
 
   await proveFailure({
     expected: /Code style issues found|scripts\/ci-failure-probe\.mjs/,
     label: 'formatting',
     prepare: () => createProbeFile('scripts/ci-failure-probe.mjs', 'const badlyFormatted={value:"broken"}\n'),
-    run: () => runSandbox(yarnExecutable, ['format:check']),
+    run: () => runPipedSandbox(yarnExecutable, ['format:check'], 'continuous-integration-evidence/format.log'),
   });
 
   await proveFailure({
     expected: /no-unused-vars/,
     label: 'lint',
     prepare: () => createProbeFile('scripts/ci-failure-probe.mjs', 'const unused = 1;\n'),
-    run: () => runSandbox(yarnExecutable, ['lint']),
+    run: () => runPipedSandbox(yarnExecutable, ['lint'], 'continuous-integration-evidence/lint.log'),
+    verify: () => assertActionableLintEvidence('continuous-integration-evidence/lint.log'),
   });
 
   await proveFailure({
@@ -105,6 +107,36 @@ try {
   });
 
   await proveFailure({
+    expected: /fail-closed run shell|bash -eo pipefail/,
+    label: 'pipeline failure masking',
+    prepare: () =>
+      replaceFile('.github/workflows/continuous-integration.yml', (content) =>
+        content.replace('shell: bash -eo pipefail {0}', 'shell: bash -e {0}'),
+      ),
+    run: () => runSandbox(yarnExecutable, ['policy:workflow']),
+  });
+
+  await proveFailure({
+    expected: /Missing mandatory command|direct yarn install --immutable/,
+    label: 'script-based continuous integration bootstrap',
+    prepare: () =>
+      replaceFile('.github/workflows/continuous-integration.yml', (content) =>
+        content.replace('yarn install --immutable', 'yarn install:check'),
+      ),
+    run: () => runSandbox(yarnExecutable, ['policy:workflow']),
+  });
+
+  await proveFailure({
+    expected: /Both protected-base jobs must bootstrap with direct yarn install --immutable/,
+    label: 'script-based adversarial bootstrap',
+    prepare: () =>
+      replaceFile('.github/workflows/adversarial-review.yml', (content) =>
+        content.replaceAll('yarn install --immutable', 'yarn install:check'),
+      ),
+    run: () => runSandbox(yarnExecutable, ['policy:adversarial-workflow']),
+  });
+
+  await proveFailure({
     env: {
       YARN_HTTP_TIMEOUT: '1000',
       YARN_NPM_REGISTRY_SERVER: 'http://127.0.0.1:9',
@@ -127,7 +159,7 @@ try {
     run: () => runSandbox(yarnExecutable, ['build-storybook']),
   });
 
-  console.log('Continuous integration fail-closed proof passed for 11 representative failures.');
+  console.log('Continuous integration fail-closed proof passed for 14 representative failures.');
 } catch (error) {
   runError = error;
 } finally {
@@ -146,29 +178,71 @@ if (runError) {
   throw runError;
 }
 
-async function proveFailure({ env = {}, expected, label, prepare = async () => undefined, run }) {
-  const restore = await prepare();
-  let result;
+async function proveFreshBootstrap() {
+  const statePath = sandboxPath('node_modules/.yarn-state.yml');
 
   try {
-    result = run(env);
+    await fs.access(statePath);
+    throw new Error('Fresh proof worktree unexpectedly contained a Yarn node-modules state file.');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+
+  const scriptedInstall = runSandbox(yarnExecutable, ['install:check']);
+  if (scriptedInstall.error) throw scriptedInstall.error;
+  const scriptedOutput = `${scriptedInstall.stdout}${scriptedInstall.stderr}`;
+  if (scriptedInstall.status === 0) {
+    throw new Error('Script-based dependency bootstrap unexpectedly succeeded without Yarn state.');
+  }
+  if (!/findPackageLocation|node_modules state file/.test(scriptedOutput)) {
+    throw new Error(`Scripted bootstrap failed for an unexpected reason:\n${scriptedOutput.slice(-4000)}`);
+  }
+
+  runRequired('install proof dependencies immutably', yarnExecutable, ['install', '--immutable'], {
+    env: {
+      YARN_ENABLE_GLOBAL_CACHE: '0',
+      // The real workflow install already performs registry hardening before this synthetic proof.
+      YARN_ENABLE_HARDENED_MODE: '0',
+    },
+  });
+  await fs.access(statePath);
+  console.log('Verified direct immutable install bootstraps a fresh node-modules worktree.');
+}
+
+async function syncCurrentPolicySources() {
+  for (const relativePath of [
+    '.github/workflows/adversarial-review.yml',
+    '.github/workflows/continuous-integration.yml',
+    'package.json',
+    'scripts/check-adversarial-workflow-policy.mjs',
+    'scripts/check-workflow-policy.mjs',
+    'yarn.lock',
+  ]) {
+    await fs.copyFile(path.join(rootDirectory, relativePath), sandboxPath(relativePath));
+  }
+}
+
+async function proveFailure({ env = {}, expected, label, prepare = async () => undefined, run, verify }) {
+  const restore = await prepare();
+
+  try {
+    const result = run(env);
+    if (result.error) {
+      throw result.error;
+    }
+
+    const output = `${result.stdout}${result.stderr}`;
+    if (result.status === 0) {
+      throw new Error(`${label} failure probe unexpectedly succeeded.`);
+    }
+    if (!expected.test(output)) {
+      throw new Error(`${label} probe failed for an unexpected reason:\n${output.slice(-4000)}`);
+    }
+    await verify?.({ output, result });
+    console.log(`Verified ${label} fails closed.`);
   } finally {
     await restore?.();
   }
-
-  if (result.error) {
-    throw result.error;
-  }
-
-  const output = `${result.stdout}${result.stderr}`;
-  if (result.status === 0) {
-    throw new Error(`${label} failure probe unexpectedly succeeded.`);
-  }
-  if (!expected.test(output)) {
-    throw new Error(`${label} probe failed for an unexpected reason:\n${output.slice(-4000)}`);
-  }
-
-  console.log(`Verified ${label} fails closed.`);
 }
 
 async function createProbeFile(relativePath, content) {
@@ -195,6 +269,27 @@ function sandboxPath(relativePath) {
 
 function runSandbox(command, args, options = {}) {
   return runRaw(command, args, { ...options, cwd: sandboxDirectory });
+}
+
+function runPipedSandbox(command, args, evidencePath) {
+  return runRaw(
+    'bash',
+    ['-eo', 'pipefail', '-c', '"$@" 2>&1 | tee "$EVIDENCE_PATH"', 'ci-evidence', command, ...args],
+    {
+      cwd: sandboxDirectory,
+      env: { EVIDENCE_PATH: sandboxPath(evidencePath) },
+    },
+  );
+}
+
+async function assertActionableLintEvidence(relativePath) {
+  const output = await fs.readFile(sandboxPath(relativePath), 'utf8');
+  if (!output.includes('scripts/ci-failure-probe.mjs')) {
+    throw new Error('Retained lint evidence does not identify the failing file.');
+  }
+  if (!/\b1:7\s+error\s+.+\sno-unused-vars\b/.test(output)) {
+    throw new Error(`Retained lint evidence is missing an actionable line, column, severity, and rule:\n${output}`);
+  }
 }
 
 function runRequired(label, command, args, options = {}) {

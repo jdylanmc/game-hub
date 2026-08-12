@@ -1,0 +1,99 @@
+name: Deploy adversarial infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        description: Protected Azure environment
+        options:
+          - test
+          - prod
+        default: test
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: adversarial-infrastructure-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.environment }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    env:
+      AZURE_SUBSCRIPTION_ID: '11213dbd-39fe-46ba-87db-5f5e8c449aed'
+      ENVIRONMENT: ${{ inputs.environment }}
+
+    steps:
+      - name: Check out protected main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Verify protected ref and environment configuration
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_REVIEWER_PRINCIPAL_ID: ${{ vars.AZURE_REVIEWER_PRINCIPAL_ID }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$AZURE_CLIENT_ID"
+          test -n "$AZURE_TENANT_ID"
+          test -n "$AZURE_REVIEWER_PRINCIPAL_ID"
+
+      - name: Sign in to Azure with OpenID Connect
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: 11213dbd-39fe-46ba-87db-5f5e8c449aed
+
+      - name: Install pinned Bicep CLI
+        run: az bicep install --version v0.42.1
+
+      - name: Build every parameter file
+        run: |
+          set -euo pipefail
+          for parameter_file in infra/*.bicepparam; do
+            az bicep build-params --file "$parameter_file" --stdout > /dev/null
+          done
+
+      - name: Preview subscription deployment
+        env:
+          AZURE_REVIEWER_PRINCIPAL_ID: ${{ vars.AZURE_REVIEWER_PRINCIPAL_ID }}
+        run: |
+          az deployment sub what-if \
+            --name "adversarial-${ENVIRONMENT}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --location eastus \
+            --template-file infra/bicep/main.bicep \
+            --parameters "infra/${ENVIRONMENT}.bicepparam" \
+            --parameters reviewerPrincipalId="$AZURE_REVIEWER_PRINCIPAL_ID" \
+            --no-pretty-print
+
+      - name: Deploy subscription infrastructure
+        env:
+          AZURE_REVIEWER_PRINCIPAL_ID: ${{ vars.AZURE_REVIEWER_PRINCIPAL_ID }}
+        run: |
+          az deployment sub create \
+            --name "adversarial-${ENVIRONMENT}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --location eastus \
+            --template-file infra/bicep/main.bicep \
+            --parameters "infra/${ENVIRONMENT}.bicepparam" \
+            --parameters reviewerPrincipalId="$AZURE_REVIEWER_PRINCIPAL_ID"
+
+      - name: Retain deployment definitions
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: adversarial-infrastructure-${{ inputs.environment }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: infra/
+          if-no-files-found: error
+          retention-days: 30

@@ -18,6 +18,9 @@ jobs:
     name: Continuous integration
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
 
     steps:
       - name: Check out repository
@@ -37,7 +40,7 @@ jobs:
         run: mkdir -p continuous-integration-evidence
 
       - name: Verify immutable installation
-        run: yarn install:check 2>&1 | tee continuous-integration-evidence/install.log
+        run: yarn install --immutable 2>&1 | tee continuous-integration-evidence/install.log
 
       - name: Verify formatting
         run: yarn format:check 2>&1 | tee continuous-integration-evidence/format.log
@@ -48,20 +51,17 @@ jobs:
       - name: Verify repository policy
         run: yarn policy:check 2>&1 | tee continuous-integration-evidence/policy.log
 
-      - name: Prove gates fail closed
-        run: yarn test:ci-fail-closed 2>&1 | tee continuous-integration-evidence/fail-closed.log
+      - name: Verify generated state
+        run: yarn generate:check 2>&1 | tee continuous-integration-evidence/generation.log
+
+      - name: Type-check repository
+        run: yarn typecheck 2>&1 | tee continuous-integration-evidence/typecheck.log
 
       - name: Audit dependencies
         run: yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log
 
       - name: Run tests with coverage
         run: yarn test:coverage 2>&1 | tee continuous-integration-evidence/test.log
-
-      - name: Verify generated state
-        run: yarn generate:check 2>&1 | tee continuous-integration-evidence/generation.log
-
-      - name: Type-check repository
-        run: yarn typecheck 2>&1 | tee continuous-integration-evidence/typecheck.log
 
       - name: Build production website
         run: yarn build 2>&1 | tee continuous-integration-evidence/build.log
@@ -71,6 +71,9 @@ jobs:
 
       - name: Build Storybook
         run: yarn build-storybook 2>&1 | tee continuous-integration-evidence/storybook.log
+
+      - name: Prove gates fail closed
+        run: yarn test:ci-fail-closed 2>&1 | tee continuous-integration-evidence/fail-closed.log
 
       - name: Retain continuous integration evidence
         if: always()

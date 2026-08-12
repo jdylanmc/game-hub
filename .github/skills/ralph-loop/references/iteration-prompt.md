@@ -5,6 +5,10 @@ You are one fresh iteration of the Game Hub Ralph Loop.
 The runner supplies `MEMORY_DIR`. Complete at most one bounded story and leave
 the repository in a clean, committed state.
 
+You are already running inside the outer Ralph runner. Do not invoke the
+`ralph-loop` skill, start another Ralph runner, or delegate this iteration to
+another Copilot process. Execute this contract directly.
+
 The current repository root must be
 `<primary-repository-parent>/<repository>-worktrees/issue-<issueNumber>`.
 Never read from, write to, or run commands in another issue's worktree. The
@@ -46,15 +50,26 @@ acceptance criteria still pass.
 Choose the lowest-priority-number story whose `passes` value is `false` and
 whose dependencies are complete. Work on no other story.
 
-If the story cannot fit in this context, split it into smaller stories in
-`plan.json`, append the reason to `progress.md`, commit the planning change, and
-end the iteration.
+Target a story that can complete, verify, and publish within about 45 minutes.
+The outer runner enforces a 90-minute hard stop by default. If the story cannot
+fit in this context or deadline, split it into smaller stories in `plan.json`,
+append the reason to `progress.md`, commit the planning change, and end the
+iteration.
+
+When a story involves live or external work, split it into separately
+checkpointed stories or phases rather than one long story. Live deployment,
+calibration, exact-head publication, and enforcement or adversarial review are
+separate checkpoints when applicable. Record extra exact-head checks in
+`plan.json.publication.adversarialStatusChecks` when that later publication step
+must exist before the issue can be complete.
 
 ## Implement and Verify
 
 - Follow existing repository patterns and all relevant `AGENTS.md` files.
 - Keep the change within the selected issue and story.
 - Run the smallest existing checks that cover the change.
+- Run the canonical root `yarn lint` command; direct `eslint` or workspace-only commands are not completion evidence.
+- When changing lint configuration, dependencies, workflow integration, policy, proofs, or agent contracts, run `yarn test:lint` and `yarn policy:check`.
 - Run `yarn typecheck` and `yarn build` for code changes.
 - Run root `lint` and `test` scripts when they exist.
 - Verify user-visible changes in a browser with available browser automation.
