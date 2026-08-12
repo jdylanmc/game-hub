@@ -49,8 +49,8 @@
         "The Bicep command-line interface version and explicit subscription selection are pinned or documented for automation"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added the subscription-scope infra/main.bicep entry point, bounded resource-group and foundation modules, deterministic naming and non-secret output contracts, explicit dev and prod Bicep parameter files, strict linter configuration, and repository tooling pinned to Bicep CLI v0.46.1. Deployment documentation selects subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed for validation, what-if, and create commands with no portal-only steps. Local compilation and lint validation passed; no Azure deployment was performed or claimed.",
       "dependencies": ["US-001"]
     },
     {

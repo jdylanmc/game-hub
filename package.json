@@ -13,6 +13,8 @@
   ],
   "scripts": {
     "install:check": "yarn install --immutable",
+    "infra:install": "node scripts/install-bicep.mjs",
+    "infra:check": "node scripts/check-bicep.mjs",
     "generate:games": "node scripts/generate-game-workspaces.mjs",
     "generate:check": "node scripts/check-generated-state.mjs",
     "dev": "yarn generate:games && vite",

@@ -14,3 +14,6 @@ test-results
 docs/memories/**/iterations/*.log
 .ralph-test-work/
 .ralph-orchestration*.json
+infra/**/*.local.bicepparam
+infra/**/*.generated.json
+infra/deployment-outputs/

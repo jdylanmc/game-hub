@@ -10,6 +10,10 @@
   injection supply them.
 - The static frontend and future containerized application programming
   interface remain separate deployable boundaries.
+- `infra/main.bicep` is the subscription-scope deployment entry point;
+  committed environment values live in `infra/environments/*.bicepparam`.
+- Bicep validation uses the exact version in `infra/.bicep-version` through
+  `yarn infra:install` and `yarn infra:check`.
 - Issue #30 is an orchestration dependency because it currently owns
   overlapping `infra`, `.github`, and policy surfaces.
 
@@ -51,3 +55,28 @@
   Front Door with its backend service tag and forwarding-gateway header.
 - No Azure resources were deployed, and no live endpoint or deployment evidence
   is claimed.
+
+## 2026-08-11 — US-002 Create modular Bicep and environment parameters
+
+- Added the subscription-scope `infra/main.bicep` entry point with an explicit
+  allowlisted target subscription, deterministic resource group, required
+  tags, bounded module composition, and non-secret deployment outputs.
+- Added resource-group and foundation modules. The foundation reserves stable,
+  environment-aware names for the frontend, application programming interface,
+  registry, storage, content delivery, identity, secrets, and monitoring
+  resources that later stories will declare.
+- Added explicit development and production Bicep parameter files for
+  subscription `11213dbd-39fe-46ba-87db-5f5e8c449aed`, `eastus2`, lifecycle,
+  ownership, cost allocation, and naming values. The files contain no secret
+  values.
+- Pinned Bicep command-line interface version `v0.46.1`, enabled strict
+  secret-related linter rules, and added cross-platform install and validation
+  commands that compile without writing generated templates.
+- Documented Microsoft Entra ID and OpenID Connect authentication, explicit
+  subscription selection, validation, `what-if`, idempotent deployment, fixed
+  deployment naming, outputs, and the prohibition on portal-only resource
+  creation.
+- Validation: `yarn install:check`, `yarn format:check`, `yarn lint`,
+  `yarn policy:check`, `yarn infra:check`, and `git diff --check`.
+- No Azure sign-in, validation deployment, `what-if`, resource deployment, or
+  live endpoint verification was performed or claimed.

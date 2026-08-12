@@ -3,6 +3,9 @@
 This document resolves the baseline Azure topology for Game Hub. It is the
 design input for the Bicep implementation tracked by GitHub issue #1.
 
+The implementation entry point, environment parameters, pinned tooling, and
+preview commands are documented in [Game Hub Azure Infrastructure](../infra/README.md).
+
 > **Evidence boundary:** This is an architecture decision, not deployment
 > evidence. No Azure resources, frontend, container image, asset, authentication
 > flow, or public endpoint were deployed or verified by this story.

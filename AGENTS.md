@@ -32,10 +32,15 @@ yarn build-storybook
 yarn generate:check
 yarn policy:check
 yarn bundle:check
+yarn infra:check
 ```
 
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
+
+Infrastructure changes must use the Bicep version in
+`infra/.bicep-version`. Run `yarn infra:install` to install that version through
+Azure CLI before `yarn infra:check`.
 
 Run `yarn generate:check` after changing game workspace metadata or discovery
 logic. It fails when generation changes Git state or the committed catalog

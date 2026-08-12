@@ -58,6 +58,7 @@ request whenever a core resolved version changes.
 | Tailwind CSS | `3.4.19` | Utility-first website and Storybook styling | [Tailwind CSS v3 documentation](https://v3.tailwindcss.com/docs/installation) |
 | Storybook | `10.5.7` | Component, composition, and accessibility grounding | [Storybook documentation](https://storybook.js.org/docs) |
 | Three.js | `0.179.1` | Per-game WebGL rendering dependency | [Three.js documentation](https://threejs.org/docs/) and [r179 source](https://github.com/mrdoob/three.js/tree/r179) |
+| Bicep CLI | `0.46.1` | Azure infrastructure linting, compilation, and deployment | [Bicep CLI documentation](https://learn.microsoft.com/azure/azure-resource-manager/bicep/bicep-cli) |
 | PostCSS | `8.5.26` | Resolved CSS transformation runtime | [PostCSS documentation](https://postcss.org/) |
 | Autoprefixer | `10.5.4` | Resolved browser-prefix generation | [Autoprefixer documentation](https://github.com/postcss/autoprefixer#readme) |
 
