@@ -88,11 +88,10 @@
   `repo:jdylanmc@6954990/game-hub@1330993568:environment:<environment>`.
 - Keep `infra/main.bicep` outputs grouped when possible; Azure Resource Manager
   limits a template to 64 outputs.
-- A hardened fresh-worktree install can expose normalized executable metadata
-  that a populated worktree misses. Refresh only lock metadata with
-  `YARN_ENABLE_GLOBAL_CACHE=0 YARN_ENABLE_HARDENED_MODE=1 yarn install
-  --mode=update-lockfile`, review the lock-only diff, and rerun the complete
-  fail-closed validation.
+- The detached fresh-worktree bootstrap proof must use the same immutable Yarn
+  metadata semantics as Continuous Integration. Do not force a platform-specific
+  hardened metadata normalization that produces a lockfile rejected by the
+  Linux runner.
 - `scripts/check-operational-infrastructure.mjs` is part of `yarn infra:check`
   and fails closed if managed identities, vault roles, unresolved runtime
   references, diagnostics, environment guardrails, immutable federation,
@@ -395,10 +394,10 @@
 - Live validation explicitly selected subscription
   `11213dbd-39fe-46ba-87db-5f5e8c449aed`; both development and production
   `az deployment sub validate` commands passed.
-- The first full validation exposed stale executable-path metadata only during
-  the hardened fresh-worktree bootstrap. Refreshed lock metadata without
-  changing package versions, reviewed the 19 path normalizations, and reran the
-  full validation successfully.
+- The first local fresh-worktree bootstrap forced hardened metadata and
+  normalized executable paths differently on macOS than the Linux runner.
+  Restored the reviewed lockfile and aligned the bootstrap proof with the
+  immutable install semantics used by Continuous Integration.
 - Validation passed: pinned Bicep lint/build/parameter compilation and
   infrastructure policies; immutable install; formatting; lint; policy;
   fail-closed continuous integration simulation; security audit; 187 tests with
