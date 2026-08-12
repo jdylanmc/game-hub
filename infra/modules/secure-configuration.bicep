@@ -11,6 +11,9 @@ param apiRuntimeIdentityName string
 @description('User-assigned managed identity name used only to publish secure configuration.')
 param configurationPublisherIdentityName string
 
+@description('System-assigned Static Web Apps principal that reads the External ID client certificate.')
+param frontendPrincipalId string
+
 @description('Deployment environment represented by the federated credential.')
 param environmentName string
 
@@ -38,6 +41,10 @@ var keyVaultSecretsUserRoleDefinitionId = subscriptionResourceId(
 var keyVaultSecretsOfficerRoleDefinitionId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
+)
+var keyVaultCertificateUserRoleDefinitionId = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'db79e9a7-68ee-4b58-9aeb-b90e7c24fcba'
 )
 
 resource apiRuntimeIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
@@ -110,6 +117,16 @@ resource secretPublisherRoleAssignment 'Microsoft.Authorization/roleAssignments@
   }
 }
 
+resource frontendCertificateUserRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, frontendPrincipalId, keyVaultCertificateUserRoleDefinitionId)
+  scope: keyVault
+  properties: {
+    principalId: frontendPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: keyVaultCertificateUserRoleDefinitionId
+  }
+}
+
 @description('Azure Key Vault resource identifier.')
 output keyVaultId string = keyVault.id
 
@@ -146,9 +163,13 @@ output secretPublisherFederatedCredentialId string = secretPublisherFederatedCre
 @description('Key Vault Secrets Officer assignment for the publication-only identity.')
 output secretPublisherRoleAssignmentId string = secretPublisherRoleAssignment.id
 
+@description('Key Vault Certificate User assignment for the Static Web Apps identity.')
+output frontendCertificateRoleAssignmentId string = frontendCertificateUserRoleAssignment.id
+
 @description('Non-secret secure configuration contract.')
 output configuration object = {
   apiRuntimeIdentityId: apiRuntimeIdentity.id
+  frontendCertificateRoleAssignmentId: frontendCertificateUserRoleAssignment.id
   keyVaultId: keyVault.id
   keyVaultName: keyVault.name
   keyVaultUri: keyVault.properties.vaultUri

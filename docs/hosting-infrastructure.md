@@ -163,11 +163,15 @@ required because linking an Azure Container Apps backend is not available on
 the Free plan. It also leaves a path to custom authentication provider
 registrations and a service-level agreement without changing hosting services.
 
-The initial authentication integration is the built-in, Azure-managed
-Microsoft Entra ID provider:
+Frontend publication replaces the initial built-in provider with the selected
+Microsoft Entra External ID custom registration:
 
-- Microsoft Entra OpenID Connect sign-in uses `/.auth/login/aad` and requires
-  no application credential in the repository or Bicep parameters;
+- Microsoft Entra OpenID Connect sign-in continues to use
+  `/.auth/login/aad`;
+- the external tenant ID, tenant subdomain, and application client ID are
+  protected non-secret environment variables;
+- the client credential is an Azure Key Vault certificate reference rendered
+  into the deployment artifact, never certificate material or a client secret;
 - the unused preconfigured GitHub provider is blocked;
 - `staticwebapp.config.json` requires the `authenticated` role for `/api/*`;
 - `/.auth/me` is the frontend identity contract; and
@@ -186,13 +190,11 @@ End-to-end frontend-to-API validation therefore runs against the deployed
 development environment, while pull-request environments remain suitable for
 frontend-only review.
 
-The managed Microsoft Entra provider can authenticate any Microsoft account it
-accepts. Tenant, group, role, and operation authorization remain application
-policy. Static Web Apps custom provider registrations require a client
-credential, so the keyless baseline does not predeclare one. A later
-tenant-restriction requirement can refine the provider configuration through a
-separately reviewed design without replacing Static Web Apps, Container Apps,
-Blob Storage, or Front Door.
+The custom provider is tenant-scoped to the selected External ID customer
+tenant. External ID owns local account email verification, password processing,
+and self-service reset. Tenant, group, role, and operation authorization remain
+application policy. The custom registration does not replace Static Web Apps,
+Container Apps, Blob Storage, or Front Door.
 
 Azure Front Door Private Link does not support Azure Static Web Apps as an
 origin. Instead, the static web app is restricted to the

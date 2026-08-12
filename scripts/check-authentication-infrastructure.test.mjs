@@ -14,7 +14,7 @@ function violations(overrides = {}) {
 }
 
 describe('authentication infrastructure policy', () => {
-  it('accepts the keyless Microsoft Entra and linked-backend trust boundary', () => {
+  it('accepts the certificate-referenced External ID and linked-backend trust boundary', () => {
     expect(violations()).toEqual([]);
   });
 
@@ -35,11 +35,11 @@ describe('authentication infrastructure policy', () => {
       },
     ],
     [
-      'keyless provider contract',
+      'certificate reference provider contract',
       {
         authenticationModule: infrastructure.authenticationModule.replace(
-          'clientCredentialRequired: false',
-          'clientCredentialRequired: true',
+          "clientCredentialStorage: 'Azure Key Vault certificate reference'",
+          "clientCredentialStorage: 'committed value'",
         ),
       },
     ],

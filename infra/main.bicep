@@ -257,6 +257,7 @@ module secureConfigurationModule './modules/secure-configuration.bicep' = {
     purgeProtectionEnabled: keyVaultPurgeProtectionEnabled
     configurationPublisherFederatedSubject: githubEnvironmentFederatedSubject
     configurationPublisherIdentityName: foundation.outputs.resourceNames.secretPublisherManagedIdentity
+    frontendPrincipalId: staticWebApp.outputs.managedIdentityPrincipalId
     softDeleteRetentionDays: keyVaultSoftDeleteRetentionDays
     tags: tags
   }
@@ -471,6 +472,7 @@ output authenticatedApiEndpoint string = authenticationReadiness.outputs.authent
 
 @description('Non-secret frontend, API, and internal identity resolution contract.')
 output authenticationConfiguration object = union(authenticationReadiness.outputs.configuration, {
+  frontendCertificateRoleAssignmentId: secureConfigurationModule.outputs.frontendCertificateRoleAssignmentId
   identityResolution: identityStorage.outputs.configuration
 })
 

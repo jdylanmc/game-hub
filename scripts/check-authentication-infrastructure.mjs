@@ -49,10 +49,15 @@ export function validateAuthenticationInfrastructure({
     ['backendResourceId: apiResourceId', 'The link must use the declared API resource identifier.'],
     ["protocol: 'OpenID Connect'", 'The frontend authentication protocol must be OpenID Connect.'],
     [
-      "providerRegistration: 'Azure-managed preconfigured provider'",
-      'Authentication must use the keyless Azure-managed provider.',
+      "providerRegistration: 'Microsoft Entra External ID custom registration'",
+      'Authentication must use the selected External ID custom registration.',
     ],
-    ['clientCredentialRequired: false', 'Authentication must not require a client credential.'],
+    ['clientCredentialRequired: true', 'The custom provider must require its certificate credential.'],
+    [
+      "clientCredentialStorage: 'Azure Key Vault certificate reference'",
+      'The custom provider credential must remain an Azure Key Vault certificate reference.',
+    ],
+    ["clientCredentialType: 'certificate'", 'The custom provider must not use a client secret.'],
     ['secretValuesAccepted: false', 'The authentication contract must reject secret values.'],
     ["principalHeaderName = 'x-ms-client-principal'", 'The API principal header boundary must be explicit.'],
     [
@@ -100,6 +105,10 @@ export function validateAuthenticationInfrastructure({
     [
       'output identityStorageConfiguration object',
       'The entry point must expose the non-secret identity storage contract.',
+    ],
+    [
+      'frontendCertificateRoleAssignmentId: secureConfigurationModule.outputs.frontendCertificateRoleAssignmentId',
+      'Authentication must expose the frontend certificate-reference role assignment.',
     ],
   ]) {
     requireText(mainTemplate, needle, message, violations);

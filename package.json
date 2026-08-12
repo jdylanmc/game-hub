@@ -17,6 +17,8 @@
   },
   "scripts": {
     "install:check": "yarn install --immutable",
+    "auth:check": "node scripts/configure-external-id.mjs --check",
+    "auth:configure": "node scripts/configure-external-id.mjs --apply",
     "infra:install": "node scripts/install-bicep.mjs",
     "infra:check": "node scripts/check-bicep.mjs",
     "generate:games": "node scripts/generate-game-workspaces.mjs",
@@ -31,7 +33,7 @@
     "policy:workflow": "node scripts/check-workflow-policy.mjs",
     "policy:adversarial": "node scripts/check-adversarial-policy.mjs",
     "policy:adversarial-identity": "node scripts/check-adversarial-identity-policy.mjs",
-    "policy:check": "yarn lint:suppressions && yarn policy:workflow && yarn policy:adversarial-workflow && yarn policy:adversarial-identity && yarn policy:adversarial && yarn policy:calibration-attestation && yarn policy:calibration",
+    "policy:check": "yarn auth:check && yarn lint:suppressions && yarn policy:workflow && yarn policy:adversarial-workflow && yarn policy:adversarial-identity && yarn policy:adversarial && yarn policy:calibration-attestation && yarn policy:calibration",
     "context:collect": "node scripts/collect-adversarial-context.ts",
     "review:adversarial": "node scripts/review-adversarial-context.ts",
     "publish:adversarial": "node scripts/publish-adversarial-evidence.ts",

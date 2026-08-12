@@ -144,6 +144,27 @@ The infrastructure, frontend, API, asset, and secure-configuration identities
 are separate. All federation subjects use
 `repo:jdylanmc@6954990/game-hub@1330993568:environment:<environment>`.
 
+Configure these additional non-secret protected environment variables before
+running the External ID and frontend workflows:
+
+| GitHub environment variable | Source |
+| --- | --- |
+| `EXTERNAL_ID_CONFIG_CLIENT_ID` | Dedicated external-tenant application with the immutable GitHub environment federation |
+| `EXTERNAL_ID_TENANT_ID` | External tenant identifier |
+| `EXTERNAL_ID_TENANT_SUBDOMAIN` | External tenant `ciamlogin.com` subdomain |
+| `EXTERNAL_ID_APP_ID` | Customer-facing External ID application client ID |
+| `EXTERNAL_ID_CERTIFICATE_KEY_VAULT_REFERENCE` | `@Microsoft.KeyVault(...)` reference to the customer application's certificate |
+
+The configuration identity requires only Microsoft Graph
+`IdentityProvider.Read.All`, `EventListener.ReadWrite.All`, and
+`Policy.ReadWrite.AuthenticationMethod` application permissions with tenant
+administrator consent. The customer application must already have a service
+principal, the Static Web Apps callback URI, and the public half of the Key
+Vault certificate. The certificate private key remains non-exportable in Key
+Vault. Creating these external-tenant objects and recording the non-secret
+identifiers is a deployment prerequisite, not a reason to store a credential
+in GitHub.
+
 ## Preview and deploy
 
 Choose one committed environment file and keep a stable subscription deployment
@@ -227,13 +248,14 @@ does not perform.
 
 ## Authentication and API trust boundary
 
-The frontend uses the Azure-managed Microsoft Entra ID provider built into
-Azure Static Web Apps. Its OpenID Connect flow is available at
-`/.auth/login/aad`, the friendly `/login` route redirects there, `/logout`
-redirects to the platform sign-out endpoint, and the unused preconfigured
-GitHub provider is blocked. This selection is keyless: the repository,
-parameter files, and deployment outputs contain no provider registration
-credential.
+The frontend uses a tenant-scoped Microsoft Entra External ID custom
+registration in Azure Static Web Apps. Its OpenID Connect flow remains
+available at `/.auth/login/aad`, the friendly `/login` route redirects there,
+`/logout` redirects to the platform sign-out endpoint, and the unused
+preconfigured GitHub provider is blocked. Protected environment variables hold
+only the external tenant metadata, customer application ID, and Azure Key
+Vault certificate reference. No certificate material or client secret enters
+the repository, parameter files, deployment outputs, or browser bundle.
 
 `public/staticwebapp.config.json` requires the built-in `authenticated` role
 for `/api/*`. The authentication module declaratively links the existing Azure
@@ -256,14 +278,14 @@ The resulting trust boundaries are stable:
    pull-only identity for Azure Container Registry, and its platform
    system-assigned identity; those identities are not interchangeable.
 
-The preconfigured Microsoft Entra provider permits Microsoft accounts accepted
-by the managed provider. Tenant-, group-, and operation-level authorization
-remain explicit application policy; they must not be simulated by accepting a
-provider credential in Bicep. If a future requirement mandates a tenant-scoped
-custom registration, it needs a separate reviewed design because Static Web
-Apps custom registrations require a credential. That refinement does not
-replace the Static Web App, linked Container App, Blob Storage, or Azure Front
-Door boundaries.
+The custom Microsoft Entra provider accepts identities from the selected
+External ID customer user flow. Tenant-, group-, and operation-level
+authorization remain explicit application policy. The provider's certificate
+credential stays behind its Azure Key Vault reference and does not replace the
+Static Web App, linked Container App, Blob Storage, or Azure Front Door
+boundaries. The Static Web Apps system-assigned identity receives only Key
+Vault Certificate User on the environment vault so the platform can resolve
+that reference.
 
 The deployment returns only non-secret authentication metadata:
 
@@ -304,11 +326,13 @@ OpenID Connect, then explicitly selects subscription
 `11213dbd-39fe-46ba-87db-5f5e8c449aed`. Content publication must use an
 approved service-issued deployment credential and keep the resolved value
 masked and process-local. `.github/workflows/deploy-frontend.yml` first signs
-in with `AZURE_FRONTEND_CLIENT_ID`, merges the live non-secret Front Door
-hostname and ID into the built `staticwebapp.config.json`, then resolves the
-Static Web Apps deployment token at runtime and masks it before invoking the
-pinned publisher. Azure authentication is keyless; the service-issued token is
-never stored in GitHub, Bicep, repository files, logs, or retained artifacts.
+in with `AZURE_FRONTEND_CLIENT_ID`, renders the External ID issuer and Azure Key Vault
+certificate reference, sets the non-secret customer application ID, merges the
+live non-secret Front Door hostname and ID into the built
+`staticwebapp.config.json`, then resolves the Static Web Apps deployment token
+at runtime and masks it before invoking the pinned publisher. Azure
+authentication is keyless; the service-issued token is never stored in GitHub,
+Bicep, repository files, logs, or retained artifacts.
 
 ## Containerized API and registry
 
@@ -635,13 +659,16 @@ GitHub environment:
 2. **Publish approved runtime configuration** — an external secret broker
    writes values to Key Vault through `AZURE_SECRET_CLIENT_ID`; commit and
    deploy only aliases and versionless Key Vault URIs.
-3. **Deploy Game Hub API image** — after `api/Dockerfile` exists, publishes the
+3. **Configure Game Hub External ID** — reconciles the local email-and-password
+   user flow and email one-time-passcode reset policy through Microsoft Graph
+   using the external tenant's dedicated OpenID Connect identity.
+4. **Deploy Game Hub API image** — after `api/Dockerfile` exists, publishes the
    exact `main` commit to Azure Container Registry and updates Container Apps
    by digest.
-4. **Deploy Game Hub frontend** — builds `dist/`, injects the non-secret Front
-   Door forwarding restriction, resolves the Static Web Apps publication token
-   only in runner memory, and publishes.
-5. **Deploy Game Hub assets** — uploads one or more reviewed directories with
+5. **Deploy Game Hub frontend** — builds `dist/`, injects the External ID
+   non-secret configuration and Front Door forwarding restriction, resolves
+   the Static Web Apps publication token only in runner memory, and publishes.
+6. **Deploy Game Hub assets** — uploads one or more reviewed directories with
    Microsoft Entra authorization and purges changed mutable paths.
 
 Production environment approval is the release gate. Do not run production

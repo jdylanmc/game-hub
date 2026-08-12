@@ -71,9 +71,11 @@ output configuration object = {
     runtimeManagedIdentityPrincipalId: apiRuntimePrincipalId
   }
   credentials: {
-    clientCredentialRequired: false
+    clientCredentialRequired: true
+    clientCredentialStorage: 'Azure Key Vault certificate reference'
+    clientCredentialType: 'certificate'
     deploymentAuthentication: 'Microsoft Entra workload identity federation with OpenID Connect'
-    providerRegistration: 'Azure-managed preconfigured provider'
+    providerRegistration: 'Microsoft Entra External ID custom registration'
     secretValuesAccepted: false
   }
   frontend: {
@@ -81,6 +83,7 @@ output configuration object = {
     loginEndpoint: '${frontendEndpoint}/.auth/login/${authenticationProviderRoute}'
     logoutEndpoint: '${frontendEndpoint}/.auth/logout'
     provider: authenticationProvider
+    providerConfigurationSource: 'protected deployment variables and Azure Key Vault certificate reference'
     protocol: 'OpenID Connect'
     systemAssignedPrincipalId: staticWebAppPrincipalId
   }

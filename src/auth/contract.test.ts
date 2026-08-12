@@ -15,6 +15,7 @@ describe('authentication contract', () => {
   it('exposes only same-origin browser paths', () => {
     const paths = [
       AUTHENTICATION_CONFIGURATION.applicationSessionPath,
+      AUTHENTICATION_CONFIGURATION.accountPath,
       AUTHENTICATION_CONFIGURATION.platformSessionPath,
       AUTHENTICATION_CONFIGURATION.signInPath,
       AUTHENTICATION_CONFIGURATION.signOutPath,
@@ -22,6 +23,14 @@ describe('authentication contract', () => {
 
     expect(paths.every((path) => path.startsWith('/'))).toBe(true);
     expect(paths.every((path) => !path.startsWith('//'))).toBe(true);
+  });
+
+  it('keeps local credential processing inside Microsoft Entra External ID', () => {
+    expect(AUTHENTICATION_CONFIGURATION.localAccount).toEqual({
+      credentialCollection: 'microsoft-entra-external-id',
+      emailVerification: 'email-one-time-passcode',
+      passwordReset: 'self-service-email-one-time-passcode',
+    });
   });
 
   it('separates the platform subject from the internal session identity', () => {

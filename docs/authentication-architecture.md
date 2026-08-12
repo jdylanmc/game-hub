@@ -131,6 +131,37 @@ The browser-facing authenticated session exposes only the internal Game Hub
 user ID. Session lifetime, refresh, revocation, and multi-device semantics
 remain an explicit issue decision and are not encoded prematurely.
 
+## Local Account Lifecycle
+
+`config/authentication/external-id-local-account.json` is the reviewed desired
+state for the local account flow. It selects External ID's
+`EmailPassword-OAUTH` provider, permits self-service sign-up, collects the
+verified email attribute, and enables email one-time passcodes for
+self-service password reset. External ID verifies a new email address with a
+one-time passcode before account creation and owns the password-reset
+verification and replacement screens.
+
+`yarn auth:configure` reconciles that state through Microsoft Graph. It creates
+or updates the environment-specific sign-up and sign-in user flow, preserves
+other identity providers added by later stories, links the non-secret customer
+application ID, and enables the tenant email authentication method. The
+protected `configure-external-id.yml` workflow authenticates to the external
+tenant through OpenID Connect and accepts only protected environment variables
+for the configuration identity, tenant ID, and customer application ID.
+
+The `/account` website route provides separate registration/sign-in and
+forgotten-password entry points. Both continue to the same Microsoft-hosted
+user flow because External ID selects sign-in versus registration after the
+email step and exposes **Forgot password** on its password screen. Game Hub
+renders no password input and receives no password value.
+
+Frontend publication renders the tenant-scoped
+`azureActiveDirectory` provider into the built Static Web Apps configuration.
+The client ID is a non-secret Static Web Apps application setting. The client
+credential is only an Azure Key Vault certificate reference, and the private
+key never enters the repository, browser artifact, workflow variables, or
+workflow output.
+
 ## Secret and Identity Handling
 
 No secret value belongs in source, Bicep parameters, Bicep outputs, browser
@@ -139,10 +170,10 @@ bundles, logs, artifacts, Ralph memory, or pull-request text.
 - GitHub deployment automation continues to use Microsoft Entra workload
   identity federation with OpenID Connect and the authorized subscription
   `11213dbd-39fe-46ba-87db-5f5e8c449aed`.
-- The Static Web Apps custom Microsoft Entra registration will use a client
+- The Static Web Apps custom Microsoft Entra registration uses a client
   certificate stored in Azure Key Vault. The Static Web App's managed identity
-  reads the certificate through a Key Vault reference; no client secret is
-  committed or exposed to the browser.
+  has only Key Vault Certificate User and reads the certificate through a Key
+  Vault reference; no client secret is committed or exposed to the browser.
 - Google and Facebook require provider application credentials. Those
   credentials are stored by Microsoft Entra External ID and supplied only
   through an approved secure configuration path. Later automation must obtain
@@ -163,14 +194,14 @@ that protection is deployed.
 
 ## Deferred Issue Decisions
 
-The first bounded story intentionally does not decide or implement:
+The current implementation still does not decide or implement:
 
 - whether and how a person can link local and social credentials;
 - session lifetime, refresh, revocation, or multi-device policy;
 - minimum age, consent, privacy, or account deletion policy;
-- provider registrations, user-flow configuration, or Azure resource creation;
-- login, registration, verification, reset, error, or signed-out user
-  interfaces; or
+- Google or Facebook provider registration;
+- custom hosted login, registration, verification, reset, error, or signed-out
+  screens beyond the managed External ID experience; or
 - live authentication or deployment verification.
 
 Duplicate identities must fail safely until the linking decision is made.
@@ -201,6 +232,9 @@ Reviewed August 12, 2026:
 - [Add Google as an identity provider](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-google-federation-customers)
 - [Add Facebook as an identity provider](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-facebook-federation-customers)
 - [Enable self-service password reset](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-enable-password-reset-customers)
+- [Create an authentication events flow with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/identitycontainer-post-authenticationeventsflows)
+- [Link an application to a user flow with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/authenticationconditionsapplications-post-includeapplications)
+- [Update the email authentication method with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/emailauthenticationmethodconfiguration-update)
 - [Azure Static Web Apps custom authentication](https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-custom)
 - [Azure Static Web Apps authentication and authorization](https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-authorization)
 - [Azure Static Web Apps user information](https://learn.microsoft.com/en-us/azure/static-web-apps/user-information)

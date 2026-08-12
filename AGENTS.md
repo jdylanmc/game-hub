@@ -32,6 +32,7 @@ yarn typecheck
 yarn build
 yarn build-storybook
 yarn generate:check
+yarn auth:check
 yarn policy:check
 yarn bundle:check
 yarn infra:check
@@ -58,10 +59,12 @@ Infrastructure changes must use the Bicep version in
 `infra/.bicep-version`. Run `yarn infra:install` to install that version through
 Azure CLI before `yarn infra:check`.
 
-Website authentication uses the keyless Azure-managed Microsoft Entra ID
-provider in Azure Static Web Apps. Keep `/api/*` behind the `authenticated`
-role and the declarative Static Web Apps linked Container Apps backend; do not
-introduce a browser-facing direct API origin or provider credential.
+Website authentication uses Microsoft Entra External ID through the Azure
+Static Web Apps custom Microsoft Entra provider. Keep its application ID,
+tenant metadata, and Azure Key Vault certificate reference in protected
+non-secret deployment variables; never commit the certificate or a client
+secret. Keep `/api/*` behind the `authenticated` role and the declarative
+Static Web Apps linked Container Apps backend.
 
 Internal identity resolution uses a dedicated Azure Tables account with shared
 key access disabled. The API runtime managed identity has only Storage Table

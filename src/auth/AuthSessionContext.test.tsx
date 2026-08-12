@@ -54,7 +54,7 @@ describe('AuthSessionProvider', () => {
       }),
     ).toBeVisible();
     expect(screen.queryByText('internal-user')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Sign in or create account' })).not.toBeInTheDocument();
   });
 
   it('falls back to anonymous when a session loader rejects', async () => {
@@ -75,6 +75,6 @@ describe('SiteHeader', () => {
     render(<SiteHeader />);
 
     expect(screen.getByRole('navigation', { name: 'Account' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/.auth/login/aad');
+    expect(screen.getByRole('link', { name: 'Sign in or create account' })).toHaveAttribute('href', '/account');
   });
 });

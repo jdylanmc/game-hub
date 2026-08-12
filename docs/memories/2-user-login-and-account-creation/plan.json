@@ -79,8 +79,8 @@
         "Game Hub never receives or stores plaintext passwords"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a reviewed Microsoft Entra External ID local-account desired state and idempotent Microsoft Graph reconciliation for the environment user flow, EmailPassword-OAUTH self-service sign-up, verified email collection, application linking, and email one-time-passcode self-service password reset. Added a protected-main, keyless External ID configuration workflow and certificate-referenced Azure Static Web Apps custom provider rendering; the frontend identity has only Key Vault Certificate User and all tenant/application/certificate-reference inputs are non-secret protected variables. Added an accessible /account entry page for hosted registration/sign-in and forgotten-password reset without rendering, receiving, or storing a password. Full yarn validate passed with 305 tests and yarn infra:check passed. No Google/Facebook federation, return-path behavior, sign-out change, custom hosted identity screens, provider secrets, live Azure configuration, or deployment verification was implemented.",
       "dependencies": ["US-001", "US-003"]
     },
     {

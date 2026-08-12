@@ -1,0 +1,81 @@
+name: Configure Game Hub External ID
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        description: Protected Azure environment
+        options:
+          - dev
+          - prod
+        default: dev
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: game-hub-external-id-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    name: Configure ${{ inputs.environment }} External ID
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      GAME_HUB_ENVIRONMENT: ${{ inputs.environment }}
+      GAME_HUB_EXTERNAL_ID_APP_ID: ${{ vars.EXTERNAL_ID_APP_ID }}
+      GAME_HUB_EXTERNAL_ID_TENANT_ID: ${{ vars.EXTERNAL_ID_TENANT_ID }}
+
+    steps:
+      - name: Check out protected main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.13.0
+
+      - name: Verify protected ref and non-secret environment configuration
+        env:
+          EXTERNAL_ID_CONFIG_CLIENT_ID: ${{ vars.EXTERNAL_ID_CONFIG_CLIENT_ID }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$EXTERNAL_ID_CONFIG_CLIENT_ID"
+          test -n "$GAME_HUB_EXTERNAL_ID_APP_ID"
+          test -n "$GAME_HUB_EXTERNAL_ID_TENANT_ID"
+
+      - name: Enable pinned Yarn
+        run: corepack enable
+
+      - name: Verify the reviewed local-account configuration
+        run: |
+          yarn install --immutable
+          yarn auth:check
+
+      - name: Sign in to the external tenant with OpenID Connect
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          allow-no-subscriptions: true
+          client-id: ${{ vars.EXTERNAL_ID_CONFIG_CLIENT_ID }}
+          tenant-id: ${{ vars.EXTERNAL_ID_TENANT_ID }}
+
+      - name: Configure local accounts in Microsoft Entra External ID
+        run: |
+          test "$(
+            az account get-access-token \
+              --resource-type ms-graph \
+              --query tenant \
+              --output tsv
+          )" = "$GAME_HUB_EXTERNAL_ID_TENANT_ID"
+          yarn auth:configure

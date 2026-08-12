@@ -12,6 +12,7 @@ export function loadDeploymentAutomation(root = rootDirectory) {
     bootstrapParameters: `${read('infra/bootstrap/dev.bicepparam')}\n${read('infra/bootstrap/prod.bicepparam')}`,
     bootstrapTemplate: read('infra/bootstrap/main.bicep'),
     documentation: read('infra/README.md'),
+    externalIdentityWorkflow: read('.github/workflows/configure-external-id.yml'),
     frontendWorkflow: read('.github/workflows/deploy-frontend.yml'),
     infrastructureWorkflow: read('.github/workflows/deploy-hosting-infrastructure.yml'),
     mainTemplate: read('infra/main.bicep'),
@@ -26,6 +27,7 @@ export function validateDeploymentAutomation({
   bootstrapParameters,
   bootstrapTemplate,
   documentation,
+  externalIdentityWorkflow,
   frontendWorkflow,
   infrastructureWorkflow,
   mainTemplate,
@@ -108,6 +110,18 @@ export function validateDeploymentAutomation({
     ['yarn build', 'Frontend publication must build the reviewed Vite artifact.'],
     ['X-Azure-FDID', 'Frontend publication must inject the Front Door identifier.'],
     ['AzureFrontDoor.Backend', 'Frontend publication must restrict the origin to Front Door.'],
+    [
+      'scripts/render-external-id-static-web-app-config.mjs',
+      'Frontend publication must render the reviewed External ID provider.',
+    ],
+    [
+      'GAME_HUB_EXTERNAL_ID_CLIENT_ID="$GAME_HUB_EXTERNAL_ID_CLIENT_ID"',
+      'Frontend publication must set only the non-secret External ID application ID.',
+    ],
+    [
+      'clientSecretCertificateKeyVaultReference',
+      'Frontend publication must use an Azure Key Vault certificate reference.',
+    ],
     ['az staticwebapp secrets list', 'Frontend publication must resolve its service token at runtime.'],
     ['echo "::add-mask::$deployment_token"', 'Frontend publication must mask its runtime service token.'],
     [
@@ -117,6 +131,44 @@ export function validateDeploymentAutomation({
     ['skip_app_build: true', 'Frontend publication must deploy the already-reviewed artifact.'],
   ]) {
     requireText(frontendWorkflow, needle, message, violations);
+  }
+
+  for (const [needle, message] of [
+    ['workflow_dispatch:', 'External ID configuration must use an explicit protected release dispatch.'],
+    ["if: github.ref == 'refs/heads/main'", 'External ID configuration must reject non-main refs.'],
+    ['environment: ${{ inputs.environment }}', 'External ID configuration must use a protected environment.'],
+    ['contents: read', 'External ID configuration must retain read-only repository access.'],
+    ['id-token: write', 'External ID configuration must use OpenID Connect.'],
+    ['vars.EXTERNAL_ID_CONFIG_CLIENT_ID', 'External ID configuration must use its dedicated keyless identity.'],
+    ['vars.EXTERNAL_ID_TENANT_ID', 'External ID configuration must select the external tenant explicitly.'],
+    ['vars.EXTERNAL_ID_APP_ID', 'External ID configuration must link the non-secret customer application ID.'],
+    ['allow-no-subscriptions: true', 'External ID configuration must not require an Azure subscription.'],
+    ['yarn auth:check', 'External ID configuration must validate the reviewed desired state.'],
+    [
+      'az account get-access-token',
+      'External ID configuration must verify its Microsoft Graph tenant without exposing the token.',
+    ],
+    [
+      ')" = "$GAME_HUB_EXTERNAL_ID_TENANT_ID"',
+      'External ID configuration must bind Microsoft Graph to the selected external tenant.',
+    ],
+    ['yarn auth:configure', 'External ID configuration must reconcile the customer user flow.'],
+    ['persist-credentials: false', 'External ID checkout must not retain a GitHub credential.'],
+    [
+      'azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca',
+      'External ID configuration must use pinned keyless Azure login.',
+    ],
+  ]) {
+    requireText(externalIdentityWorkflow, needle, message, violations);
+  }
+  if (externalIdentityWorkflow.includes('${{ secrets.')) {
+    violations.push('External ID configuration must not depend on a stored GitHub secret.');
+  }
+  for (const line of externalIdentityWorkflow.split('\n')) {
+    const actionReference = line.match(/^\s*uses:\s*[^@\s]+@([^\s#]+)/);
+    if (actionReference && !/^[0-9a-f]{40}$/.test(actionReference[1])) {
+      violations.push(`External ID action reference is not pinned to a full commit SHA: ${line.trim()}`);
+    }
   }
 
   for (const [needle, message] of [

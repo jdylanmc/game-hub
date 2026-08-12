@@ -1,6 +1,7 @@
 import { AUTHENTICATION_CONFIGURATION } from '../auth/contract';
 import { useAuthSession } from '../auth/AuthSessionContext';
 import { Brand } from './Brand';
+import { Link } from './Link';
 import { buttonStyles } from './ui/Button';
 
 export function SiteHeader() {
@@ -23,9 +24,9 @@ export function SiteHeader() {
           ) : null}
 
           {session.state === 'anonymous' ? (
-            <a className={buttonStyles()} href={AUTHENTICATION_CONFIGURATION.signInPath}>
-              Sign in
-            </a>
+            <Link className={buttonStyles()} href={AUTHENTICATION_CONFIGURATION.accountPath}>
+              Sign in or create account
+            </Link>
           ) : null}
 
           {session.state === 'authenticated' ? (

@@ -1,4 +1,6 @@
+import { AUTHENTICATION_CONFIGURATION } from './auth/contract';
 import { findGame, useGameCatalog } from './game-catalog';
+import { AccountPage } from './pages/AccountPage';
 import { GamePage } from './pages/GamePage';
 import { LandingPage } from './pages/LandingPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -22,6 +24,10 @@ export function App() {
 
   if (pathname === '/') {
     return <LandingPage catalog={catalog} />;
+  }
+
+  if (pathname === AUTHENTICATION_CONFIGURATION.accountPath) {
+    return <AccountPage />;
   }
 
   const gameMatch = pathname.match(/^\/games\/([^/]+)$/);

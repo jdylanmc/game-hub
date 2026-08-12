@@ -33,6 +33,10 @@ jobs:
     env:
       AZURE_SUBSCRIPTION_ID: '11213dbd-39fe-46ba-87db-5f5e8c449aed'
       DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment }}
+      GAME_HUB_EXTERNAL_ID_CERTIFICATE_KEY_VAULT_REFERENCE: ${{ vars.EXTERNAL_ID_CERTIFICATE_KEY_VAULT_REFERENCE }}
+      GAME_HUB_EXTERNAL_ID_CLIENT_ID: ${{ vars.EXTERNAL_ID_APP_ID }}
+      GAME_HUB_EXTERNAL_ID_TENANT_ID: ${{ vars.EXTERNAL_ID_TENANT_ID }}
+      GAME_HUB_EXTERNAL_ID_TENANT_SUBDOMAIN: ${{ vars.EXTERNAL_ID_TENANT_SUBDOMAIN }}
 
     steps:
       - name: Check out protected main
@@ -53,6 +57,10 @@ jobs:
           test "$GITHUB_REF" = 'refs/heads/main'
           test -n "$AZURE_CLIENT_ID"
           test -n "$AZURE_TENANT_ID"
+          test -n "$GAME_HUB_EXTERNAL_ID_CERTIFICATE_KEY_VAULT_REFERENCE"
+          test -n "$GAME_HUB_EXTERNAL_ID_CLIENT_ID"
+          test -n "$GAME_HUB_EXTERNAL_ID_TENANT_ID"
+          test -n "$GAME_HUB_EXTERNAL_ID_TENANT_SUBDOMAIN"
 
       - name: Enable pinned Yarn
         run: corepack enable
@@ -101,8 +109,27 @@ jobs:
             echo "GAME_HUB_FRONT_DOOR_ID=$front_door_id"
           } >> "$GITHUB_ENV"
 
-      - name: Merge the Front Door origin restriction into the artifact
+      - name: Configure the non-secret External ID application setting
         run: |
+          az staticwebapp appsettings set \
+            --resource-group "$GAME_HUB_RESOURCE_GROUP" \
+            --name "$GAME_HUB_STATIC_WEB_APP" \
+            --setting-names \
+              GAME_HUB_EXTERNAL_ID_CLIENT_ID="$GAME_HUB_EXTERNAL_ID_CLIENT_ID" \
+            --output none
+          configured_client_id="$(
+            az staticwebapp appsettings list \
+              --resource-group "$GAME_HUB_RESOURCE_GROUP" \
+              --name "$GAME_HUB_STATIC_WEB_APP" \
+              --query 'properties.GAME_HUB_EXTERNAL_ID_CLIENT_ID' \
+              --output tsv
+          )"
+          test "$configured_client_id" = "$GAME_HUB_EXTERNAL_ID_CLIENT_ID"
+
+      - name: Merge External ID and Front Door configuration into the artifact
+        run: |
+          node scripts/render-external-id-static-web-app-config.mjs \
+            --path dist/staticwebapp.config.json
           node <<'NODE'
           const fs = require('node:fs');
           const path = 'dist/staticwebapp.config.json';
@@ -121,7 +148,15 @@ jobs:
           jq -e '
             .forwardingGateway.allowedForwardedHosts == [env.GAME_HUB_FRONT_DOOR_HOST] and
             .forwardingGateway.requiredHeaders["X-Azure-FDID"] == env.GAME_HUB_FRONT_DOOR_ID and
-            .networking.allowedIpRanges == ["AzureFrontDoor.Backend"]
+            .networking.allowedIpRanges == ["AzureFrontDoor.Backend"] and
+            .auth.identityProviders.azureActiveDirectory.registration.openIdIssuer ==
+              ("https://" + env.GAME_HUB_EXTERNAL_ID_TENANT_SUBDOMAIN + ".ciamlogin.com/" +
+                env.GAME_HUB_EXTERNAL_ID_TENANT_ID + "/v2.0") and
+            .auth.identityProviders.azureActiveDirectory.registration.clientIdSettingName ==
+              "GAME_HUB_EXTERNAL_ID_CLIENT_ID" and
+            .auth.identityProviders.azureActiveDirectory.registration.clientSecretCertificateKeyVaultReference ==
+              env.GAME_HUB_EXTERNAL_ID_CERTIFICATE_KEY_VAULT_REFERENCE and
+            .auth.identityProviders.azureActiveDirectory.registration.clientSecretCertificateThumbprint == "*"
           ' dist/staticwebapp.config.json > /dev/null
 
       - name: Resolve the service-issued deployment token at runtime

@@ -19,6 +19,10 @@
 - The website bootstraps display state from `/.auth/me`, calls
   `/api/auth/session` only for an existing platform session, and retains only
   the shared anonymous or provider-independent authenticated session shape.
+- Local account configuration is a reviewed Microsoft Graph desired state.
+  Protected workflows use OpenID Connect, non-secret tenant/application
+  identifiers, and an Azure Key Vault certificate reference; no credential
+  value belongs in repository or workflow configuration.
 
 ## Iteration 1: Select the identity architecture and contracts
 
@@ -103,3 +107,29 @@
   return-path behavior, sign-out, duplicate-account handling, failure user
   interface, abuse controls, account linking, or live Azure configuration was
   implemented.
+
+## Iteration 4: Enable local account lifecycle
+
+- Added `config/authentication/external-id-local-account.json` as the reviewed
+  desired state for the environment-specific Microsoft Entra External ID
+  customer user flow.
+- Added idempotent Microsoft Graph reconciliation for
+  `EmailPassword-OAUTH`, self-service sign-up, verified email collection,
+  customer application linking, and enabled email one-time passcodes for
+  self-service password reset. Reconciliation preserves identity providers
+  added by later stories.
+- Added a protected-main External ID workflow that uses a dedicated OpenID
+  Connect identity and only non-secret protected environment variables.
+- Frontend publication now renders the tenant-scoped Static Web Apps custom
+  Microsoft Entra provider, sets only the non-secret application ID, and
+  references its client certificate in Azure Key Vault. The Static Web Apps
+  managed identity has only Key Vault Certificate User.
+- Added an `/account` route with hosted registration/sign-in and
+  forgotten-password entry points. Game Hub renders no password input and
+  never receives or stores a plaintext password.
+- Added deterministic desired-state, reconciliation, deployment-policy,
+  contract, header, and account-page coverage. Full `yarn validate` passed with
+  305 tests and `yarn infra:check` passed.
+- No Google or Facebook federation, provider credential, return-path behavior,
+  sign-out change, custom hosted identity screens, live Azure configuration,
+  or deployment verification was implemented.

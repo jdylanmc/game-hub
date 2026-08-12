@@ -72,4 +72,12 @@ describe('deployment automation policy', () => {
       }),
     ).toContain('API deployment must not depend on a stored GitHub secret.');
   });
+
+  it('rejects a stored provider credential in External ID configuration', () => {
+    expect(
+      violations({
+        externalIdentityWorkflow: `${automation.externalIdentityWorkflow}\n          password: \${{ secrets.PROVIDER_PASSWORD }}`,
+      }),
+    ).toContain('External ID configuration must not depend on a stored GitHub secret.');
+  });
 });

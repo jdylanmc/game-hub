@@ -38,6 +38,11 @@ export function validateOperationalInfrastructure({
       'The publication identity must retain the Key Vault Secrets Officer role.',
     ],
     [
+      "'db79e9a7-68ee-4b58-9aeb-b90e7c24fcba'",
+      'The frontend must retain Key Vault Certificate User for its External ID certificate reference.',
+    ],
+    ['principalId: frontendPrincipalId', 'The certificate role must target the Static Web Apps managed identity.'],
+    [
       'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31',
       'Secure configuration publication must use OpenID Connect federation.',
     ],
@@ -60,6 +65,10 @@ export function validateOperationalInfrastructure({
     ],
     ["module observability './modules/observability.bicep'", 'The entry point must compose observability.'],
     ['output apiRuntimeIdentity object', 'The API runtime identity contract must be exposed.'],
+    [
+      'frontendPrincipalId: staticWebApp.outputs.managedIdentityPrincipalId',
+      'The Static Web Apps identity must be granted certificate access.',
+    ],
     ['output secretPublisherIdentity object', 'The publication identity contract must be exposed.'],
     ['output secureConfiguration object', 'The non-secret Key Vault reference contract must be exposed.'],
     ['output monitoringConfiguration object', 'The monitoring contract must be exposed.'],

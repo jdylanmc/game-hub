@@ -3,8 +3,14 @@ export const AUTHENTICATION_METHODS = ['local', 'google', 'facebook'] as const;
 export type AuthenticationMethod = (typeof AUTHENTICATION_METHODS)[number];
 
 export const AUTHENTICATION_CONFIGURATION = {
+  accountPath: '/account',
   applicationSessionPath: '/api/auth/session',
   identityService: 'microsoft-entra-external-id',
+  localAccount: {
+    credentialCollection: 'microsoft-entra-external-id',
+    emailVerification: 'email-one-time-passcode',
+    passwordReset: 'self-service-email-one-time-passcode',
+  },
   methods: AUTHENTICATION_METHODS,
   platformSessionPath: '/.auth/me',
   providerName: 'aad',

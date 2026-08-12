@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "environments": ["dev", "prod"],
+  "userFlow": {
+    "displayName": "Game Hub {environment} sign-up and sign-in",
+    "description": "Game Hub customer sign-up and sign-in managed by Microsoft Entra External ID.",
+    "emailPasswordProviderId": "EmailPassword-OAUTH",
+    "signUpAllowed": true,
+    "attributes": [
+      {
+        "id": "email",
+        "displayName": "Email Address",
+        "description": "Verified email address used by the hosted local account flow.",
+        "userFlowAttributeType": "builtIn",
+        "dataType": "string",
+        "input": {
+          "label": "Email Address",
+          "inputType": "text",
+          "hidden": true,
+          "editable": false,
+          "writeToDirectory": true,
+          "required": true
+        }
+      }
+    ]
+  },
+  "passwordReset": {
+    "authenticationMethodConfigurationId": "email",
+    "state": "enabled",
+    "allowExternalIdToUseEmailOtp": "enabled"
+  },
+  "staticWebApps": {
+    "clientIdSettingName": "GAME_HUB_EXTERNAL_ID_CLIENT_ID",
+    "providerRoute": "aad"
+  },
+  "credentialHandling": {
+    "processor": "microsoft-entra-external-id",
+    "emailVerification": "email-one-time-passcode",
+    "passwordReset": "self-service-email-one-time-passcode",
+    "gameHubReceivesPlaintextPassword": false,
+    "gameHubStoresPlaintextPassword": false
+  }
+}
