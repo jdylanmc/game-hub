@@ -128,7 +128,7 @@ try {
   });
 
   await proveFailure({
-    expected: /Both protected-base jobs must bootstrap with direct yarn install --immutable/,
+    expected: /All protected-base jobs must bootstrap with direct yarn install --immutable/,
     label: 'script-based adversarial bootstrap',
     prepare: () =>
       replaceFile('.github/workflows/adversarial-review.yml', (content) =>

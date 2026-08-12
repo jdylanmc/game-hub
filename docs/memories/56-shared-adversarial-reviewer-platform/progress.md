@@ -221,3 +221,8 @@
 - **Final local evidence:** `yarn format:check`, `yarn lint`, `yarn
   typecheck`, `yarn policy:check`, and the targeted adversarial suite (117
   tests) pass.
+- The first exact-head Continuous integration run then exposed a stale
+  fail-closed probe expectation after the fan-in job increased protected-base
+  jobs from two to three. The expectation now matches the enforced
+  all-protected-base invariant; `yarn test:ci-fail-closed` passes all 23
+  representative probes.
