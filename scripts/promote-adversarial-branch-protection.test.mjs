@@ -77,10 +77,18 @@ describe('promoteAdversarialBranchProtection', () => {
 
   it.each([
     ['non-owner authentication', { mutate: (transport) => (transport.authenticatedLogin = 'attacker') }],
-    ['protection drift', { mutate: (transport) => (transport.protection.requiredChecks.push('Unexpected')) }],
+    ['protection drift', { mutate: (transport) => transport.protection.requiredChecks.push('Unexpected') }],
     ['removal', { candidateProtection: { ...oldProtection, requiredChecks: ['Continuous integration'] } }],
     ['rename', { candidateProtection: { ...oldProtection, requiredChecks: ['Continuous integration', 'Renamed'] } }],
-    ['duplicate check', { candidateProtection: { ...candidateProtection, requiredChecks: [...candidateProtection.requiredChecks, candidateProtection.requiredChecks.at(-1)] } }],
+    [
+      'duplicate check',
+      {
+        candidateProtection: {
+          ...candidateProtection,
+          requiredChecks: [...candidateProtection.requiredChecks, candidateProtection.requiredChecks.at(-1)],
+        },
+      },
+    ],
     ['stale proof', { proof: { ...options(new FakeProtectionTransport()).proof, headSha: 'd'.repeat(40) } }],
     ['inconclusive proof', { proof: { ...options(new FakeProtectionTransport()).proof, conclusion: 'neutral' } }],
     ['promotion manifest drift', { candidatePromotion: ['gilfoyle-security-architect'] }],

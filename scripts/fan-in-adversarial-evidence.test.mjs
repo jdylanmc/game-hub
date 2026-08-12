@@ -15,7 +15,7 @@ function result(decision = 'PASS') {
       promptVersion: '1.0.3',
       promptContentHash: '9d5667c8233da813b06adc93eba7daf832339653b44c617a006df51b21697c68',
       schemaVersion: '2.0.0',
-      schemaContentHash: '16cac8840afd4409e88968f695a5f3fb8c445f368ef59875d170dfeb602967e5',
+      schemaContentHash: '87392e8ee01e14b3a9fa43bf8c54bf92104f7589b6257440fe369ba7e467fd2a',
       policyVersion: '2.0.0',
       policyContentHash: 'ed7e5906234a69d282c2102490fc3227703c049c97e63170ffb968c34b478286',
       toolsVersion: '1.0.1',
@@ -113,7 +113,10 @@ describe('evaluateAdversarialFanIn', () => {
     ['missing', []],
     ['duplicate', [evidence(), evidence()]],
     ['stale', [evidence({ check: { ...evidence().check, headSha: 'c'.repeat(40) } })]],
-    ['mismatched attribution', [evidence({ result: { ...result(), provenance: { ...result().provenance, headCommit: 'c'.repeat(40) } } })]],
+    [
+      'mismatched attribution',
+      [evidence({ result: { ...result(), provenance: { ...result().provenance, headCommit: 'c'.repeat(40) } } })],
+    ],
     ['failed reviewer', [evidence({ check: { ...evidence().check, conclusion: 'failure' } })]],
     ['invalid provenance', [evidence({ check: { ...evidence().check, provenance: {} } })]],
   ])('fails closed for %s evidence', (_label, evidenceValue) => {

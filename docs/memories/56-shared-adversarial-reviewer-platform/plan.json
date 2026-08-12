@@ -25,12 +25,8 @@
     ]
   },
   "publication": {
-    "requiredStatusChecks": [
-      "Continuous integration"
-    ],
-    "adversarialStatusChecks": [
-      "Adversarial Review / unit-test-reviewer"
-    ]
+    "requiredStatusChecks": ["Continuous integration"],
+    "adversarialStatusChecks": ["Adversarial Review / unit-test-reviewer"]
   },
   "stories": [
     {

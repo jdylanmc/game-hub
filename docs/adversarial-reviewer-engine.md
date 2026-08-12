@@ -37,6 +37,26 @@ The request has three distinct messages:
 No tools are registered. Pull-request content cannot change the system policy,
 review prompt, transport, destination, or tool boundary.
 
+## Shared verdict, critic, and presentation behavior
+
+The authoritative result uses the versioned shared contract:
+
+- **PASS** publishes when no critic-adjusted policy blocker remains.
+- **FAIL** publishes for a critic-confirmed blocker and every platform,
+  validation, attribution, or workflow error.
+- **INCONCLUSIVE** is reserved for unavailable artificial-intelligence compute
+  only, after exactly three bounded exponential-backoff attempts. It is never
+  used for a malformed result or platform error.
+
+Only a proposed blocker consumes a separate critic pass. `CONFIRM` preserves a
+blocker, `REJECT` downgrades it, and critic `INCONCLUSIVE` preserves it only at
+the calibrated high-confidence threshold. Findings carry exact citations,
+policy rule, scenario, impact, remediation, and verification guidance.
+
+Persona text is a non-authoritative presentation field. The machine result,
+citations, remediation, and verdict remain authoritative; a renderer failure
+uses the validated neutral presentation fallback.
+
 ## Limits and failure behavior
 
 `config/adversarial-agents/reviewer-engine.json` pins:
@@ -54,10 +74,9 @@ and original evidence. Authentication, validation, policy, other HTTP, timeout,
 and budget failures do not retry.
 
 Malformed JSON, schema-invalid or missing output, supplied verdict/count
-mismatches, blocked context, timeout, network/model failure, and token/cost
-breaches return a schema-valid blocking `ERROR` result. Valid findings are
-deduplicated deterministically before counts and verdict are derived from
-policy.
+mismatches, blocked context, timeout, non-compute network/model failure, and
+token/cost breaches return a schema-valid platform `FAIL`. Valid findings are
+deduplicated deterministically before critic adjustment and verdict derivation.
 
 Run locally after Azure resources and identity are available:
 

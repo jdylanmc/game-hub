@@ -107,3 +107,20 @@
 - **Broader checks:** `yarn vitest run
   scripts/promote-adversarial-branch-protection.test.mjs
   --coverage.enabled=false`.
+
+### US-007 — Integrate fail-closed policy and documentation
+
+- **Confirmed seams:** repository policy commands and the public package
+  commands for fan-in, waiver validation, and promotion.
+- **Integration:** Added policy assertions for the shared versioned contract,
+  registry matrix, fan-in workflow, and canonical commands. Documentation now
+  covers critic capacity, conclusion mapping, fan-in, waivers, bootstrap
+  sequencing, and forward-only protection repair.
+- **Checks:** `yarn format:check`, `yarn lint`, `yarn typecheck`, targeted
+  adversarial tests (93 tests), `yarn policy:adversarial-workflow`, and
+  `yarn policy:adversarial` pass.
+- **Blocker:** Full `yarn policy:check` correctly fails only because the
+  active real-Azure calibration fingerprint is stale after this intentionally
+  fingerprinted schema/policy/engine migration. Replacing it requires a
+  complete real-Azure calibration and protected-run attestation; a fixture or
+  rewritten report would violate the fail-closed calibration policy.

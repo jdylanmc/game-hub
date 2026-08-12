@@ -54,9 +54,10 @@ function validateAdversarialWaiver(options: {
   ) {
     reasons.push('Waiver request identity or purpose is invalid.');
   }
-  const result = isObject(options.reviewerResult) && isObject(options.reviewerResult.verdict)
-    ? options.reviewerResult.verdict
-    : undefined;
+  const result =
+    isObject(options.reviewerResult) && isObject(options.reviewerResult.verdict)
+      ? options.reviewerResult.verdict
+      : undefined;
   if (result?.decision !== 'INCONCLUSIVE' || result.kind !== 'COMPUTE') {
     reasons.push('Waivers apply only to compute-only INCONCLUSIVE evidence.');
   }
@@ -130,10 +131,10 @@ function main(): void {
   const value: unknown = JSON.parse(fs.readFileSync(input, 'utf8'));
   if (!isObject(value)) throw new Error('Waiver input must be an object');
   const result = validateAdversarialWaiver({
-    repository: String(value.repository ?? ''),
+    repository: typeof value.repository === 'string' ? value.repository : '',
     pullRequestNumber: Number(value.pullRequestNumber),
-    headSha: String(value.headSha ?? ''),
-    reviewer: String(value.reviewer ?? ''),
+    headSha: typeof value.headSha === 'string' ? value.headSha : '',
+    reviewer: typeof value.reviewer === 'string' ? value.reviewer : '',
     reviewerResult: value.reviewerResult,
     comments: Array.isArray(value.comments) ? value.comments : [],
     authorizedOwners: Array.isArray(value.authorizedOwners) ? value.authorizedOwners.map(String) : [],

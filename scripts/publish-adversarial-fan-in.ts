@@ -13,11 +13,18 @@ function hash(value: string): string {
 async function main(): Promise<void> {
   const [repository, headSha] = process.argv.slice(2);
   const token = process.env.GITHUB_TOKEN;
-  if (!repository || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) || !/^[a-f0-9]{40}$/.test(headSha) || !token) {
+  if (
+    !repository ||
+    !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) ||
+    !/^[a-f0-9]{40}$/.test(headSha) ||
+    !token
+  ) {
     throw new Error('Usage: GITHUB_TOKEN=... publish-adversarial-fan-in.ts <owner/repository> <head-sha>');
   }
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const registry = JSON.parse(fs.readFileSync(path.join(root, 'config/adversarial-agents/agents-config.json'), 'utf8'));
+  const registry: unknown = JSON.parse(
+    fs.readFileSync(path.join(root, 'config/adversarial-agents/agents-config.json'), 'utf8'),
+  );
   const validation = validateAgentRegistry(root, registry);
   if (!validation.valid) throw new Error(`Invalid reviewer registry: ${validation.errors.join(' ')}`);
   const enabled = validation.agents.filter((agent) => agent.enabled);
@@ -35,7 +42,8 @@ async function main(): Promise<void> {
     });
     if (!response.ok) throw new Error(`GitHub Checks API failed with HTTP ${response.status}`);
     const value: unknown = await response.json();
-    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('GitHub Checks API returned malformed JSON');
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      throw new Error('GitHub Checks API returned malformed JSON');
     return value as Record<string, unknown>;
   };
   const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${headSha}/check-runs?filter=latest&per_page=100`;
@@ -86,7 +94,11 @@ async function main(): Promise<void> {
       payload,
     );
   } else {
-    await request('POST', `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/check-runs`, payload);
+    await request(
+      'POST',
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/check-runs`,
+      payload,
+    );
   }
   process.stdout.write(`${JSON.stringify({ conclusion, enabledReviewers: enabled.map((agent) => agent.name) })}\n`);
   process.exitCode = conclusion === 'failure' ? 3 : 0;

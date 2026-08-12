@@ -67,7 +67,8 @@ function evaluateAdversarialFanIn(options: {
       .filter((agent) => options.enabledReviewers.includes(agent.name) && agent.enabled)
       .map((agent) => [agent.name, agent]),
   );
-  if (expected.size !== options.enabledReviewers.length) reasons.push('Enabled reviewer state does not match the registry.');
+  if (expected.size !== options.enabledReviewers.length)
+    reasons.push('Enabled reviewer state does not match the registry.');
 
   const entries = options.evidence.filter(isObject) as unknown as FanInEvidence[];
   if (entries.length !== options.evidence.length) reasons.push('Fan-in evidence is malformed.');
@@ -144,8 +145,8 @@ function main(): void {
   const value: unknown = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
   if (!isObject(value)) throw new Error('Fan-in input must be an object');
   const result = evaluateAdversarialFanIn({
-    repoRoot: path.resolve(String(value.repoRoot ?? '.')),
-    headSha: String(value.headSha ?? ''),
+    repoRoot: path.resolve(typeof value.repoRoot === 'string' ? value.repoRoot : '.'),
+    headSha: typeof value.headSha === 'string' ? value.headSha : '',
     enabledReviewers: Array.isArray(value.enabledReviewers) ? value.enabledReviewers.map(String) : [],
     evidence: Array.isArray(value.evidence) ? value.evidence : [],
   });

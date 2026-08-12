@@ -365,55 +365,59 @@ describe('AdversarialReviewerEngine', () => {
   });
 
   it('uses critic capacity only for proposed blockers and applies REJECT and INCONCLUSIVE semantics', async () => {
-      const advisoryTransport = new FakeTransport(async () =>
-        response(
-          modelResult({
-            findings: [{ ...finding('ADVISORY-1'), proposedSeverity: 'ADVISORY', severity: 'ADVISORY', confidence: 'LOW' }],
-          }),
-        ),
-      );
-      const advisory = await engine(advisoryTransport).review(packet());
-      expect(advisory.verdict.decision).toBe('PASS');
-      expect(advisoryTransport.requests).toHaveLength(1);
+    const advisoryTransport = new FakeTransport(async () =>
+      response(
+        modelResult({
+          findings: [
+            { ...finding('ADVISORY-1'), proposedSeverity: 'ADVISORY', severity: 'ADVISORY', confidence: 'LOW' },
+          ],
+        }),
+      ),
+    );
+    const advisory = await engine(advisoryTransport).review(packet());
+    expect(advisory.verdict.decision).toBe('PASS');
+    expect(advisoryTransport.requests).toHaveLength(1);
 
-      const rejectingTransport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
-      rejectingTransport.criticResult = {
-        ...rejectingTransport.criticResult,
-        decision: 'REJECT',
-      };
-      const rejected = await engine(rejectingTransport).review(packet());
-      expect(rejected).toMatchObject({
-        verdict: { decision: 'PASS', advisoryFindingsCount: 1 },
-        findings: [expect.objectContaining({ severity: 'ADVISORY', critic: expect.objectContaining({ decision: 'REJECT' }) })],
-      });
+    const rejectingTransport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
+    rejectingTransport.criticResult = {
+      ...rejectingTransport.criticResult,
+      decision: 'REJECT',
+    };
+    const rejected = await engine(rejectingTransport).review(packet());
+    expect(rejected).toMatchObject({
+      verdict: { decision: 'PASS', advisoryFindingsCount: 1 },
+      findings: [
+        expect.objectContaining({ severity: 'ADVISORY', critic: expect.objectContaining({ decision: 'REJECT' }) }),
+      ],
+    });
 
-      const inconclusiveTransport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
-      inconclusiveTransport.criticResult = {
-        ...inconclusiveTransport.criticResult,
-        decision: 'INCONCLUSIVE',
-      };
-      const inconclusive = await engine(inconclusiveTransport).review(packet());
-      expect(inconclusive.verdict.decision).toBe('FAIL');
-      expect(inconclusive.findings[0]).toMatchObject({
-        severity: 'BLOCKING',
-        critic: expect.objectContaining({ decision: 'INCONCLUSIVE' }),
-      });
+    const inconclusiveTransport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
+    inconclusiveTransport.criticResult = {
+      ...inconclusiveTransport.criticResult,
+      decision: 'INCONCLUSIVE',
+    };
+    const inconclusive = await engine(inconclusiveTransport).review(packet());
+    expect(inconclusive.verdict.decision).toBe('FAIL');
+    expect(inconclusive.findings[0]).toMatchObject({
+      severity: 'BLOCKING',
+      critic: expect.objectContaining({ decision: 'INCONCLUSIVE' }),
+    });
   });
 
   it('uses a neutral validated presentation fallback without changing the authoritative verdict', async () => {
-      const transport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
-      const result = await engine(transport, {
-        personaRenderer: async () => {
-          throw new Error('persona unavailable');
-        },
-      }).review(packet());
+    const transport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
+    const result = await engine(transport, {
+      personaRenderer: async () => {
+        throw new Error('persona unavailable');
+      },
+    }).review(packet());
 
-      expect(result.verdict.decision).toBe('FAIL');
-      expect(result.presentation).toMatchObject({
-        mode: 'NEUTRAL_FALLBACK',
-        summary: 'Authoritative decision: FAIL.',
-      });
-      expect(new AdversarialFindingValidator(repoRoot).validate(result).valid).toBe(true);
+    expect(result.verdict.decision).toBe('FAIL');
+    expect(result.presentation).toMatchObject({
+      mode: 'NEUTRAL_FALLBACK',
+      summary: 'Authoritative decision: FAIL.',
+    });
+    expect(new AdversarialFindingValidator(repoRoot).validate(result).valid).toBe(true);
   });
 
   it('enforces preflight context and postresponse token/cost budgets', async () => {

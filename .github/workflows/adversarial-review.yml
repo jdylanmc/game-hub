@@ -79,7 +79,7 @@ jobs:
     name: Adversarial review / ${{ matrix.agentName }}
     needs:
       - resolve
-    if: needs.resolve.outputs.eligible == 'true'
+    if: always() && needs.resolve.outputs.eligible == 'true'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false

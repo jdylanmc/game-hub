@@ -6,15 +6,7 @@
   "version": "2.0.0",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schemaVersion",
-    "findingVersion",
-    "attribution",
-    "provenance",
-    "artifactDigest",
-    "verdict",
-    "findings"
-  ],
+  "required": ["schemaVersion", "findingVersion", "attribution", "provenance", "artifactDigest", "verdict", "findings"],
   "properties": {
     "schemaVersion": {
       "const": "2.0.0"

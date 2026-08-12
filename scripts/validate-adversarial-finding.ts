@@ -209,7 +209,15 @@ class AdversarialFindingValidator {
   private validateSharedContract(root: JsonObject): ValidationResult {
     const errors: ValidationError[] = [];
     const warnings: ValidationError[] = [];
-    const required = ['schemaVersion', 'findingVersion', 'attribution', 'provenance', 'artifactDigest', 'verdict', 'findings'];
+    const required = [
+      'schemaVersion',
+      'findingVersion',
+      'attribution',
+      'provenance',
+      'artifactDigest',
+      'verdict',
+      'findings',
+    ];
     this.rejectUnknownProperties(root, [...required, 'summary', 'presentation'], '', errors);
     this.requireFields(root, required, '', errors);
     if (root.schemaVersion !== '2.0.0') {
@@ -228,7 +236,7 @@ class AdversarialFindingValidator {
     const findings = Array.isArray(root.findings) ? root.findings : [];
     if (!Array.isArray(root.findings)) this.addError(errors, 1, 'findings', 'findings must be an array');
 
-    const agent = this.validateSharedAttribution(attribution, errors);
+    this.validateSharedAttribution(attribution, errors);
     this.validateSharedProvenance(provenance, attribution, errors);
     this.validateSharedDigest(digest, errors);
     if (root.summary !== undefined) this.validateSummary(root.summary, errors);
@@ -259,10 +267,7 @@ class AdversarialFindingValidator {
     }
   }
 
-  private validateSharedAttribution(
-    value: JsonObject | undefined,
-    errors: ValidationError[],
-  ): JsonObject | undefined {
+  private validateSharedAttribution(value: JsonObject | undefined, errors: ValidationError[]): JsonObject | undefined {
     if (!value) return undefined;
     const required = [
       'agentName',
@@ -285,7 +290,9 @@ class AdversarialFindingValidator {
     this.rejectUnknownProperties(value, required, 'attribution', errors);
     this.requireFields(value, required, 'attribution', errors);
     const agents = Array.isArray(this.registry.agents) ? this.registry.agents : [];
-    const registered = agents.find((candidate): candidate is JsonObject => isObject(candidate) && candidate.name === value.agentName);
+    const registered = agents.find(
+      (candidate): candidate is JsonObject => isObject(candidate) && candidate.name === value.agentName,
+    );
     if (!registered) {
       this.addError(errors, 3, 'attribution.agentName', 'agentName is not a registered reviewer');
       return value;
@@ -314,7 +321,13 @@ class AdversarialFindingValidator {
     if (value.policyVersion !== this.policy.version) {
       this.addError(errors, 3, 'attribution.policyVersion', 'policyVersion does not match the reviewed policy');
     }
-    for (const field of ['promptContentHash', 'schemaContentHash', 'policyContentHash', 'contextFingerprint', 'calibrationFingerprint']) {
+    for (const field of [
+      'promptContentHash',
+      'schemaContentHash',
+      'policyContentHash',
+      'contextFingerprint',
+      'calibrationFingerprint',
+    ]) {
       if (typeof value[field] !== 'string' || !/^[a-f0-9]{64}$/.test(value[field])) {
         this.addError(errors, 2, `attribution.${field}`, `${field} must be a SHA-256 digest`);
       }
@@ -382,7 +395,11 @@ class AdversarialFindingValidator {
     }
   }
 
-  private validateSharedFinding(value: unknown, index: number, errors: ValidationError[]): 'BLOCKING' | 'ADVISORY' | undefined {
+  private validateSharedFinding(
+    value: unknown,
+    index: number,
+    errors: ValidationError[],
+  ): 'BLOCKING' | 'ADVISORY' | undefined {
     const field = `findings[${index}]`;
     const finding = this.requireObject(value, field, errors);
     if (!finding) return undefined;
@@ -406,7 +423,15 @@ class AdversarialFindingValidator {
     if (typeof finding.id !== 'string' || !/^[A-Z0-9]+-\d+$/.test(finding.id)) {
       this.addError(errors, 2, `${field}.id`, 'id must match CATEGORY-001');
     }
-    for (const name of ['title', 'category', 'description', 'policyRule', 'failureScenario', 'impact', 'verificationGuidance']) {
+    for (const name of [
+      'title',
+      'category',
+      'description',
+      'policyRule',
+      'failureScenario',
+      'impact',
+      'verificationGuidance',
+    ]) {
       if (!isNonEmptyString(finding[name])) this.addError(errors, 3, `${field}.${name}`, `${name} must be non-empty`);
     }
     if (!['BLOCKING', 'ADVISORY'].includes(String(finding.proposedSeverity))) {
@@ -418,7 +443,11 @@ class AdversarialFindingValidator {
     if (!['HIGH', 'MEDIUM', 'LOW'].includes(String(finding.confidence))) {
       this.addError(errors, 2, `${field}.confidence`, 'confidence must be HIGH, MEDIUM, or LOW');
     }
-    if (!Array.isArray(finding.remediation) || finding.remediation.length === 0 || finding.remediation.some((item) => !isNonEmptyString(item))) {
+    if (
+      !Array.isArray(finding.remediation) ||
+      finding.remediation.length === 0 ||
+      finding.remediation.some((item) => !isNonEmptyString(item))
+    ) {
       this.addError(errors, 3, `${field}.remediation`, 'remediation must contain actionable non-empty steps');
     }
     this.validateCitations(finding.citations, field, errors);
@@ -460,7 +489,14 @@ class AdversarialFindingValidator {
   ): void {
     const verdict = this.requireObject(value, 'verdict', errors);
     if (!verdict) return;
-    const common = ['decision', 'kind', 'severity', 'blockingFindingsCount', 'advisoryFindingsCount', 'policyDecisionRationale'];
+    const common = [
+      'decision',
+      'kind',
+      'severity',
+      'blockingFindingsCount',
+      'advisoryFindingsCount',
+      'policyDecisionRationale',
+    ];
     this.rejectUnknownProperties(verdict, [...common, 'platformError', 'compute'], 'verdict', errors);
     this.requireFields(verdict, common, 'verdict', errors);
     if (!isNonEmptyString(verdict.policyDecisionRationale)) {
@@ -472,7 +508,12 @@ class AdversarialFindingValidator {
     if (verdict.kind === 'POLICY') {
       const expectedDecision = blockingCount > 0 ? 'FAIL' : 'PASS';
       const expectedSeverity = blockingCount > 0 ? 'BLOCKING' : advisoryCount > 0 ? 'ADVISORY' : 'INFO';
-      if (verdict.decision !== expectedDecision || verdict.severity !== expectedSeverity || verdict.platformError || verdict.compute) {
+      if (
+        verdict.decision !== expectedDecision ||
+        verdict.severity !== expectedSeverity ||
+        verdict.platformError ||
+        verdict.compute
+      ) {
         this.addError(errors, 3, 'verdict', 'policy verdict does not match critic-adjusted findings');
       }
       return;

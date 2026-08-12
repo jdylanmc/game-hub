@@ -82,11 +82,16 @@ async function promoteAdversarialBranchProtection(options: {
   }
   validateProtection(options.expectedOldProtection, 'Expected old protection');
   validateProtection(options.candidateProtection, 'Candidate protection');
-  if (!options.candidateProtection.strict || options.expectedOldProtection.strict !== options.candidateProtection.strict) {
+  if (
+    !options.candidateProtection.strict ||
+    options.expectedOldProtection.strict !== options.candidateProtection.strict
+  ) {
     throw new Error('Promotion may not weaken strict branch protection');
   }
   if (
-    !options.expectedOldProtection.requiredChecks.every((check, index) => options.candidateProtection.requiredChecks[index] === check) ||
+    !options.expectedOldProtection.requiredChecks.every(
+      (check, index) => options.candidateProtection.requiredChecks[index] === check,
+    ) ||
     options.candidateProtection.requiredChecks.length !== options.expectedOldProtection.requiredChecks.length + 1 ||
     options.candidateProtection.requiredChecks.at(-1) !== options.reviewer.checkName
   ) {
@@ -171,7 +176,7 @@ class GitHubBranchProtectionTransport implements BranchProtectionTransport {
 
   async getAuthenticatedLogin(): Promise<string> {
     const user = await this.request('GET', 'https://api.github.com/user');
-    return String(user.login ?? '');
+    return typeof user.login === 'string' ? user.login : '';
   }
 
   async getBranchProtection(repository: string, branch: string): Promise<BranchProtection> {
@@ -224,8 +229,8 @@ async function main(): Promise<void> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Promotion input must be an object');
   const inputValue = value as Record<string, unknown>;
   const result = await promoteAdversarialBranchProtection({
-    repository: String(inputValue.repository ?? ''),
-    branch: String(inputValue.branch ?? ''),
+    repository: typeof inputValue.repository === 'string' ? inputValue.repository : '',
+    branch: typeof inputValue.branch === 'string' ? inputValue.branch : '',
     reviewer: inputValue.reviewer as { name: string; checkName: string; promoted: boolean },
     expectedOldProtection: inputValue.expectedOldProtection as BranchProtection,
     candidateProtection: inputValue.candidateProtection as BranchProtection,
@@ -238,7 +243,7 @@ async function main(): Promise<void> {
       runFingerprint: string;
       artifactSha256: string;
     },
-    expectedHeadSha: String(inputValue.expectedHeadSha ?? ''),
+    expectedHeadSha: typeof inputValue.expectedHeadSha === 'string' ? inputValue.expectedHeadSha : '',
     transport: new GitHubBranchProtectionTransport(process.env.GH_TOKEN ?? ''),
     now: () => new Date(),
   });

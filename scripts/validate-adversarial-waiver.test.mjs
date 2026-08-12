@@ -58,8 +58,26 @@ describe('validateAdversarialWaiver', () => {
     ['edited comment', { comments: [comment({ updatedAt: '2026-08-12T19:01:00.000Z' })] }],
     ['changed head', { headSha: 'b'.repeat(40) }],
     ['wrong reviewer', { reviewer: 'gilfoyle-security-architect' }],
-    ['missing outage evidence', { comments: [comment({ body: `<!-- adversarial-waiver:${Buffer.from(JSON.stringify(waiver({ outageEvidence: '' }))).toString('base64url')} -->` })] }],
-    ['expiry beyond 24 hours', { comments: [comment({ body: `<!-- adversarial-waiver:${Buffer.from(JSON.stringify(waiver({ expiresAt: '2026-08-13T20:00:01.000Z' }))).toString('base64url')} -->` })] }],
+    [
+      'missing outage evidence',
+      {
+        comments: [
+          comment({
+            body: `<!-- adversarial-waiver:${Buffer.from(JSON.stringify(waiver({ outageEvidence: '' }))).toString('base64url')} -->`,
+          }),
+        ],
+      },
+    ],
+    [
+      'expiry beyond 24 hours',
+      {
+        comments: [
+          comment({
+            body: `<!-- adversarial-waiver:${Buffer.from(JSON.stringify(waiver({ expiresAt: '2026-08-13T20:00:01.000Z' }))).toString('base64url')} -->`,
+          }),
+        ],
+      },
+    ],
     ['expired', { now: new Date('2026-08-12T21:00:00.000Z') }],
     ['FAIL result', { reviewerResult: { verdict: { decision: 'FAIL', kind: 'POLICY' } } }],
     ['promotion use', { purpose: 'promotion' }],

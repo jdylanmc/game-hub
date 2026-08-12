@@ -415,8 +415,9 @@ function platformFailure(options: {
   };
 }
 
-function computeInconclusive(options: Parameters<typeof platformFailure>[0] & { retryDelaysMs: number[] }): ReviewResult {
-  const contextSha256 = options.contextSha256 ?? '0'.repeat(64);
+function computeInconclusive(
+  options: Parameters<typeof platformFailure>[0] & { retryDelaysMs: number[] },
+): ReviewResult {
   return {
     ...platformFailure(options),
     verdict: {
@@ -431,7 +432,8 @@ function computeInconclusive(options: Parameters<typeof platformFailure>[0] & { 
         attempts: 3,
         retryDelaysMs: options.retryDelaysMs,
       },
-      policyDecisionRationale: 'The reviewed artificial-intelligence compute remained unavailable after bounded retries.',
+      policyDecisionRationale:
+        'The reviewed artificial-intelligence compute remained unavailable after bounded retries.',
     },
   };
 }
@@ -675,7 +677,7 @@ class AdversarialReviewerEngine {
         ],
       });
       let critic: JsonObject | undefined;
-      let delays: number[] = [];
+      const delays: number[] = [];
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
           const response = await transport.complete(criticRequest, new AbortController().signal);
@@ -927,7 +929,13 @@ class AdversarialReviewerEngine {
       ...modelResult,
       schemaVersion: '2.0.0',
       findingVersion: `${runtime.agentConfig.name}@${timestamp}`,
-      attribution: runtimeAttribution(runtime.agentConfig, runtime.policyVersion, identity.headSha, timestamp, evidenceHash),
+      attribution: runtimeAttribution(
+        runtime.agentConfig,
+        runtime.policyVersion,
+        identity.headSha,
+        timestamp,
+        evidenceHash,
+      ),
       provenance: {
         repository: identity.repository,
         pullRequestNumber: identity.pullRequestNumber,
@@ -971,7 +979,13 @@ class AdversarialReviewerEngine {
     const finalResult: ReviewResult = {
       schemaVersion: '2.0.0',
       findingVersion: `${runtime.agentConfig.name}@${timestamp}`,
-      attribution: runtimeAttribution(runtime.agentConfig, runtime.policyVersion, identity.headSha, timestamp, evidenceHash),
+      attribution: runtimeAttribution(
+        runtime.agentConfig,
+        runtime.policyVersion,
+        identity.headSha,
+        timestamp,
+        evidenceHash,
+      ),
       provenance: candidate.provenance,
       artifactDigest: candidate.artifactDigest,
       verdict: deriveVerdict(findings, runtime.blockingFindingsMinimum, runtime.agentConfig.name),
