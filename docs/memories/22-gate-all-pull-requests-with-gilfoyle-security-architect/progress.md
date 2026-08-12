@@ -129,12 +129,18 @@
   workflow conclusion remains authoritative and cannot be overridden by model
   output.
 - Updated fail-closed proofs for removed security scans, masked aggregate
-  results, and newly unsupported container definitions. Refreshed hardened Yarn
-  lock metadata required for a genuine fresh-worktree immutable install.
+  results, and newly unsupported container definitions. Fresh local proof
+  worktrees avoid platform-specific hardened registry metadata refreshes;
+  GitHub Actions retains hardened mode and the committed lock remains unchanged.
 - Targeted checks passed: 45 security/context/policy tests,
   `yarn policy:workflow`, `yarn policy:adversarial`,
   `yarn policy:gilfoyle`, `yarn agents:validate`, full issue-diff secret scan,
   Bicep compilation, container-surface validation, type checking, and 17
   fail-closed simulations.
+- The first published exact-head attempt exposed cross-platform hardened Yarn
+  registry metadata drift during immutable install. Restored the reviewed lock
+  unchanged and limited the local detached proof's hardened lookup to GitHub
+  Actions, where the genuine public-pull-request hardened install remains
+  enforced.
 - US-004 is next and owns Gilfoyle implementation and real calibration. Gilfoyle
   remains disabled in this story.
