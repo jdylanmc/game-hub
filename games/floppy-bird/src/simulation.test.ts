@@ -237,3 +237,30 @@ describe('FloppyBird obstacles and scoring', () => {
     },
   );
 });
+
+describe('FloppyBird lifecycle simulation', () => {
+  it.each(['paused', 'game-over'] as const)('freezes every simulation field during the %s phase', (phase) => {
+    const state: FloppyBirdSimulationState = {
+      ...createFloppyBirdSimulationState(),
+      ambience: 3,
+      birdVelocity: -4,
+      birdY: 2,
+      collisionReason: 'Terminal collision.',
+      score: 7,
+      wingBeat: 0.8,
+    };
+    let randomCalls = 0;
+    const random = {
+      next: () => {
+        randomCalls += 1;
+        return 0.5;
+      },
+    };
+    const nextState = stepFloppyBirdSimulation(state, { flap: true, phase }, 10, random);
+
+    expect(nextState).toEqual(state);
+    expect(nextState).not.toBe(state);
+    expect(nextState.obstacles).not.toBe(state.obstacles);
+    expect(randomCalls).toBe(0);
+  });
+});

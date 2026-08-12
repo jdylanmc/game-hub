@@ -94,8 +94,8 @@
         "Dispose removes listeners and prevents further animation, events, or score submission"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added deterministic JSDOM lifecycle coverage with mocked WebGL rendering and controlled animation frames, simulation clock, random source, and score timestamp. Pause now freezes every simulation field; resume restores ready or running with a zero-delta first frame; paused and terminal input is suppressed; ready, running, paused, resumed, and game-over host events are asserted; repeated terminal frames submit one exact score payload; and idempotent disposal removes listeners, cancels animation, disposes rendering, and blocks stale or public lifecycle work.",
       "dependencies": ["US-004"]
     },
     {

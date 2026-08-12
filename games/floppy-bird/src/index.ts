@@ -3,6 +3,7 @@ import {
   type GameHost,
   type GameInstance,
   type GameManifest,
+  type RandomSource,
   type SimulationClock,
 } from '@game-hub/game-contract';
 import manifestData from '../game.manifest.json';
@@ -58,6 +59,12 @@ interface ParallaxMarker {
   offset: number;
   speedScale: number;
   y: number;
+}
+
+export interface FloppyBirdRuntimeOptions {
+  clock?: SimulationClock;
+  random?: RandomSource;
+  scoreOccurredAt?: () => string;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -183,7 +190,11 @@ function resizeRenderer(camera: OrthographicCamera, renderer: WebGLRenderer, can
 
 export { manifest };
 
-export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInstance {
+export function createGame(
+  canvas: HTMLCanvasElement,
+  host: GameHost,
+  runtime: Readonly<FloppyBirdRuntimeOptions> = {},
+): GameInstance {
   const renderer = new WebGLRenderer({ antialias: true, canvas });
   const scene = new Scene();
   const camera = new OrthographicCamera(-16, 16, VIEW_HEIGHT / 2, -VIEW_HEIGHT / 2, 0.1, 100);
@@ -255,13 +266,15 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   const obstacles: ObstacleView[] = [];
   const floorMarkers: ParallaxMarker[] = [];
   const topMarkers: ParallaxMarker[] = [];
-  const clock: SimulationClock = {
+  const clock: SimulationClock = runtime.clock ?? {
     nowMilliseconds: () => performance.now(),
   };
-  const random = createSeededRandomSource(Math.trunc(clock.nowMilliseconds() * 1_000));
+  const random = runtime.random ?? createSeededRandomSource(Math.trunc(clock.nowMilliseconds() * 1_000));
+  const scoreOccurredAt = runtime.scoreOccurredAt ?? (() => new Date().toISOString());
 
   let animationFrameId = 0;
   let disposed = false;
+  let started = false;
   let phase: 'ready' | 'running' | 'paused' | 'game-over' = 'ready';
   let phaseBeforePause: 'ready' | 'running' = 'ready';
   let phaseMessage = 'Press Space, click, or tap to flap upward.';
@@ -342,7 +355,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   };
 
   const finishRun = (reason: string) => {
-    if (phase === 'game-over') {
+    if (disposed || phase === 'game-over') {
       return;
     }
 
@@ -355,7 +368,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       host.submitScore({
         gameId: manifest.id,
         score: simulation.score,
-        occurredAt: new Date().toISOString(),
+        occurredAt: scoreOccurredAt(),
         metadata: {
           durationSeconds: Math.max(0, Math.round((clock.nowMilliseconds() - startedAt) / 1000)),
           technology: manifest.technology,
@@ -365,7 +378,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   };
 
   const flap = () => {
-    if (phase === 'paused' || phase === 'game-over') {
+    if (disposed || phase === 'paused' || phase === 'game-over') {
       return;
     }
 
@@ -472,10 +485,15 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
 
   return {
     start() {
+      if (disposed || started) {
+        return;
+      }
+
+      started = true;
       render(clock.nowMilliseconds());
     },
     pause() {
-      if (phase === 'paused' || phase === 'game-over') {
+      if (disposed || phase === 'paused' || phase === 'game-over') {
         return;
       }
 
@@ -484,7 +502,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       emitAnnouncement('Game paused.');
     },
     resume() {
-      if (phase !== 'paused') {
+      if (disposed || phase !== 'paused') {
         return;
       }
 
@@ -499,6 +517,10 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       emitAnnouncement('Game resumed.');
     },
     dispose() {
+      if (disposed) {
+        return;
+      }
+
       disposed = true;
       canvas.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('keydown', onKeyDown);

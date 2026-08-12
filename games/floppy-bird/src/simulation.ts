@@ -152,8 +152,15 @@ export function stepFloppyBirdSimulation(
   random: RandomSource,
 ): FloppyBirdSimulationState {
   return stepSimulation(state, input, elapsedSeconds, random, (current, context) => {
+    if (context.input.phase === 'paused' || context.input.phase === 'game-over') {
+      return {
+        ...current,
+        obstacles: current.obstacles.map((obstacle) => ({ ...obstacle })),
+      };
+    }
+
     const frameDeltaSeconds = Math.min(context.elapsedSeconds, MAX_FRAME_DELTA_SECONDS);
-    const ambience = context.input.phase === 'paused' ? current.ambience : current.ambience + frameDeltaSeconds;
+    const ambience = current.ambience + frameDeltaSeconds;
     let birdVelocity = context.input.flap ? FLAP_VELOCITY : current.birdVelocity;
     let birdY = current.birdY;
     let highestObstacleX = current.highestObstacleX;

@@ -24,6 +24,11 @@
 - FloppyBird obstacle recycling anchors new gates to the post-movement
   rightmost gate, preserving exact score-based spacing instead of accumulating
   stale frame travel.
+- FloppyBird runtime tests inject clocks, random sources, and score timestamps
+  through `FloppyBirdRuntimeOptions`; animation frames and WebGL rendering stay
+  mocked at their browser boundaries.
+- FloppyBird paused and game-over phases preserve every simulation field, and
+  runtime start and disposal are idempotent.
 - Generated game discovery has committed outputs under `public/generated/` and
   `src/generated/`, while generator implementation currently executes at module
   load and is not directly unit-testable.
@@ -158,3 +163,35 @@
   tests; full `yarn validate`.
 - Pause, resume, lifecycle events, disposal, and idempotent final-score
   submission remain intentionally deferred to US-005.
+
+## 2026-08-12 - US-005: Test FloppyBird lifecycle and final score
+
+- Added deterministic JSDOM lifecycle tests with controlled animation frames,
+  a manual simulation clock, seeded randomness, a fixed score timestamp, and a
+  mocked Three.js WebGL renderer.
+- Covered ready and running pause freezes, suppressed pointer and keyboard
+  flaps while paused or terminal, zero-delta resume, and restoration of the
+  exact ready or running phase.
+- Asserted ready, running, paused, resumed, and game-over host events plus the
+  assertive terminal announcement.
+- Proved repeated terminal frames and post-game input submit one exact final
+  score with controlled duration, timestamp, and technology metadata.
+- Made paused and game-over simulation fully frozen. Made runtime start and
+  disposal idempotent, and blocked lifecycle methods and score submission after
+  disposal.
+- Proved disposal removes input listeners, cancels the pending animation frame,
+  disposes the renderer once, and prevents a retained stale frame from
+  rendering, emitting events, or submitting a score.
+- Files changed: `games/floppy-bird/src/index.ts`,
+  `games/floppy-bird/src/index.test.ts`,
+  `games/floppy-bird/src/simulation.ts`,
+  `games/floppy-bird/src/simulation.test.ts`,
+  `games/floppy-bird/AGENTS.md`, and this issue memory.
+- Checks passed before full validation: targeted Prettier and ESLint, all 20
+  FloppyBird tests, and `yarn typecheck`.
+- Full `yarn validate` passed on the first attempt, including immutable install,
+  formatting, lint, policy, fail-closed proofs, security audit, all 223 Vitest
+  tests, generation, type checking, production build, bundle budgets, and
+  Storybook.
+- Neon Drift and Orbital Stack remain intentionally untouched for US-006 and
+  US-007.
