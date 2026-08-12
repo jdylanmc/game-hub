@@ -422,3 +422,26 @@
   suite, exact-head deterministic continuous integration, and the unique
   adversarial reviewer check succeed; the PR body records the final immutable
   check evidence.
+
+## 2026-08-11 - Reopened workflow remediation
+
+- Preserved the prior PR #35 rollout record as historical evidence and added
+  bounded story US-010 after protected-main run `31556974503` exposed a
+  fresh-runner bootstrap regression.
+- Confirmed the `node-modules` linker cannot invoke the `install:check` package
+  script before `node_modules/.yarn-state.yml` exists. Continuous Integration
+  and both protected-base adversarial jobs now call direct
+  `yarn install --immutable`.
+- Continuous Integration now gives all run steps `bash -eo pipefail` semantics,
+  preventing `tee` from masking a failed validation command.
+- Workflow policies and mutation tests reject script-based bootstrap, missing
+  pipefail, and fail-open shell overrides. The isolated failure proof now
+  reproduces the original bootstrap failure, verifies direct bootstrap creates
+  Yarn state, and exercises the evidence pipeline with pipefail.
+- Direct installation in the new worktree created
+  `node_modules/.yarn-state.yml`. The full `yarn validate` gate passed,
+  including 14 isolated fail-closed probes, 151 Vitest tests, 26 Ralph tests,
+  dependency audit, generation, typecheck, production build, bundle budgets,
+  and Storybook.
+- Exact-head pull-request publication evidence remains pending. Issue #30 stays
+  open until merge and protected-main post-merge verification.

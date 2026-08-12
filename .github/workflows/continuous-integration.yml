@@ -18,6 +18,9 @@ jobs:
     name: Continuous integration
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
 
     steps:
       - name: Check out repository
@@ -37,7 +40,7 @@ jobs:
         run: mkdir -p continuous-integration-evidence
 
       - name: Verify immutable installation
-        run: yarn install:check 2>&1 | tee continuous-integration-evidence/install.log
+        run: yarn install --immutable 2>&1 | tee continuous-integration-evidence/install.log
 
       - name: Verify formatting
         run: yarn format:check 2>&1 | tee continuous-integration-evidence/format.log
