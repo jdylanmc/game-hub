@@ -18,6 +18,8 @@ The main site always runs at `http://localhost:1337`.
 
 - [Game Hub Architecture](docs/architecture.md) defines system boundaries,
   pinned versions, and upstream documentation.
+- [Azure Hosting Infrastructure](docs/hosting-infrastructure.md) defines the
+  selected Azure topology, trust boundaries, environments, costs, and outputs.
 - [Continuous Integration Contract](docs/continuous-integration.md) defines the
   reproducible local gates, retained evidence, and fail-closed merge contract.
 - [Repository Linting](docs/linting.md) defines lint and safe-fix usage, rule

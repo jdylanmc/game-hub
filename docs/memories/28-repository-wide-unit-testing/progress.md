@@ -193,5 +193,11 @@
   formatting, lint, policy, fail-closed proofs, security audit, all 223 Vitest
   tests, generation, type checking, production build, bundle budgets, and
   Storybook.
+- Before exact-head publication, merged latest `origin/main` at `4b6e60b` after
+  its hosting change made the draft pull request unmergeable and prevented
+  checks from starting. Retained both unit-test and infrastructure guidance in
+  the sole root-guide conflict.
+- Full `yarn validate` passed again on the synchronized tree, including all 256
+  Vitest tests and the newly merged infrastructure policy suites.
 - Neon Drift and Orbital Stack remain intentionally untouched for US-006 and
   US-007.

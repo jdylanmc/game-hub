@@ -58,6 +58,7 @@ request whenever a core resolved version changes.
 | Tailwind CSS | `3.4.19` | Utility-first website and Storybook styling | [Tailwind CSS v3 documentation](https://v3.tailwindcss.com/docs/installation) |
 | Storybook | `10.5.7` | Component, composition, and accessibility grounding | [Storybook documentation](https://storybook.js.org/docs) |
 | Three.js | `0.179.1` | Per-game WebGL rendering dependency | [Three.js documentation](https://threejs.org/docs/) and [r179 source](https://github.com/mrdoob/three.js/tree/r179) |
+| Bicep CLI | `0.46.1` | Azure infrastructure linting, compilation, and deployment | [Bicep CLI documentation](https://learn.microsoft.com/azure/azure-resource-manager/bicep/bicep-cli) |
 | PostCSS | `8.5.26` | Resolved CSS transformation runtime | [PostCSS documentation](https://postcss.org/) |
 | Autoprefixer | `10.5.4` | Resolved browser-prefix generation | [Autoprefixer documentation](https://github.com/postcss/autoprefixer#readme) |
 
@@ -153,6 +154,16 @@ Store environment-specific values in committed Bicep parameter or configuration
 files. Keep credentials and secret values in an approved secret store and pass
 them at deployment time; do not commit them in environment files.
 
+Protected GitHub deployment environments use separate OpenID
+Connect-federated identities for infrastructure, frontend, application
+programming interface image, asset, and secure-configuration publication. The
+infrastructure workflow must select the approved subscription, run validation
+and `what-if`, apply the stable deployment name, retain only non-secret outputs,
+and reject a repeated preview that would create, modify, or delete resources.
+Azure Static Web Apps content publication resolves its service-issued token
+only in runner memory after keyless Azure sign-in; the token is never a stored
+GitHub secret or deployment output.
+
 The first infrastructure change must pin the Bicep CLI version used by local and
 continuous integration (CI) deployments. Update that pin through a reviewed
 dependency change, not an implicit workstation or hosted-agent upgrade.
@@ -161,6 +172,10 @@ Target Azure subscription
 `11213dbd-39fe-46ba-87db-5f5e8c449aed` unless a future architecture decision
 defines another subscription for a specific environment. Deployment automation
 must select the subscription explicitly before previewing or applying changes.
+
+The [Azure Hosting Infrastructure](hosting-infrastructure.md) decision defines
+the cost-aware service topology, public and trust boundaries, environment
+strategy, and required deployment outputs for the first Bicep implementation.
 
 ## Architectural Invariants
 
@@ -212,6 +227,7 @@ When an issue requires a core technology update:
 
 ## See Also
 
+- [Azure Hosting Infrastructure](hosting-infrastructure.md)
 - [Ralph Loop](ralph-loop.md)
 - [Root Agent Guide](../AGENTS.md)
 - [Game Contract Agent Guide](../packages/game-contract/AGENTS.md)

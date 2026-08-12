@@ -1,0 +1,122 @@
+name: Deploy Game Hub API image
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        description: Protected Azure environment
+        options:
+          - dev
+          - prod
+        default: dev
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: game-hub-api-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.environment }} API image
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      AZURE_SUBSCRIPTION_ID: '11213dbd-39fe-46ba-87db-5f5e8c449aed'
+      DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment }}
+      API_IMAGE_REPOSITORY: game-hub-api
+
+    steps:
+      - name: Check out protected main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Verify protected ref, source, and keyless environment configuration
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_API_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$AZURE_CLIENT_ID"
+          test -n "$AZURE_TENANT_ID"
+          test -f api/Dockerfile
+
+      - name: Sign in to Azure with OpenID Connect
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          client-id: ${{ vars.AZURE_API_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: 11213dbd-39fe-46ba-87db-5f5e8c449aed
+
+      - name: Select the approved subscription and resolve API targets
+        run: |
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          resource_group="rg-gamehub-${DEPLOYMENT_ENVIRONMENT}-eus2"
+          registry_name="$(
+            az acr list \
+              --resource-group "$resource_group" \
+              --query '[0].name' \
+              --output tsv
+          )"
+          registry_login_server="$(
+            az acr show \
+              --resource-group "$resource_group" \
+              --name "$registry_name" \
+              --query loginServer \
+              --output tsv
+          )"
+          test -n "$registry_name"
+          test -n "$registry_login_server"
+          {
+            echo "GAME_HUB_RESOURCE_GROUP=$resource_group"
+            echo "GAME_HUB_REGISTRY_NAME=$registry_name"
+            echo "GAME_HUB_REGISTRY_LOGIN_SERVER=$registry_login_server"
+            echo "GAME_HUB_CONTAINER_APP=ca-gamehub-${DEPLOYMENT_ENVIRONMENT}-eus2"
+          } >> "$GITHUB_ENV"
+
+      - name: Build and publish an immutable API image
+        run: |
+          az acr login --name "$GAME_HUB_REGISTRY_NAME"
+          image_tag="${GAME_HUB_REGISTRY_LOGIN_SERVER}/${API_IMAGE_REPOSITORY}:sha-${GITHUB_SHA}"
+          docker build --file api/Dockerfile --tag "$image_tag" api
+          docker push "$image_tag"
+          image_digest="$(
+            az acr repository show \
+              --name "$GAME_HUB_REGISTRY_NAME" \
+              --image "${API_IMAGE_REPOSITORY}:sha-${GITHUB_SHA}" \
+              --query digest \
+              --output tsv
+          )"
+          test -n "$image_digest"
+          echo "GAME_HUB_API_IMAGE=${GAME_HUB_REGISTRY_LOGIN_SERVER}/${API_IMAGE_REPOSITORY}@${image_digest}" \
+            >> "$GITHUB_ENV"
+
+      - name: Deploy the immutable image to Azure Container Apps
+        run: |
+          az containerapp update \
+            --subscription "$AZURE_SUBSCRIPTION_ID" \
+            --resource-group "$GAME_HUB_RESOURCE_GROUP" \
+            --name "$GAME_HUB_CONTAINER_APP" \
+            --image "$GAME_HUB_API_IMAGE" \
+            --revision-suffix "${GITHUB_SHA:0:7}" \
+            --output none
+          deployed_image="$(
+            az containerapp show \
+              --subscription "$AZURE_SUBSCRIPTION_ID" \
+              --resource-group "$GAME_HUB_RESOURCE_GROUP" \
+              --name "$GAME_HUB_CONTAINER_APP" \
+              --query 'properties.template.containers[0].image' \
+              --output tsv
+          )"
+          test "$deployed_image" = "$GAME_HUB_API_IMAGE"
