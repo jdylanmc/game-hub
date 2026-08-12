@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthSessionProvider, useAuthSession } from './AuthSessionContext';
 import type { GameHubUserId } from './contract';
 import { SiteHeader } from '../components/SiteHeader';
@@ -15,6 +15,14 @@ function SessionProbe({ children }: { children?: ReactNode }) {
     </>
   );
 }
+
+beforeEach(() => {
+  window.history.replaceState({}, '', '/');
+});
+
+afterEach(() => {
+  window.history.replaceState({}, '', '/');
+});
 
 describe('AuthSessionProvider', () => {
   it('renders public content while the session loads and remains anonymous', async () => {
@@ -68,6 +76,34 @@ describe('AuthSessionProvider', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Session state')).toHaveTextContent('anonymous'));
   });
+
+  it('clears the website session immediately when signing out from an authenticated page', async () => {
+    window.history.replaceState({}, '', '/games/orbital-stack?mode=endless#results');
+    const loadSession = vi.fn().mockResolvedValue({
+      state: 'authenticated',
+      userId: 'internal-user' as GameHubUserId,
+    } as const);
+
+    render(
+      <AuthSessionProvider loadSession={loadSession}>
+        <SessionProbe />
+        <SiteHeader />
+      </AuthSessionProvider>,
+    );
+
+    const signOutLink = await screen.findByRole('link', { name: 'Sign out' });
+    expect(signOutLink).toHaveAttribute(
+      'href',
+      '/.auth/logout?post_logout_redirect_uri=%2Fgames%2Forbital-stack%3Fmode%3Dendless%23results',
+    );
+    signOutLink.addEventListener('click', (event) => event.preventDefault(), {
+      once: true,
+    });
+    fireEvent.click(signOutLink);
+
+    expect(screen.getByLabelText('Session state')).toHaveTextContent('anonymous');
+    expect(screen.getByRole('link', { name: 'Sign in or create account' })).toBeVisible();
+  });
 });
 
 describe('SiteHeader', () => {
@@ -76,5 +112,16 @@ describe('SiteHeader', () => {
 
     expect(screen.getByRole('navigation', { name: 'Account' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Sign in or create account' })).toHaveAttribute('href', '/account');
+  });
+
+  it('carries the current website path to the account entry page', () => {
+    window.history.replaceState({}, '', '/games/floppy-bird?mode=daily#score');
+
+    render(<SiteHeader />);
+
+    expect(screen.getByRole('link', { name: 'Sign in or create account' })).toHaveAttribute(
+      'href',
+      '/account?returnTo=%2Fgames%2Ffloppy-bird%3Fmode%3Ddaily%23score',
+    );
   });
 });

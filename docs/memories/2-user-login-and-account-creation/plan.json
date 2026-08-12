@@ -107,8 +107,8 @@
         "A user can sign out from any authenticated page and the website immediately returns to anonymous state"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a root-relative return-path validator and URL builders for the account, Azure Static Web Apps sign-in, and managed sign-out endpoints. The shared header carries the current website path into /account, hosted authentication receives only a validated post_login_redirect_uri, and unsafe absolute, protocol-relative, backslash, control-character, authentication-service, and API targets fall back to /. Every authenticated page now renders a sign-out action that synchronously clears provider-independent website state before navigating through /.auth/logout with a validated post_logout_redirect_uri. Added deterministic return-path, account-entry, shared-header, and immediate sign-out tests and documented the runtime boundary. Full yarn validate passed with 327 tests, and yarn infra:check passed for 21 modules and 9 environment parameter files. No failure-state, duplicate-identity, abuse-protection, live Azure configuration, or later story work was implemented.",
       "dependencies": ["US-003", "US-004", "US-005"]
     },
     {

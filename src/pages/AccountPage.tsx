@@ -1,11 +1,12 @@
-import { AUTHENTICATION_CONFIGURATION } from '../auth/contract';
 import { useAuthSession } from '../auth/AuthSessionContext';
+import { createSignInPath, getCurrentWebsiteReturnPath } from '../auth/navigation';
 import { SiteHeader } from '../components/SiteHeader';
 import { buttonStyles } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
 export function AccountPage() {
   const session = useAuthSession();
+  const signInPath = createSignInPath(getCurrentWebsiteReturnPath());
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -33,7 +34,7 @@ export function AccountPage() {
                 Continue to the secure Microsoft-hosted flow. New email addresses are verified before the local account
                 is created.
               </p>
-              <a className={buttonStyles('primary', 'mt-6')} href={AUTHENTICATION_CONFIGURATION.signInPath}>
+              <a className={buttonStyles('primary', 'mt-6')} href={signInPath}>
                 Continue with email
               </a>
             </Card>
@@ -44,7 +45,7 @@ export function AccountPage() {
                 On the secure sign-in page, enter your email, choose Next, then choose Forgot password to verify your
                 email and set a new password.
               </p>
-              <a className={buttonStyles('secondary', 'mt-6')} href={AUTHENTICATION_CONFIGURATION.signInPath}>
+              <a className={buttonStyles('secondary', 'mt-6')} href={signInPath}>
                 Reset password
               </a>
             </Card>

@@ -155,6 +155,24 @@ user flow because External ID selects sign-in versus registration after the
 email step and exposes **Forgot password** on its password screen. Game Hub
 renders no password input and receives no password value.
 
+## Return Paths and Sign-Out
+
+The shared website header carries the current pathname, query, and fragment to
+`/account` as one encoded `returnTo` value. The account page validates that
+value before passing it to Azure Static Web Apps as
+`post_login_redirect_uri`. Validation accepts only root-relative website paths
+on the current origin. Absolute URLs, protocol-relative URLs, backslashes,
+control characters, and `/.auth/*` or `/api/*` service paths fall back to `/`.
+Completed and canceled hosted flows therefore never receive an untrusted return
+origin from Game Hub.
+
+Every authenticated page renders the shared header's **Sign out** action. It
+first clears the provider-independent website session state synchronously, then
+navigates through `/.auth/logout` with the same validated website path as
+`post_logout_redirect_uri`. Azure Static Web Apps clears its managed session
+before returning to that path. The website immediately renders its anonymous
+state while the browser begins that managed sign-out navigation.
+
 ## Social Provider Federation
 
 `config/authentication/external-id-social-providers.json` declares Google and
@@ -225,8 +243,8 @@ The current implementation still does not decide or implement:
 - minimum age, consent, privacy, or account deletion policy;
 - live Google and Facebook application registration, credential seeding, and
   federation verification;
-- custom hosted login, registration, verification, reset, error, or signed-out
-  screens beyond the managed External ID experience; or
+- custom hosted login, registration, verification, reset, or error screens
+  beyond the managed External ID experience; or
 - live authentication or deployment verification.
 
 Duplicate identities must fail safely until the linking decision is made.

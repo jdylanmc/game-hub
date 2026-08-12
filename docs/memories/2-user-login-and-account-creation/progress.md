@@ -28,6 +28,10 @@
   from Azure Key Vault with the secure-configuration identity, masks them, and
   passes them only to Microsoft Graph after a separate keyless external-tenant
   sign-in.
+- Authentication return targets are root-relative website paths. The browser
+  rejects external, protocol-relative, backslash, control-character,
+  authentication-service, and application programming interface targets before
+  they can enter a managed sign-in or sign-out URL.
 
 ## Iteration 1: Select the identity architecture and contracts
 
@@ -166,3 +170,29 @@
   Azure configuration, deployed social sign-in verification, return-path
   behavior, sign-out change, error-state work, abuse protection, or later story
   was implemented.
+
+## Iteration 6: Preserve return paths and support sign-out
+
+- Added one website return-path validator that retains the current pathname,
+  query, and fragment only when it is a root-relative path on the current
+  origin. Absolute URLs, protocol-relative URLs, backslashes, control
+  characters, `/.auth/*`, and `/api/*` fall back to `/`.
+- The shared header carries the current website path into `/account`; the
+  account page passes only the validated value to Azure Static Web Apps as
+  `post_login_redirect_uri`. Completed or canceled hosted authentication never
+  receives an untrusted return origin from Game Hub.
+- Every authenticated page now exposes a responsive shared-header **Sign out**
+  action. It clears the provider-independent React session state synchronously,
+  immediately rendering the anonymous affordance, then navigates through
+  `/.auth/logout` with the validated path as `post_logout_redirect_uri`.
+- Added deterministic coverage for safe path preservation, malicious and
+  service-path rejection, account handoff, sign-in URL construction, sign-out
+  URL construction, and the immediate authenticated-to-anonymous transition.
+- Full `yarn validate` passed with 327 tests, coverage, immutable install,
+  formatting, lint, policy, fail-closed simulations, security audit,
+  generated-state, type, production website and application programming
+  interface builds, bundle budgets, and Storybook. `yarn infra:check` passed
+  for 21 modules and 9 environment parameter files.
+- No authentication failure user interface, duplicate-identity handling, abuse
+  protection, live Azure configuration, deployment verification, or later
+  story was implemented.

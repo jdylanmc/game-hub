@@ -5,7 +5,16 @@ import { loadAuthSession } from './session';
 export type WebsiteAuthSession = AuthSession | { state: 'loading' };
 
 const anonymousSession: AuthSession = { state: 'anonymous' };
-const AuthSessionContext = createContext<WebsiteAuthSession>(anonymousSession);
+
+interface AuthSessionContextValue {
+  clearSession: () => void;
+  session: WebsiteAuthSession;
+}
+
+const AuthSessionContext = createContext<AuthSessionContextValue>({
+  clearSession: () => undefined,
+  session: anonymousSession,
+});
 
 interface AuthSessionProviderProps {
   children: ReactNode;
@@ -38,9 +47,24 @@ export function AuthSessionProvider({ children, loadSession = loadAuthSession }:
     };
   }, [loadSession]);
 
-  return <AuthSessionContext.Provider value={session}>{children}</AuthSessionContext.Provider>;
+  return (
+    <AuthSessionContext.Provider
+      value={{
+        clearSession: () => setSession(anonymousSession),
+        session,
+      }}
+    >
+      {children}
+    </AuthSessionContext.Provider>
+  );
 }
 
 export function useAuthSession(): WebsiteAuthSession {
-  return useContext(AuthSessionContext);
+  return useContext(AuthSessionContext).session;
+}
+
+export function useAuthSessionActions(): Pick<AuthSessionContextValue, 'clearSession'> {
+  const { clearSession } = useContext(AuthSessionContext);
+
+  return { clearSession };
 }

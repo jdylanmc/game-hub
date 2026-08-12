@@ -21,6 +21,7 @@ export default defineConfig({
         'api/src/server.ts',
         'api/src/session-handler.ts',
         'src/auth/AuthSessionContext.tsx',
+        'src/auth/navigation.ts',
         'src/auth/session.ts',
         'src/components/SiteHeader.tsx',
         'src/game-catalog.ts',

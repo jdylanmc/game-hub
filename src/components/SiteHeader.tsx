@@ -1,11 +1,13 @@
-import { AUTHENTICATION_CONFIGURATION } from '../auth/contract';
-import { useAuthSession } from '../auth/AuthSessionContext';
+import { useAuthSession, useAuthSessionActions } from '../auth/AuthSessionContext';
+import { createAccountPath, createSignOutPath, getCurrentWebsiteReturnPath } from '../auth/navigation';
 import { Brand } from './Brand';
 import { Link } from './Link';
 import { buttonStyles } from './ui/Button';
 
 export function SiteHeader() {
   const session = useAuthSession();
+  const { clearSession } = useAuthSessionActions();
+  const returnPath = getCurrentWebsiteReturnPath();
 
   return (
     <header className="border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
@@ -24,20 +26,25 @@ export function SiteHeader() {
           ) : null}
 
           {session.state === 'anonymous' ? (
-            <Link className={buttonStyles()} href={AUTHENTICATION_CONFIGURATION.accountPath}>
+            <Link className={buttonStyles()} href={createAccountPath(returnPath)}>
               Sign in or create account
             </Link>
           ) : null}
 
           {session.state === 'authenticated' ? (
-            <span
-              aria-label="Signed in to Game Hub"
-              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 text-sm font-semibold text-emerald-100"
-              role="status"
-            >
-              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-emerald-300" />
-              Signed in
-            </span>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <span
+                aria-label="Signed in to Game Hub"
+                className="inline-flex min-h-10 items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 text-sm font-semibold text-emerald-100"
+                role="status"
+              >
+                <span aria-hidden="true" className="h-2 w-2 rounded-full bg-emerald-300" />
+                Signed in
+              </span>
+              <a className={buttonStyles('secondary')} href={createSignOutPath(returnPath)} onClick={clearSession}>
+                Sign out
+              </a>
+            </div>
           ) : null}
         </nav>
       </div>
