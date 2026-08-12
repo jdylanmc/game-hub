@@ -70,6 +70,11 @@ Git objects and explicit issue/pull-request metadata. It treats every collected
 value as inert untrusted data and must never check out, import, install, build,
 test, or execute pull-request content.
 
+Adversarial source-issue resolution accepts canonical Ralph markers, matching
+`issue-<number>` branch identity, and explicit close/fix/resolve/track/address
+declarations. Generic prose such as a dependency's "issue #N" is not identity;
+conflicting canonical signals must fail closed.
+
 `yarn review:adversarial` consumes only a ready context packet. Keep its
 versioned system policy separate from the human review prompt, authenticate with
 Microsoft Entra ID, register no model tools, restrict Azure OpenAI destinations,

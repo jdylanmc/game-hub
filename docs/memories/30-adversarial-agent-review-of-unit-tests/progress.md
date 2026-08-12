@@ -487,3 +487,30 @@
   passed, fresh protected-main run `31561212543` authenticated successfully,
   and check `94003877768` published `PASS` on exact head
   `49240626b04f5a85828edb2bfcdaf16366309a5e`.
+
+## 2026-08-12 - Ralph source-issue resolver remediation
+
+- Inspected PR #37 body, branch, GitHub linked closing issues, exact-head
+  Continuous Integration evidence, protected run `31560833700`, and the exact
+  resolver failure log.
+- Found three agreeing issue #27 signals: canonical Ralph marker, `Tracks #27`,
+  and the `issue-27` branch. GitHub linked no closing issue. Incidental body
+  prose naming dependency `issue #30` was captured by the generic source regex,
+  producing false ambiguity before model access.
+- Replaced generic issue matching with bounded canonical signal groups:
+  Ralph marker, issue branch, and explicit
+  close/fix/resolve/track/address declarations. Multiple values within a group
+  or disagreement across groups still fail closed.
+- Added exact PR #37 regression coverage and policy mutations for generic issue
+  matching and removed canonical agreement. Focused resolver/policy tests,
+  lint, full policy, 162 Vitest tests, and 26 Ralph tests passed.
+- Protected main cannot use the unmerged resolver implementation. Normalized
+  only PR #37's incidental dependency wording, preserved its marker, source
+  declaration, code, and exact head, then reran genuine Continuous Integration.
+- Fresh protected run `31562174681` resolved issue #27, authenticated with the
+  immutable subject, and published successful exact-head adversarial check
+  `94006743369` on `ac2f41696798b03cacbd9ccb051b6730462f4826`.
+- While this correction was in progress, `jdylanmc` merged OIDC PR #41 as
+  `f8ad8715f13edc9bb5ecb737f695461a311848e1`. The resolver commit was rebased
+  onto that exact main head in `fix/issue-30-ralph-source-resolution`, and issue
+  #30 was reopened after GitHub closed it at merge.

@@ -194,6 +194,22 @@
       "passes": true,
       "notes": "Completed on fix/issue-30-adversarial-oidc from origin/main. Read-only inspection proved the failed token used immutable subject repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review while Azure trusted the legacy name-only subject. Existing applications were onboarded once with immutable Graph uniqueName values, then the pinned Microsoft Graph Bicep extension reconciled all three exact environment credentials in subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed. Repeat inference deployment retained one credential. Policy, lint, seven focused mutation tests, Bicep builds, and shell validation passed. Full yarn validate reached the isolated hardened bootstrap proof but stopped on unrelated public-registry bin-path metadata drift that would rewrite unchanged lock entries. Fresh protected run 31561212543 authenticated with the immutable subject and published successful check 94003877768 on PR #39 exact head 49240626b04f5a85828edb2bfcdaf16366309a5e.",
       "dependencies": ["US-010"]
+    },
+    {
+      "id": "US-012",
+      "title": "Disambiguate normal Ralph source-issue metadata",
+      "description": "Prevent incidental dependency issue prose from blocking otherwise attributable Ralph pull requests while retaining fail-closed canonical identity checks.",
+      "acceptanceCriteria": [
+        "Canonical Ralph marker, issue branch, and explicit close/fix/resolve/track/address declarations resolve one agreeing source issue",
+        "Generic prose such as dependency issue #30 is not treated as source identity",
+        "Conflicting canonical markers, branches, or explicit declarations still fail closed",
+        "Repository workflow policy and focused tests reject reintroducing generic issue matching or removing canonical agreement",
+        "Affected PR #37 receives a successful genuine Adversarial Review / unit-test-reviewer check on exact head ac2f41696798b03cacbd9ccb051b6730462f4826"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "PR #37 had no linked closing issues; its body and branch identified issue #27 through the Ralph marker, Tracks declaration, and issue-27 branch, while incidental text 'dependency issue #30' triggered the old generic regex. The resolver now accepts only canonical marker, branch, and explicit close/fix/resolve/track/address signals, unions them only when they agree, and keeps ambiguity fail-closed. Policy mutations and exact PR #37 regression tests passed; the full deterministic suite passed with 162 Vitest and 26 Ralph tests. Because protected workflow code remains on the previous resolver until this resolver pull request merges, PR #37's body was truthfully normalized to remove the incidental generic phrase before rerunning existing CI. Fresh protected run 31562174681 then resolved issue #27, authenticated with immutable OIDC, and published successful exact-head check 94006743369 on ac2f41696798b03cacbd9ccb051b6730462f4826. OIDC PR #41 merged as f8ad8715f13edc9bb5ecb737f695461a311848e1 during this work, so the resolver commit was rebased onto that main head and issue #30 was reopened for the remaining resolver gate. No identity binding was weakened.",
+      "dependencies": ["US-011"]
     }
   ]
 }

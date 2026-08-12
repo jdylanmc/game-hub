@@ -6,8 +6,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const workflow = await fs.readFile(path.join(root, '.github/workflows/adversarial-review.yml'), 'utf8');
 const config = JSON.parse(await fs.readFile(path.join(root, 'config/adversarial-agents/workflow.json'), 'utf8'));
 const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
+const resolver = await fs.readFile(path.join(root, 'scripts/prepare-adversarial-workflow.ts'), 'utf8');
 
-function validateAdversarialWorkflowPolicy(workflow, config, packageJson) {
+function validateAdversarialWorkflowPolicy(workflow, config, packageJson, resolver) {
   const violations = [];
   const requiredFragments = [
     'name: Adversarial review',
@@ -144,10 +145,32 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson) {
     violations.push('Canonical adversarial workflow preparation or policy command is missing.');
   }
 
+  const requiredResolverFragments = [
+    'const SOURCE_ISSUE_PATTERNS',
+    'ralphMarker:',
+    'branch:',
+    'declaration:',
+    'track(?:s|ed)?',
+    'address(?:e[sd])?',
+    'issueReferences(pullRequest.body, SOURCE_ISSUE_PATTERNS.ralphMarker)',
+    'issueReferences(pullRequest.headRef, SOURCE_ISSUE_PATTERNS.branch)',
+    'SOURCE_ISSUE_PATTERNS.declaration',
+    'signalGroups.some((references) => references.size > 1)',
+    'new Set(signalGroups.flatMap((group) => [...group]))',
+  ];
+  for (const fragment of requiredResolverFragments) {
+    if (!resolver.includes(fragment)) {
+      violations.push(`Missing source-issue resolver invariant: ${fragment}`);
+    }
+  }
+  if (resolver.includes('|issue|') || resolver.includes('|issue)')) {
+    violations.push('Generic issue prose must not be treated as a source-issue declaration.');
+  }
+
   return violations;
 }
 
-const violations = validateAdversarialWorkflowPolicy(workflow, config, packageJson);
+const violations = validateAdversarialWorkflowPolicy(workflow, config, packageJson, resolver);
 if (violations.length > 0) {
   throw new Error(`Adversarial workflow policy failed:\n${violations.join('\n')}`);
 }
