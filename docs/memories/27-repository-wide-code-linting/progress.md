@@ -20,6 +20,12 @@
 - The required protected check is currently the composite
   `Continuous integration` job, which invokes the same root lint command used
   locally.
+- TypeScript linting uses TypeScript ESLint project service type information
+  from the root application and Node.js projects. Keep all authored TypeScript
+  surfaces included in one of those projects.
+- Browser globals apply to host and game source plus Storybook preview code;
+  Node.js globals apply to configuration files; tests add Vitest globals;
+  shared package source remains environment-neutral.
 
 ## 2026-08-11 - Planning
 
@@ -107,3 +113,30 @@ Current inspection found these issue #27 gaps:
   `yarn npm audit --all --recursive --severity high`.
 - US-002 is next. It should activate typed TypeScript rules and precise
   environment overrides using this pinned shared toolchain.
+
+## 2026-08-11 - US-002
+
+- Replaced the non-type-aware TypeScript baseline with
+  `recommendedTypeChecked` and TypeScript project service integration in the
+  single root flat ESLint configuration.
+- Added targeted browser, Node.js, test, Storybook, package, game, React, and
+  generator environment boundaries instead of assigning browser globals to
+  every TypeScript file.
+- Expanded the application and Node.js TypeScript projects so game and package
+  tests, Storybook configuration, and Tailwind configuration participate in
+  type-aware linting and repository typechecking.
+- Fixed newly exposed baseline findings: removed an unnecessary Three.js
+  assertion, made contract-test module typing explicit, replaced unsafe Vitest
+  asymmetric matcher composition, and narrowed Tailwind theme values from
+  `unknown` before using them as styles.
+- Verified an isolated temporary probe failed with actionable diagnostics for
+  unused code, explicit and called `any`, floating promises, and promises
+  misused as void callbacks. Verified printed configurations give browser
+  globals only to host, game, preview, and jsdom test code; Node.js globals only
+  to configuration code; and no browser or React rules to shared package
+  source.
+- Passed `yarn lint`, `yarn test`, `yarn typecheck`, `yarn build`,
+  `yarn bundle:check`, `yarn build-storybook`, `yarn generate:check`,
+  `yarn policy:check`, and `yarn format:check`.
+- US-003 is next. It should activate the pinned accessibility and import
+  plugins while preserving these environment boundaries.

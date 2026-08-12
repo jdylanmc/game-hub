@@ -56,8 +56,8 @@
         "The configuration remains one shared root flat configuration with targeted overrides"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "The current config uses non-type-aware TypeScript recommended rules and assigns browser globals to every TS/TSX file. Current evidence does not satisfy typed unsafe or promise enforcement and precise environment separation.",
+      "passes": true,
+      "notes": "Enabled TypeScript ESLint recommendedTypeChecked with project service type information. Browser, Node.js, test, Storybook, package, game, React, and generator surfaces now receive targeted globals and rules; representative unsafe any, floating promise, misused promise, and unused-code probes fail with file and line diagnostics.",
       "dependencies": ["US-001"]
     },
     {

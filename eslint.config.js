@@ -4,6 +4,12 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+const typescriptFiles = ['**/*.{ts,tsx}'];
+const browserFiles = ['src/**/*.{ts,tsx}', 'games/*/src/**/*.{ts,tsx}', '.storybook/preview.ts'];
+const nodeTypescriptFiles = ['*.config.ts', '.storybook/main.ts'];
+const testFiles = ['**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'];
+const reactFiles = ['src/**/*.{ts,tsx}', '.storybook/preview.ts'];
+
 export default tseslint.config(
   {
     ignores: [
@@ -22,18 +28,46 @@ export default tseslint.config(
       globals: globals.node,
     },
   },
-  ...tseslint.configs.recommended.map((config) => ({
+  ...tseslint.configs.recommendedTypeChecked.map((config) => ({
     ...config,
-    files: ['**/*.{ts,tsx}'],
+    files: typescriptFiles,
+    languageOptions: {
+      ...config.languageOptions,
+      parserOptions: {
+        ...config.languageOptions?.parserOptions,
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
   })),
   {
-    files: ['**/*.{ts,tsx}'],
+    files: browserFiles,
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+  {
+    files: nodeTypescriptFiles,
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: testFiles,
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.vitest,
+      },
+    },
+  },
+  {
+    files: reactFiles,
     plugins: {
       react,
       'react-hooks': reactHooks,
     },
     languageOptions: {
-      globals: globals.browser,
       parserOptions: {
         ecmaFeatures: {
           jsx: true,
