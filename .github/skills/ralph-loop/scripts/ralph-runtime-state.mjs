@@ -133,7 +133,7 @@ export function evaluateLeaseState(
   const isStopped = Boolean(lease.stop?.at || lease.stop?.outcome || lease.phase === 'stop');
 
   let state = 'stopped';
-  if (!isStopped && runnerAlive === true && fresh) {
+  if (!isStopped && ((sameHost && runnerAlive === true) || (!sameHost && fresh))) {
     state = 'active';
   } else if (!isStopped && runnerAlive === false) {
     state = 'dead';
@@ -284,13 +284,25 @@ export function acquireLock(
   return lockDir;
 }
 
-export function releaseLock(lockDir) {
+export function releaseLock(lockDir, runId) {
+  const metadata = readLockMetadata(lockDir);
+  if (!metadata || metadata.runId !== runId) {
+    throw new Error(`Refusing to release a Ralph lock no longer owned by run ${runId}.`);
+  }
   rmSync(lockDir, { force: true, recursive: true });
 }
 
-export function releaseLocks(lockDirs) {
+export function releaseLocks(lockDirs, runId) {
+  const errors = [];
   for (const lockDir of lockDirs) {
-    releaseLock(lockDir);
+    try {
+      releaseLock(lockDir, runId);
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  if (errors.length) {
+    throw new Error(errors.map((error) => error.message).join(' '));
   }
 }
 

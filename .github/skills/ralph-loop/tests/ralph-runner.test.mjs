@@ -3,10 +3,10 @@
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { processAlive, stableLockKey } from '../scripts/ralph-runtime-state.mjs';
+import { acquireLock, processAlive, releaseLock, stableLockKey } from '../scripts/ralph-runtime-state.mjs';
 import {
   collectOutput,
   createRalphFixture,
@@ -18,6 +18,7 @@ import {
   spawnRunner,
   waitForFile,
   waitForLease,
+  writeGhState,
 } from './fixture-helpers.mjs';
 
 setScratchRoot('.ralph-test-work/runner-flow');
@@ -211,8 +212,8 @@ test('active leases are refused without takeover', async () => {
         host: os.hostname(),
         iteration: 1,
         phase: 'agent-execution',
-        startedAt: new Date().toISOString(),
-        lastHeartbeatAt: new Date().toISOString(),
+        startedAt: '2026-08-11T00:00:00.000Z',
+        lastHeartbeatAt: '2026-08-11T00:00:00.000Z',
         lastKnownHead: 'current',
         childPid: null,
         stop: null,
@@ -226,6 +227,24 @@ test('active leases are refused without takeover', async () => {
   const result = await collectOutput(runner);
   assert.equal(result.code, 1);
   assert.match(result.stderr, /owns issue/);
+});
+
+test('lock release refuses to delete a successor owner', () => {
+  const fixture = createRalphFixture('release-owner');
+  const leasePath = path.join(fixture.commonDir, 'lease.json');
+  const lockDir = acquireLock(fixture.commonDir, {
+    identity: 'issue ownership',
+    leasePath,
+    lockName: 'release-owner',
+    runId: 'first-run',
+  });
+  const metadataPath = path.join(lockDir, 'metadata.json');
+  const metadata = JSON.parse(readFileSync(metadataPath, 'utf8'));
+  writeFileSync(metadataPath, `${JSON.stringify({ ...metadata, runId: 'second-run' }, null, 2)}\n`);
+
+  assert.throws(() => releaseLock(lockDir, 'first-run'), /no longer owned/);
+  assert.equal(existsSync(lockDir), true);
+  releaseLock(lockDir, 'second-run');
 });
 
 test('dirty worktrees block deterministic recovery', async () => {
@@ -281,4 +300,22 @@ test('checkpoints persist the published exact head and completion metadata', asy
   assert.match(checkpoint.nextResumableAction, /human review and merge/i);
   assert.ok(checkpoint.lastVerifiedHead);
   assert.equal(lease.stop.outcome, 'complete');
+});
+
+test('pending checks time out with a truthful check-wait checkpoint', async () => {
+  const fixture = createRalphFixture('pending-check-timeout');
+  writeGhState(fixture, { checkState: 'pending' });
+  const runner = spawnRunner(fixture, ['--max-iterations', '1', '--iteration-deadline-minutes', '0.1'], {
+    FAKE_COPILOT_SCENARIO: 'complete',
+    RALPH_HEARTBEAT_SECONDS: '1',
+  });
+
+  const result = await collectOutput(runner);
+  assert.equal(result.code, 124);
+  const lease = readLease(fixture);
+  const checkpoint = readCheckpoint(fixture);
+  assert.equal(lease.stop.outcome, 'timed-out');
+  assert.match(lease.stop.reason, /waiting for pull-request checks/);
+  assert.equal(checkpoint.phase, 'check-wait');
+  assert.equal(checkpoint.checkState.required, 'pending');
 });

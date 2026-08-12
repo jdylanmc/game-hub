@@ -585,7 +585,16 @@ async function waitForCheckOutcome({ deadlineAt, githubEnvironment, loop, repoRo
     });
 
     if (Date.now() >= deadlineAt.getTime()) {
-      throw new Error('Iteration timed out while waiting for pull-request checks.');
+      runtimeState.stopLease({
+        lastKnownHead: snapshot.localCommit,
+        outcome: 'timed-out',
+        reason: 'Iteration timed out while waiting for pull-request checks.',
+      });
+      return {
+        ...snapshot,
+        nextAction: 'Inspect the pending exact-head checks, then resume from the last verified checkpoint.',
+        status: 'timed-out',
+      };
     }
     const exactHeadPublished =
       snapshot.localCommit &&
@@ -1113,6 +1122,8 @@ export async function runRalphLoop(argv = process.argv.slice(2), { cwd = process
           continue;
         }
 
+        currentPhase = 'check-wait';
+        runtimeState.updateLease({ phase: currentPhase });
         const completionSnapshot = await waitForCheckOutcome({
           deadlineAt: currentDeadlineAt,
           githubEnvironment,
@@ -1150,6 +1161,10 @@ export async function runRalphLoop(argv = process.argv.slice(2), { cwd = process
           process.stdout.write(`Ralph Loop completed issue #${issueNumber} with passing CI checks.\n`);
           return 0;
         }
+        if (completionSnapshot.status === 'timed-out') {
+          process.stderr.write(`${completionSnapshot.nextAction}\n`);
+          return 124;
+        }
 
         const blockedStatus = !['not-required', 'success'].includes(completionSnapshot.adversarialState)
           ? 'adversarial-check-blocked'
@@ -1164,6 +1179,21 @@ export async function runRalphLoop(argv = process.argv.slice(2), { cwd = process
       });
       process.stderr.write(`Ralph Loop reached ${options.maxIterations} iterations before completion.\n`);
       return 2;
+    } catch (error) {
+      if (!runtimeState.lease?.stop) {
+        runtimeState.stopLease({
+          lastKnownHead: (() => {
+            try {
+              return currentHead(repoRoot);
+            } catch {
+              return runtimeState.lease?.lastKnownHead ?? null;
+            }
+          })(),
+          outcome: 'cancelled',
+          reason: error.message,
+        });
+      }
+      throw error;
     } finally {
       clearInterval(heartbeatTimer);
       for (const signal of ['SIGINT', 'SIGTERM']) {
@@ -1172,7 +1202,7 @@ export async function runRalphLoop(argv = process.argv.slice(2), { cwd = process
       runtimeState.logStream = null;
     }
   } finally {
-    releaseLocks(lockDirs);
+    releaseLocks(lockDirs, runId);
   }
 }
 
