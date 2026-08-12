@@ -202,6 +202,36 @@ describe('prepareAdversarialWorkflow', () => {
     ).toThrow(/exactly one source issue/);
   });
 
+  it('resolves a normal Ralph pull request without treating dependency prose as source identity', () => {
+    expect(
+      extractIssueNumber(
+        pullRequest({
+          title: 'Repository-Wide Code Linting',
+          body: [
+            '<!-- ralph-issue:27 -->',
+            '',
+            'Tracks #27.',
+            '',
+            '- Integrated dependency issue #30 from `main`.',
+          ].join('\n'),
+          headRef: 'ralph/issue-27-repository-wide-code-linting',
+        }),
+      ),
+    ).toBe(27);
+  });
+
+  it('fails closed when canonical Ralph source signals disagree', () => {
+    expect(() =>
+      extractIssueNumber(
+        pullRequest({
+          title: 'Repository-Wide Code Linting',
+          body: '<!-- ralph-issue:27 -->\n\nTracks #27.',
+          headRef: 'ralph/issue-28-repository-wide-code-linting',
+        }),
+      ),
+    ).toThrow(/exactly one source issue/);
+  });
+
   it('extracts checklist requirements and preserves a non-checklist issue body', () => {
     expect(acceptanceCriteria('- [ ] First\n- [x] Second')).toEqual(['First', 'Second']);
     expect(acceptanceCriteria('A complete prose requirement.')).toEqual(['A complete prose requirement.']);

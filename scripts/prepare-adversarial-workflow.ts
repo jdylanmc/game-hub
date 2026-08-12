@@ -129,17 +129,34 @@ function isRelevantPath(filePath: string, patterns: string[]): boolean {
   return patterns.some((pattern) => globToRegex(pattern).test(filePath));
 }
 
-function extractIssueNumber(pullRequest: PullRequestMetadata): number {
+const SOURCE_ISSUE_PATTERNS = {
+  ralphMarker: [/<!--\s*ralph-issue:\s*(\d+)\s*-->/gi],
+  branch: [/(?:^|\/)issue-(\d+)(?:[-/]|$)/gi],
+  declaration: [
+    /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|track(?:s|ed)?|address(?:e[sd])?)\s*:?\s*#(\d+)\b/gi,
+    /\bsource\s+issue\s*:?\s*#(\d+)\b/gi,
+    /^\s*issue\s*:?\s*#(\d+)\s*$/gim,
+  ],
+};
+
+function issueReferences(text: string, patterns: RegExp[]): Set<number> {
   const references = new Set<number>();
-  const text = `${pullRequest.title}\n${pullRequest.body}\n${pullRequest.headRef}`;
-  const patterns = [
-    /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|issue)\s*:?\s*#(\d+)\b/gi,
-    /<!--\s*ralph-issue:\s*(\d+)\s*-->/gi,
-    /\bissue-(\d+)\b/gi,
-  ];
   for (const pattern of patterns) {
     for (const match of text.matchAll(pattern)) references.add(Number(match[1]));
   }
+  return references;
+}
+
+function extractIssueNumber(pullRequest: PullRequestMetadata): number {
+  const signalGroups = [
+    issueReferences(pullRequest.body, SOURCE_ISSUE_PATTERNS.ralphMarker),
+    issueReferences(pullRequest.headRef, SOURCE_ISSUE_PATTERNS.branch),
+    issueReferences(`${pullRequest.title}\n${pullRequest.body}`, SOURCE_ISSUE_PATTERNS.declaration),
+  ];
+  if (signalGroups.some((references) => references.size > 1)) {
+    throw new Error('Pull request must identify exactly one source issue');
+  }
+  const references = new Set(signalGroups.flatMap((group) => [...group]));
   if (references.size !== 1) {
     throw new Error('Pull request must identify exactly one source issue');
   }
