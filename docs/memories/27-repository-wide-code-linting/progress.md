@@ -277,5 +277,11 @@ Current inspection found these issue #27 gaps:
   all 14 fail-closed probes, security audit, 26 Ralph tests, 175 Vitest tests,
   coverage, generation, typecheck, production build, bundle budgets, and
   Storybook.
+- Exact-head continuous integration attempt one, run `31563903752`, then showed
+  that the protected GitHub runner's immutable registry view required the
+  pre-refresh bin paths. Restored those 20 metadata-only paths exactly as
+  requested by the failed install diff; dependency versions, resolutions, and
+  checksums remain unchanged. The one remaining publication attempt must prove
+  this protected-runner representation before adversarial review runs.
 - US-006 is next. It should add isolated representative lint and safe-fix
   proofs without broadening the now-enforced suppression exception policy.
