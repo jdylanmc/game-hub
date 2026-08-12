@@ -26,7 +26,7 @@ canonical root commands in the same order:
 | `yarn policy:check` | Lint suppressions are approved and workflow and Code Owner invariants remain intact. |
 | `yarn test:ci-fail-closed` | All 11 representative failure probes fail for their expected reason. |
 | `yarn security:audit` | The recursive dependency audit reports no high-severity findings; an unavailable registry fails the command. |
-| `yarn test:coverage` | Test integrity, deterministic Vitest execution, JUnit output, and configured coverage thresholds pass. |
+| `yarn test:coverage` | Test integrity, Ralph orchestration simulations, deterministic Vitest execution, JUnit output, and configured coverage thresholds pass. |
 | `yarn generate:check` | Workspace generation leaves the committed manifest and import map unchanged and clean. |
 | `yarn typecheck` | All TypeScript project references compile without emitting errors. |
 | `yarn build` | `dist/` contains the production website and Vite manifest. |

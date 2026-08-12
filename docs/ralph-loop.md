@@ -34,7 +34,9 @@ Each iteration follows the same cycle:
 1. **Read** the GitHub Issue, story plan, progress, relevant `AGENTS.md` files,
    pull request checks, and recent Git history.
 2. **Plan** one story small enough to complete and verify within the fresh
-   context.
+   context. Target about 45 minutes of implementation plus verification time so
+   the runner's default 90-minute hard iteration deadline remains an exception,
+   not the plan.
 3. **Execute** the implementation without expanding the GitHub Issue's scope.
 4. **Verify** the smallest available type, build, lint, test, and browser checks
    that cover the change.
@@ -46,6 +48,11 @@ Each iteration follows the same cycle:
 
 The local runner starts a new `copilot --prompt` process for every iteration. It
 does not resume a prior Copilot session.
+
+Stories that involve live or external work need even smaller boundaries. Treat
+live deployment, calibration, exact-head publication, and enforcement or
+adversarial review as separate stories or checkpoints when applicable rather
+than one multi-hour context.
 
 ## Worktree Topology and Lifecycle
 
@@ -167,6 +174,32 @@ Committed repository memory is transparent and reviewable. Never put
 credentials, personal data, access tokens, private chat, or unrelated repository
 content in these files.
 
+## Live Lease, Heartbeat, and Checkpoint State Is Git-Local
+
+Committed memory is not enough for truthful runtime status. The runner also
+writes atomic machine-readable state under the repository's shared git common
+directory:
+
+```text
+<git-common-dir>/
+├── ralph-locks/
+│   └── *.lock/
+│       └── metadata.json
+└── ralph-state/
+    └── issue-<number>/
+        ├── lease.json
+        ├── checkpoint.json
+        └── archives/
+            └── <timestamp>-<run-id>.json
+```
+
+`lease.json` records immutable run identity, runner and child process IDs,
+current iteration, phase, start time, last heartbeat, last known `HEAD`, and
+the final stop or outcome reason. `checkpoint.json` records the last verified
+commit, the last published commit, the draft pull request and head SHA, story
+and check state, and the next resumable action. These files are never committed
+and must never contain secrets.
+
 ## Workspace Guidance Carries Durable Conventions
 
 Every Yarn workspace contains an `AGENTS.md`. An iteration reads the root file
@@ -183,27 +216,30 @@ failed attempts in the issue memory.
    the context-isolation property.
 2. **Each iteration completes at most one story.** Oversized iterations recreate
    the context pressure the loop is designed to avoid.
-3. **The worktree starts and ends clean.** Uncommitted changes stop the loop so a
+3. **The runner owns liveness state.** A git-local lease, heartbeat, and
+   checkpoint determine whether a loop is running, stale, blocked, or complete.
+   Todo rows or shell history are not authoritative.
+4. **The worktree starts and ends clean.** Uncommitted changes stop the loop so a
    later context cannot compound an unknown partial state.
-4. **Passing checks precede commits.** Broken commits make every later iteration
+5. **Passing checks precede commits.** Broken commits make every later iteration
    less reliable.
-5. **Every run uses an issue branch and draft pull request.** The loop never
+6. **Every run uses an issue branch and draft pull request.** The loop never
    pushes directly to the default branch.
-6. **The loop never merges.** A human owns the merge decision.
-7. **All cross-iteration memory lives under `docs/memories`.** Conversation
+7. **The loop never merges.** A human owns the merge decision.
+8. **All cross-iteration memory lives under `docs/memories`.** Conversation
    history and local hidden files are not durable project state.
-8. **Run identity cannot drift.** Repository, issue, branch, base branch, and
+9. **Run identity cannot drift.** Repository, issue, branch, base branch, and
    draft pull request must continue to identify the same work.
-9. **Remote state is reconciled before publication.** The runner fetches and
+10. **Remote state is reconciled before publication.** The runner fetches and
    stops on branch divergence or pull request collisions.
-10. **GitHub API calls use the repository owner account.** The runner switches
-    to no global account. It resolves `jdylanmc`'s stored credential and binds
-    the orchestrator and each child process through an isolated `GH_TOKEN`
-    environment.
-11. **Issue worktrees are deterministic and exclusive.** A loop runs only at
-    `<repository>-worktrees/issue-<number>`.
-12. **Parallel eligibility is explicit.** Unmerged dependencies block work and
-    overlapping eligible change scopes stop orchestration.
+11. **GitHub API calls use the repository owner account.** The runner switches
+   to no global account. It resolves `jdylanmc`'s stored credential and binds
+   the orchestrator and each child process through an isolated `GH_TOKEN`
+   environment.
+12. **Issue worktrees are deterministic and exclusive.** A loop runs only at
+   `<repository>-worktrees/issue-<number>`.
+13. **Parallel eligibility is explicit.** Unmerged dependencies block work and
+   overlapping eligible change scopes stop orchestration.
 
 The runner stores issue, branch, and worktree locks under the shared Git common
 directory. Independent issues acquire different locks and can run concurrently;
@@ -229,11 +265,42 @@ identity.
 
 Git commits define successful checkpoints. If Copilot exits with an error or
 leaves uncommitted changes, the runner stops and preserves the files for human
-inspection. Restart the loop after resolving the blocker and restoring a clean
-worktree.
+inspection. The runner never auto-commits unvalidated dirty files.
+
+Recovery starts from the last verified checkpoint in `checkpoint.json`, not from
+an assumption about the prior shell or todo state. A fresh runner:
+
+- refuses an active healthy lease;
+- archives stale or stopped lease state before reusing the worktree;
+- treats dirty files as blocking evidence that must be inspected manually; and
+- resumes only after the worktree is clean again.
 
 The next fresh context reads the last committed plan and progress. It does not
 inherit the failed context's assumptions.
+
+## Truthful Status and Checkpoint Inspection
+
+Use the status command inside the issue worktree:
+
+```bash
+yarn ralph:status -- --memory-dir docs/memories/<issue>-<slug>
+```
+
+Status is derived from the lease, process liveness, worktree dirtiness, Git
+publication, draft pull request, and exact-head check state. It distinguishes:
+
+- `running`
+- `idle`
+- `stale`
+- `timed-out`
+- `cancelled`
+- `dirty-blocked`
+- `ci-blocked`
+- `adversarial-check-blocked`
+- `complete`
+
+Each status includes timestamps and the next resumable action so recovery does
+not guess.
 
 ## Unattended Operation
 
@@ -278,7 +345,8 @@ After the skill creates and commits the issue memory, it runs:
 ```bash
 .github/skills/ralph-loop/scripts/run-ralph-loop.sh \
   --memory-dir docs/memories/27-repository-wide-code-linting \
-  --max-iterations 10
+  --max-iterations 10 \
+  --iteration-deadline-minutes 90
 ```
 
 Pass `--continuous` only after the user explicitly delegates unattended
