@@ -1,6 +1,8 @@
 import type { GameManifest } from '@game-hub/game-contract';
 import { renderHook, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
+import { installFetchMock } from './test/boundaries';
 
 const manifest: GameManifest = {
   accent: '#f59e0b',
@@ -16,21 +18,16 @@ const manifest: GameManifest = {
   title: 'FloppyBird',
 };
 
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.resetModules();
-  vi.unstubAllGlobals();
-});
-
 describe('game catalog', () => {
   it('loads, validates, and caches a valid catalog', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ games: [manifest] }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200,
-      }),
+    const fetchMock = installFetchMock(async () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ games: [manifest] }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        }),
+      ),
     );
-    vi.stubGlobal('fetch', fetchMock);
     const { loadGameCatalog } = await import('./game-catalog');
 
     await expect(loadGameCatalog()).resolves.toEqual([manifest]);
@@ -40,13 +37,10 @@ describe('game catalog', () => {
   });
 
   it('rejects malformed catalog entries', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response(JSON.stringify({ games: [{ ...manifest, technology: 'Canvas' }] }), { status: 200 }),
-        ),
+    installFetchMock(async () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ games: [{ ...manifest, technology: 'Canvas' }] }), { status: 200 }),
+      ),
     );
     const { loadGameCatalog } = await import('./game-catalog');
 
@@ -67,18 +61,17 @@ describe('game catalog', () => {
       'games[0].controls[0].inputs[0] must be a non-empty string.',
     ],
   ])('rejects invalid catalog shape %#', async (catalog, message) => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(catalog), { status: 200 })));
+    installFetchMock(async () => Promise.resolve(new Response(JSON.stringify(catalog), { status: 200 })));
     const { loadGameCatalog } = await import('./game-catalog');
 
     await expect(loadGameCatalog()).rejects.toThrow(message);
   });
 
   it('reports request failures and permits a retry', async () => {
-    const fetchMock = vi
-      .fn()
+    const fetchMock = installFetchMock();
+    fetchMock
       .mockResolvedValueOnce(new Response(null, { status: 503, statusText: 'Unavailable' }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ games: [manifest] }), { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
     const { loadGameCatalog } = await import('./game-catalog');
 
     await expect(loadGameCatalog()).rejects.toThrow('503 Unavailable');
@@ -95,10 +88,7 @@ describe('game catalog', () => {
   });
 
   it('exposes ready catalog state through the host hook', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(new Response(JSON.stringify({ games: [manifest] }), { status: 200 })),
-    );
+    installFetchMock(async () => Promise.resolve(new Response(JSON.stringify({ games: [manifest] }), { status: 200 })));
     const { useGameCatalog } = await import('./game-catalog');
     const { result } = renderHook(() => useGameCatalog());
 
@@ -107,7 +97,7 @@ describe('game catalog', () => {
   });
 
   it('exposes catalog failures through the host hook', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network unavailable')));
+    installFetchMock(async () => Promise.reject(new Error('network unavailable')));
     const { useGameCatalog } = await import('./game-catalog');
     const { result } = renderHook(() => useGameCatalog());
 

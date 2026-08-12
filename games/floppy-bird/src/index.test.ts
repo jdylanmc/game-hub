@@ -5,18 +5,11 @@ import {
   type GameScore,
   type RandomSource,
 } from '@game-hub/game-contract';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { installAnimationFrameController } from '../../../src/test/boundaries';
+import type { WebGLRendererDouble } from '../../../src/test/three-boundary';
 import { createGame, manifest } from './index';
 import type { FloppyBirdSimulationInput, FloppyBirdSimulationState } from './simulation';
-
-interface RendererDouble {
-  dispose: ReturnType<typeof vi.fn>;
-  render: ReturnType<typeof vi.fn>;
-  setClearColor: ReturnType<typeof vi.fn>;
-  setPixelRatio: ReturnType<typeof vi.fn>;
-  setSize: ReturnType<typeof vi.fn>;
-  shadowMap: { enabled: boolean };
-}
 
 interface SimulationStepRecord {
   elapsedSeconds: number;
@@ -26,7 +19,7 @@ interface SimulationStepRecord {
 }
 
 const threeState = vi.hoisted(() => ({
-  renderers: [] as RendererDouble[],
+  renderers: [] as WebGLRendererDouble[],
 }));
 
 const simulationState = vi.hoisted(() => ({
@@ -35,21 +28,11 @@ const simulationState = vi.hoisted(() => ({
 
 vi.mock('three', async (importOriginal) => {
   const actual = await importOriginal<typeof import('three')>();
+  const { createWebGLRendererConstructor } = await import('../../../src/test/three-boundary');
 
   return {
     ...actual,
-    WebGLRenderer: class {
-      readonly dispose = vi.fn();
-      readonly render = vi.fn();
-      readonly setClearColor = vi.fn();
-      readonly setPixelRatio = vi.fn();
-      readonly setSize = vi.fn();
-      readonly shadowMap = { enabled: false };
-
-      constructor() {
-        threeState.renderers.push(this);
-      }
-    },
+    WebGLRenderer: createWebGLRendererConstructor((renderer) => threeState.renderers.push(renderer)),
   };
 });
 
@@ -76,54 +59,6 @@ vi.mock('./simulation', async (importOriginal) => {
     },
   };
 });
-
-interface AnimationFrameController {
-  cancel: ReturnType<typeof vi.fn>;
-  pendingCount: () => number;
-  peekNext: () => { callback: FrameRequestCallback; id: number };
-  request: ReturnType<typeof vi.fn>;
-  runNext: (timestamp: number) => void;
-}
-
-function installAnimationFrameController(): AnimationFrameController {
-  const callbacks = new Map<number, FrameRequestCallback>();
-  let nextId = 1;
-  const request = vi.fn((callback: FrameRequestCallback) => {
-    const id = nextId;
-
-    nextId += 1;
-    callbacks.set(id, callback);
-    return id;
-  });
-  const cancel = vi.fn((id: number) => {
-    callbacks.delete(id);
-  });
-  const peekNext = () => {
-    const entry = callbacks.entries().next().value;
-
-    if (!entry) {
-      throw new Error('Expected a pending animation frame.');
-    }
-
-    return { callback: entry[1], id: entry[0] };
-  };
-
-  vi.stubGlobal('requestAnimationFrame', request);
-  vi.stubGlobal('cancelAnimationFrame', cancel);
-
-  return {
-    cancel,
-    peekNext,
-    pendingCount: () => callbacks.size,
-    request,
-    runNext(timestamp) {
-      const { callback, id } = peekNext();
-
-      callbacks.delete(id);
-      callback(timestamp);
-    },
-  };
-}
 
 function phaseSequence(events: GameEvent[]): string[] {
   return events.filter((event) => event.type === 'phase').map((event) => event.phase);
@@ -169,11 +104,6 @@ function createLifecycleHarness() {
 beforeEach(() => {
   simulationState.steps.length = 0;
   threeState.renderers.length = 0;
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
 });
 
 describe('FloppyBird manifest behavior', () => {

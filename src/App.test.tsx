@@ -1,10 +1,11 @@
 import type { GameModule } from '@game-hub/game-contract';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App';
 import type { GameCatalogState } from './game-catalog';
+import { installScrollToMock } from './test/boundaries';
 import { gameFixture } from './test/game-fixture';
 
 const scrollTo = vi.fn();
@@ -32,11 +33,7 @@ beforeEach(() => {
   mocks.loadGameModule.mockReset();
   mocks.loadGameModule.mockReturnValue(new Promise<GameModule>(() => undefined));
   mocks.useGameCatalog.mockReset();
-  vi.stubGlobal('scrollTo', scrollTo);
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
+  installScrollToMock(scrollTo);
 });
 
 describe('App', () => {

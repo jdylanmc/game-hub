@@ -178,8 +178,8 @@
         "Unit suites make no live Azure, GitHub, advertising, identity, payment, or artificial-intelligence service calls"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added reusable explicit boundaries for fetch, scroll and object URLs, local and session storage, controlled animation frames, performance time, fake timers, and Three.js WebGLRenderer construction. Game lifecycle, catalog, link, and avatar suites now use those narrow helpers instead of duplicated global stubs. Shared setup cleans Testing Library renders, fake timers, module caches, mocks, environment and global stubs, storage, and document state after every test, then reinstalls a deny-by-default ambient fetch guard. Direct proofs verify cleanup and fail closed for Azure, GitHub, advertising, identity, payment, and artificial-intelligence destinations while existing model and service tests retain injected credentials and transports.",
       "dependencies": ["US-005", "US-006", "US-007", "US-010"]
     },
     {

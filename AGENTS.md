@@ -182,6 +182,11 @@ Keep at least one deterministic test under each of `src/`, `games/`, and
 `packages/`. Do not commit focused, skipped, todo, or quarantined tests; the root
 test command rejects those states and enforces coverage thresholds.
 
+Unit tests install browser, fetch, storage, animation-frame, performance-time,
+timer, and Three.js doubles explicitly through `src/test/` boundaries. The
+shared setup denies ambient live fetches and restores Testing Library renders,
+mocks, modules, timers, globals, storage, and document state after every test.
+
 ## GitHub CLI Account
 
 GitHub CLI stores both `dylanmccurry_microsoft` and `jdylanmc` credentials for

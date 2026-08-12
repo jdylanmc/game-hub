@@ -346,3 +346,32 @@
 - Checks passed: targeted Prettier and ESLint, 50 catalog/loader/host/component
   tests, `yarn typecheck`, and the full `yarn validate` contract on the first
   attempt with 43 test files and 344 Vitest tests.
+
+## 2026-08-12 - US-011: Standardize mocks and global cleanup
+
+- Added reusable explicit test boundaries for fetch, scrolling, object URLs,
+  local and session storage, animation-frame queues, performance time, fake
+  timers, and Three.js `WebGLRenderer` construction.
+- Replaced duplicated animation-frame and renderer doubles across all three
+  game lifecycle suites and adopted the shared fetch and browser helpers in
+  catalog, routing, link, and avatar upload tests.
+- Expanded shared setup to clean Testing Library renders, queued fake timers,
+  module caches, mock implementations and spies, environment and global stubs,
+  storage, document children, document attributes, and document title after
+  every test.
+- Installed a deny-by-default ambient fetch guard. Tests that need network
+  behavior must install a local fetch double or inject a transport and
+  credential explicitly; no broad service response mock is installed.
+- Added direct proofs that cleanup restores every shared boundary and that
+  attempted Azure, GitHub, advertising, identity, payment, and
+  artificial-intelligence fetches fail before making a live request.
+- Files changed: `src/test/`, catalog and browser component tests under `src/`,
+  all three game lifecycle tests, `AGENTS.md`, and this issue memory.
+- Checks passed: targeted Prettier and ESLint, 43 focused boundary and consumer
+  tests, `yarn typecheck`, all 44 Vitest files with 353 tests, and the complete
+  `yarn validate` contract. One earlier all-suite preflight hit the existing
+  timing-sensitive Ralph descendant-process fixture; its isolated retry passed
+  before full validation.
+- Coverage ratcheting, broader integrity probes, workflow publication, and
+  final unit-test documentation remain intentionally deferred to US-012
+  through US-015.

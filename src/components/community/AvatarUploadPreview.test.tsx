@@ -1,25 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { installObjectUrlController } from '../../test/boundaries';
 import { AvatarUploadPreview } from './AvatarUploadPreview';
 
 const createObjectURL = vi.fn<(file: Blob) => string>();
 const revokeObjectURL = vi.fn<(url: string) => void>();
 
-class TestURL extends URL {
-  static createObjectURL = createObjectURL;
-  static revokeObjectURL = revokeObjectURL;
-}
-
 beforeEach(() => {
   createObjectURL.mockReset();
   revokeObjectURL.mockReset();
-  vi.stubGlobal('URL', TestURL);
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
+  installObjectUrlController({ createObjectURL, revokeObjectURL });
 });
 
 describe('AvatarUploadPreview', () => {

@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { installScrollToMock } from '../test/boundaries';
 import { Link } from './Link';
 
 const scrollTo = vi.fn();
@@ -9,11 +10,7 @@ const scrollTo = vi.fn();
 beforeEach(() => {
   window.history.replaceState({}, '', '/');
   scrollTo.mockReset();
-  vi.stubGlobal('scrollTo', scrollTo);
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
+  installScrollToMock(scrollTo);
 });
 
 describe('Link', () => {
