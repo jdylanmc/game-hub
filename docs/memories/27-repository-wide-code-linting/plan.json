@@ -121,8 +121,8 @@
         "Proofs reject unrelated setup failures as successful evidence"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "The existing fail-closed harness proves one JavaScript no-unused-vars lint failure. It does not yet cover the issue's remaining rule families, workspace bypass, exclusions, warnings, or fix safety.",
+      "passes": true,
+      "notes": "Added yarn test:lint as a required fail-closed proof suite. Structured isolated probes require ESLint status 1, exact expected error rule IDs, actionable locations, and no fatal, warning, unexpected-rule, or setup diagnostics for TypeScript unused and unsafe code, floating and misused promises, React, Hooks, accessibility, invalid/disordered/duplicate/unresolved imports, and Node.js environment isolation. The canonical yarn lint command rejects exactly one warning through --max-warnings 0. The canonical yarn lint:fix command applies a supported import-order fix, passes yarn lint afterward, and proves 412 generated, imported, and unrelated repository files remain byte-identical. Validator tests reject setup-status, fatal-parser, unexpected-rule, warning-only, and mixed-error false evidence; the suite also retains automatic workspace, exclusion, and suppression proofs.",
       "dependencies": ["US-003", "US-004", "US-005"]
     },
     {

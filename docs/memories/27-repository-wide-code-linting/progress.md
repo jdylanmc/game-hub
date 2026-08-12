@@ -43,6 +43,10 @@
   `eslint-disable-line` directives with a durable inline reason are eligible;
   the allowlist must repeat the exact file, line, directive, rule, and rationale
   once.
+- `yarn test:lint` is the deterministic lint behavior proof. It requires exact
+  structured ESLint diagnostics for rule failures, exercises canonical
+  zero-warning and fix commands, and rejects fatal, setup, warning-only,
+  unexpected-rule, or mixed-error false evidence.
 
 ## 2026-08-11 - Planning
 
@@ -285,3 +289,43 @@ Current inspection found these issue #27 gaps:
   this protected-runner representation before adversarial review runs.
 - US-006 is next. It should add isolated representative lint and safe-fix
   proofs without broadening the now-enforced suppression exception policy.
+
+## 2026-08-12 - US-006
+
+- Added `scripts/prove-lint-behavior.mjs` with one isolated source probe per lint
+  family. Every violation must exit with ESLint status 1, report only the exact
+  expected rule identifiers at actionable file/line locations, and contain no
+  fatal parser, warning, setup, or unrelated diagnostics.
+- Proved TypeScript unused and unsafe rules, floating and misused promises,
+  React JSX correctness, Rules of Hooks, accessibility, invalid/disordered/
+  duplicate/unresolved imports, and Node.js environment isolation.
+- Proved the canonical `yarn lint` command rejects exactly one `no-console`
+  warning with zero errors because `--max-warnings 0` remains active.
+- Proved the canonical `yarn lint:fix` command applies the supported
+  `import-x/first` fix and then passes `yarn lint`. A byte snapshot verified 412
+  generated, imported, and unrelated JavaScript, TypeScript, JSON, and Markdown
+  files remained unchanged, including committed game discovery and Mamba
+  boundaries.
+- Added validator tests that deliberately mix expected diagnostics with setup
+  status, fatal parser output, unexpected rules, warning-only results, and
+  unrelated errors; all false evidence is rejected.
+- Added `yarn test:lint` and made it the first part of the existing
+  `test:ci-fail-closed` command, so the protected continuous integration proof
+  runs the exact lint behavior suite without adding a second workflow contract.
+- Kept the synthetic detached-worktree bootstrap deterministic by disabling
+  mutable registry hardening only inside that proof. The real workflow's
+  direct immutable install still performs its normal pull-request hardening;
+  the later synthetic worktree now verifies fresh node-modules bootstrap from
+  the committed lockfile and cache instead of accepting registry metadata drift
+  as lint evidence.
+- Targeted `yarn test:lint` evidence passed with 20 validator and suppression
+  cases plus every live representative probe. The existing canonical lint scope
+  step continues proving future workspace discovery and generated/imported
+  exclusions.
+- The complete `yarn validate` gate passed after the deterministic bootstrap
+  adjustment: immutable install, formatting, lint and policy, 14 fail-closed
+  gates, dependency audit, 26 Ralph tests, 182 Vitest tests with coverage,
+  generated-state verification, typecheck, production build, bundle budgets,
+  and Storybook.
+- US-007 is next. It should reconcile the completed lint behavior proof with
+  local, workflow, retained-evidence, and protected merge-gate contracts.

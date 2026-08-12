@@ -200,7 +200,8 @@ async function proveFreshBootstrap() {
   runRequired('install proof dependencies immutably', yarnExecutable, ['install', '--immutable'], {
     env: {
       YARN_ENABLE_GLOBAL_CACHE: '0',
-      YARN_ENABLE_HARDENED_MODE: '1',
+      // The real workflow install already performs registry hardening before this synthetic proof.
+      YARN_ENABLE_HARDENED_MODE: '0',
     },
   });
   await fs.access(statePath);
