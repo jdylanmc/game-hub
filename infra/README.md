@@ -39,11 +39,12 @@ GitHub environment (`test` or `prod`). Configure each environment with:
 
 The workflow uses OpenID Connect (OIDC). These identifiers are configuration,
 not credentials. Do not create branch or pull-request federated credentials.
-Use only these subjects:
+GitHub emits immutable repository subjects for this repository. Use only:
 
 ```text
-repo:jdylanmc/game-hub:environment:test
-repo:jdylanmc/game-hub:environment:prod
+repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review
+repo:jdylanmc@6954990/game-hub@1330993568:environment:test
+repo:jdylanmc@6954990/game-hub@1330993568:environment:prod
 ```
 
 `bicep/bootstrap-deployment-role.bicep` declaratively defines the narrow
@@ -52,6 +53,13 @@ deployment identities use only their matching protected-environment OpenID
 Connect subjects. The main template declaratively grants the distinct reviewer
 identity the built-in Cognitive Services OpenAI User role; it needs no
 deployment or secret-management role.
+
+`bicep/federated-identity.bicep` declaratively owns the three existing
+application federated credentials through the Microsoft Graph Bicep extension.
+The environment parameter files bind exact application `uniqueName`, credential
+name, immutable owner/repository IDs, and protected environment. Run
+`deploy-federated-identity.sh` as an administrator; the normal deployment
+identities intentionally lack Microsoft Graph application-write permission.
 
 ## Validation
 
@@ -62,6 +70,7 @@ for parameter_file in infra/*.bicepparam; do
   az bicep build-params --file "$parameter_file" --stdout > /dev/null
 done
 az bicep build --file infra/bicep/bootstrap-deployment-role.bicep --stdout > /dev/null
+az bicep build --file infra/bicep/federated-identity.bicep --stdout > /dev/null
 ```
 
 After protected identities exist, preview or deploy locally:

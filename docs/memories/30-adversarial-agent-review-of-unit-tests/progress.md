@@ -455,3 +455,35 @@
   it must validate and fetch the committed dependency graph.
 - Re-ran the complete `yarn validate` gate successfully after the lock repair.
   Exact-head checks on the corrected commit remain pending.
+
+## 2026-08-11 - Immutable OpenID Connect identity remediation
+
+- Read the exact failed run `31560385215`, protected workflow environment/ref,
+  GitHub environment controls, repository OpenID Connect settings, and deployed
+  Microsoft Entra ID federated credentials before making changes.
+- Confirmed GitHub emitted immutable subject
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review`,
+  while inference, test deployment, and production deployment identities each
+  trusted a legacy name-only subject.
+- Added a pinned Microsoft Graph Bicep resource and three exact environment
+  parameter files. The subscription-guarded deployment script previews and
+  applies only to `11213dbd-39fe-46ba-87db-5f5e8c449aed`.
+- Onboarded the three preexisting applications once with immutable Graph
+  `uniqueName` values, then deployed all three credentials declaratively. A
+  repeat inference deployment succeeded and readback retained exactly one
+  credential per application. Azure what-if warned that Graph extensible
+  resources are not introspectable, so repeat apply plus exact readback is the
+  convergence proof.
+- Added a mandatory identity policy and seven focused mutation tests rejecting
+  mutable subjects, incorrect numeric IDs, wrong environment mapping, an
+  unpinned Graph extension, and missing explicit subscription verification.
+  Policy, lint, focused tests, all Bicep builds, shell syntax, and diff checks
+  passed.
+- The complete `yarn validate` run reached the isolated hardened bootstrap proof
+  but failed because current public-registry metadata normalized unchanged
+  executable paths with `./`, which would rewrite existing lockfile entries.
+  No dependency or lockfile change is part of this identity remediation.
+- Re-ran exact-head Continuous Integration for affected PR #39. Attempt 3
+  passed, fresh protected-main run `31561212543` authenticated successfully,
+  and check `94003877768` published `PASS` on exact head
+  `49240626b04f5a85828edb2bfcdaf16366309a5e`.
