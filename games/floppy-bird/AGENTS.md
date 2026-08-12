@@ -10,6 +10,8 @@
   keep pure state progression in `src/simulation.ts`.
 - Advance simulation from explicit state, input, elapsed time, and a supplied
   random source without reading browser or Three.js state.
+- Clamp gameplay frame deltas inside `src/simulation.ts` so direct callers and
+  tests preserve the same bounded physics as the rendering adapter.
 - Keep `game.manifest.json`, the exported manifest, and controls synchronized.
 - Use `@game-hub/game-contract` for host lifecycle, events, and score reporting.
 - Keep Three.js as a direct workspace dependency.

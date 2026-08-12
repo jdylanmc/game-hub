@@ -18,6 +18,9 @@
 - Each game keeps pure state progression in `src/simulation.ts`; its
   `src/index.ts` adapts browser input, animation-frame elapsed time, Three.js
   rendering, and host effects without placing those dependencies in simulation.
+- FloppyBird clamps elapsed gameplay frames to 50 milliseconds inside its pure
+  simulation boundary, so rendering and direct test callers share bounded
+  physics.
 - Generated game discovery has committed outputs under `public/generated/` and
   `src/generated/`, while generator implementation currently executes at module
   load and is not directly unit-testable.
@@ -111,3 +114,22 @@
   rejected a fingerprinted architecture edit as stale calibration; restoring
   the unchanged architecture contract allowed the second and final attempt to
   pass.
+
+## 2026-08-12 - US-003: Test FloppyBird flight physics
+
+- Added Node-environment unit coverage for deterministic ready-state bobbing,
+  explicit ready-to-running progression, exact flap velocity, gravity and
+  position integration, long-frame clamping, immutable input state, and
+  repeatable advancement from the same explicit inputs and seeded random
+  source.
+- Moved the existing 50-millisecond gameplay frame cap into the pure
+  FloppyBird simulation boundary. Direct callers now receive the same bounded
+  physics as the rendering adapter without browser, canvas, WebGL, Three.js
+  scene construction, ambient clocks, or ambient random mutation.
+- Files changed: `games/floppy-bird/src/simulation.ts`,
+  `games/floppy-bird/src/simulation.test.ts`,
+  `games/floppy-bird/AGENTS.md`, and this issue memory.
+- Checks passed: targeted Prettier, ESLint, and four FloppyBird physics tests;
+  full `yarn validate`.
+- Obstacle generation, collision, scoring, difficulty, and lifecycle behavior
+  remain intentionally deferred to later stories.

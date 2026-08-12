@@ -66,8 +66,8 @@
         "The suite requires no browser or Three.js scene construction"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added Node-environment tests for deterministic ready-state bobbing, explicit ready-to-running progression, exact flap velocity, gravity and position integration, immutable repeatable advancement, and the 50-millisecond frame-delta cap. Moved the existing gameplay delta cap into the pure FloppyBird simulation boundary so direct callers receive the same bounded physics without browser, canvas, WebGL, Three.js scene construction, ambient clocks, or ambient randomness.",
       "dependencies": ["US-002"]
     },
     {

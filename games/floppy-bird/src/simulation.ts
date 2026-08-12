@@ -6,6 +6,7 @@ const BIRD_X = -6.4;
 const BIRD_RADIUS = 0.85;
 const FLAP_VELOCITY = 7.4;
 const GRAVITY = 20.5;
+const MAX_FRAME_DELTA_SECONDS = 0.05;
 const BASE_SPEED = 7.2;
 const MAX_SPEED = 10.6;
 const BASE_GAP = 5.8;
@@ -151,7 +152,8 @@ export function stepFloppyBirdSimulation(
   random: RandomSource,
 ): FloppyBirdSimulationState {
   return stepSimulation(state, input, elapsedSeconds, random, (current, context) => {
-    const ambience = context.input.phase === 'paused' ? current.ambience : current.ambience + context.elapsedSeconds;
+    const frameDeltaSeconds = Math.min(context.elapsedSeconds, MAX_FRAME_DELTA_SECONDS);
+    const ambience = context.input.phase === 'paused' ? current.ambience : current.ambience + frameDeltaSeconds;
     let birdVelocity = context.input.flap ? FLAP_VELOCITY : current.birdVelocity;
     let birdY = current.birdY;
     let highestObstacleX = current.highestObstacleX;
@@ -167,14 +169,14 @@ export function stepFloppyBirdSimulation(
     }
 
     if (context.input.phase === 'running') {
-      birdVelocity -= GRAVITY * context.elapsedSeconds;
-      birdY += birdVelocity * context.elapsedSeconds;
+      birdVelocity -= GRAVITY * frameDeltaSeconds;
+      birdY += birdVelocity * frameDeltaSeconds;
       const speed = flightSpeedForScore(score);
 
       obstacles = obstacles.map((obstacle) => {
         const nextObstacle = {
           ...obstacle,
-          x: obstacle.x - speed * context.elapsedSeconds,
+          x: obstacle.x - speed * frameDeltaSeconds,
         };
 
         if (!nextObstacle.scored && nextObstacle.x + OBSTACLE_WIDTH / 2 < BIRD_X) {
@@ -202,7 +204,7 @@ export function stepFloppyBirdSimulation(
       });
     }
 
-    wingBeat = Math.max(0, wingBeat - context.elapsedSeconds * 2.6);
+    wingBeat = Math.max(0, wingBeat - frameDeltaSeconds * 2.6);
 
     return {
       ambience,
