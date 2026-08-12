@@ -17,3 +17,6 @@ docs/memories/**/iterations/*.log
 .adversarial-context-test-work/
 .live-review/
 .ralph-orchestration*.json
+infra/**/*.local.bicepparam
+infra/**/*.generated.json
+infra/deployment-outputs/

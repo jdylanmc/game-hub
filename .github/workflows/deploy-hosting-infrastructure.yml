@@ -1,0 +1,132 @@
+name: Deploy Game Hub infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        description: Protected Azure environment
+        options:
+          - dev
+          - prod
+        default: dev
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: game-hub-infrastructure-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.environment }} infrastructure
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      AZURE_SUBSCRIPTION_ID: '11213dbd-39fe-46ba-87db-5f5e8c449aed'
+      DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment }}
+      DEPLOYMENT_LOCATION: eastus2
+
+    steps:
+      - name: Check out protected main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Verify protected ref and keyless environment configuration
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_INFRA_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$AZURE_CLIENT_ID"
+          test -n "$AZURE_TENANT_ID"
+
+      - name: Sign in to Azure with OpenID Connect
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          client-id: ${{ vars.AZURE_INFRA_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: 11213dbd-39fe-46ba-87db-5f5e8c449aed
+
+      - name: Select the approved subscription explicitly
+        run: |
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+
+      - name: Install the repository-pinned Bicep CLI
+        run: az bicep install --version "$(cat infra/.bicep-version)"
+
+      - name: Validate the environment deployment
+        run: |
+          az deployment sub validate \
+            --subscription "$AZURE_SUBSCRIPTION_ID" \
+            --name "game-hub-${DEPLOYMENT_ENVIRONMENT}" \
+            --location "$DEPLOYMENT_LOCATION" \
+            --template-file infra/main.bicep \
+            --parameters "infra/environments/${DEPLOYMENT_ENVIRONMENT}.bicepparam"
+
+      - name: Preview the environment deployment
+        run: |
+          az deployment sub what-if \
+            --subscription "$AZURE_SUBSCRIPTION_ID" \
+            --name "game-hub-${DEPLOYMENT_ENVIRONMENT}" \
+            --location "$DEPLOYMENT_LOCATION" \
+            --template-file infra/main.bicep \
+            --parameters "infra/environments/${DEPLOYMENT_ENVIRONMENT}.bicepparam" \
+            --result-format ResourceIdOnly \
+            --output json > deployment-what-if.json
+          jq -e '.status == "Succeeded"' deployment-what-if.json > /dev/null
+
+      - name: Deploy the idempotent environment
+        run: |
+          az deployment sub create \
+            --subscription "$AZURE_SUBSCRIPTION_ID" \
+            --name "game-hub-${DEPLOYMENT_ENVIRONMENT}" \
+            --location "$DEPLOYMENT_LOCATION" \
+            --template-file infra/main.bicep \
+            --parameters "infra/environments/${DEPLOYMENT_ENVIRONMENT}.bicepparam"
+
+      - name: Capture non-secret deployment outputs
+        run: |
+          az deployment sub show \
+            --subscription "$AZURE_SUBSCRIPTION_ID" \
+            --name "game-hub-${DEPLOYMENT_ENVIRONMENT}" \
+            --query properties.outputs \
+            --output json > deployment-outputs.json
+          jq -e '.subscriptionId.value == env.AZURE_SUBSCRIPTION_ID' deployment-outputs.json > /dev/null
+
+      - name: Prove the repeated deployment converges
+        run: |
+          az deployment sub what-if \
+            --subscription "$AZURE_SUBSCRIPTION_ID" \
+            --name "game-hub-${DEPLOYMENT_ENVIRONMENT}" \
+            --location "$DEPLOYMENT_LOCATION" \
+            --template-file infra/main.bicep \
+            --parameters "infra/environments/${DEPLOYMENT_ENVIRONMENT}.bicepparam" \
+            --result-format ResourceIdOnly \
+            --output json > repeat-deployment-what-if.json
+          jq -e '
+            [.changes[]? | select(.changeType != "NoChange" and .changeType != "Ignore")] |
+            length == 0
+          ' repeat-deployment-what-if.json > /dev/null
+
+      - name: Retain deployment evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: game-hub-infrastructure-${{ inputs.environment }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            deployment-what-if.json
+            deployment-outputs.json
+            repeat-deployment-what-if.json
+          if-no-files-found: error
+          retention-days: 30

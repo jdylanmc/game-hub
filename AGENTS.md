@@ -32,6 +32,7 @@ yarn build-storybook
 yarn generate:check
 yarn policy:check
 yarn bundle:check
+yarn infra:check
 ```
 
 Adversarial reviewer calibration is versioned and fail-closed. Use
@@ -43,6 +44,38 @@ architecture change.
 
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
+
+Infrastructure changes must use the Bicep version in
+`infra/.bicep-version`. Run `yarn infra:install` to install that version through
+Azure CLI before `yarn infra:check`.
+
+Website authentication uses the keyless Azure-managed Microsoft Entra ID
+provider in Azure Static Web Apps. Keep `/api/*` behind the `authenticated`
+role and the declarative Static Web Apps linked Container Apps backend; do not
+introduce a browser-facing direct API origin or provider credential.
+
+Azure Front Door Premium is the canonical public origin. Keep its web
+application firewall associated with `/*`, retain the managed default and bot
+rule sets, and express API, authentication, and general rate limits through
+environment parameters. Static Web Apps publication must merge the
+`frontendDeployment.forwardingGatewayConfiguration` output so the generated
+origin cannot bypass Front Door.
+
+Container Apps runtime configuration accepts only Azure Key Vault references
+resolved by the dedicated user-assigned managed identity. Keep secret values
+out of Bicep, parameters, outputs, logs, and artifacts. Route platform logs
+through Azure Monitor diagnostic settings rather than a Log Analytics workspace
+key, and preserve environment retention, sampling, ingestion caps, replica
+ceilings, and required cost-allocation tags.
+
+Hosting publication runs only from protected `main` through the `dev` or
+`prod` GitHub environment. Keep infrastructure, frontend, application
+programming interface image, asset, and secure-configuration identities
+separate and federated to the immutable environment subject. Azure Static Web
+Apps still requires its service publication token; retrieve it only after
+OpenID Connect sign-in, mask it immediately, and never store or retain it.
+Infrastructure deployment must validate, preview, apply, capture non-secret
+outputs, and prove the repeated preview converges.
 
 Run `yarn generate:check` after changing game workspace metadata or discovery
 logic. It fails when generation changes Git state or the committed catalog

@@ -1,0 +1,153 @@
+name: Deploy Game Hub assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        description: Protected Azure environment
+        options:
+          - dev
+          - prod
+        default: dev
+      game_assets_path:
+        required: false
+        type: string
+        description: Repository-relative directory for immutable game assets
+      media_path:
+        required: false
+        type: string
+        description: Repository-relative directory for mutable user-facing media
+      static_assets_path:
+        required: false
+        type: string
+        description: Repository-relative directory for other mutable static assets
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: game-hub-assets-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.environment }} assets
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      AZURE_SUBSCRIPTION_ID: '11213dbd-39fe-46ba-87db-5f5e8c449aed'
+      DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment }}
+      GAME_ASSETS_PATH: ${{ inputs.game_assets_path }}
+      MEDIA_PATH: ${{ inputs.media_path }}
+      STATIC_ASSETS_PATH: ${{ inputs.static_assets_path }}
+
+    steps:
+      - name: Check out protected main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Verify protected ref, source paths, and keyless environment configuration
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_ASSET_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$AZURE_CLIENT_ID"
+          test -n "$AZURE_TENANT_ID"
+          test -n "${GAME_ASSETS_PATH}${MEDIA_PATH}${STATIC_ASSETS_PATH}"
+          for source_path in "$GAME_ASSETS_PATH" "$MEDIA_PATH" "$STATIC_ASSETS_PATH"; do
+            if test -z "$source_path"; then
+              continue
+            fi
+            test -d "$source_path"
+            resolved_path="$(realpath "$source_path")"
+            case "$resolved_path/" in
+              "$GITHUB_WORKSPACE"/*) ;;
+              *) exit 1 ;;
+            esac
+          done
+
+      - name: Sign in to Azure with OpenID Connect
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          client-id: ${{ vars.AZURE_ASSET_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: 11213dbd-39fe-46ba-87db-5f5e8c449aed
+
+      - name: Select the approved subscription and resolve asset targets
+        run: |
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          resource_group="rg-gamehub-${DEPLOYMENT_ENVIRONMENT}-eus2"
+          storage_account="$(
+            az storage account list \
+              --resource-group "$resource_group" \
+              --query '[0].name' \
+              --output tsv
+          )"
+          front_door_profile="afd-gamehub-${DEPLOYMENT_ENVIRONMENT}-eus2"
+          front_door_endpoint="$(
+            az afd endpoint list \
+              --resource-group "$resource_group" \
+              --profile-name "$front_door_profile" \
+              --query '[0].name' \
+              --output tsv
+          )"
+          test -n "$storage_account"
+          test -n "$front_door_endpoint"
+          {
+            echo "GAME_HUB_RESOURCE_GROUP=$resource_group"
+            echo "GAME_HUB_STORAGE_ACCOUNT=$storage_account"
+            echo "GAME_HUB_FRONT_DOOR_PROFILE=$front_door_profile"
+            echo "GAME_HUB_FRONT_DOOR_ENDPOINT=$front_door_endpoint"
+          } >> "$GITHUB_ENV"
+
+      - name: Publish assets with Microsoft Entra authorization
+        run: |
+          upload_directory() {
+            local source_path="$1"
+            local container_name="$2"
+            if test -z "$source_path"; then
+              return
+            fi
+            az storage blob upload-batch \
+              --subscription "$AZURE_SUBSCRIPTION_ID" \
+              --auth-mode login \
+              --account-name "$GAME_HUB_STORAGE_ACCOUNT" \
+              --destination "$container_name" \
+              --source "$source_path" \
+              --overwrite true \
+              --output none
+          }
+          upload_directory "$GAME_ASSETS_PATH" game-assets
+          upload_directory "$MEDIA_PATH" media
+          upload_directory "$STATIC_ASSETS_PATH" static-assets
+
+      - name: Purge changed mutable content from Azure Front Door
+        run: |
+          purge_paths=()
+          if test -n "$MEDIA_PATH"; then
+            purge_paths+=('/media/*')
+          fi
+          if test -n "$STATIC_ASSETS_PATH"; then
+            purge_paths+=('/static-assets/*')
+          fi
+          if test "${#purge_paths[@]}" -eq 0; then
+            exit 0
+          fi
+          az afd endpoint purge \
+            --subscription "$AZURE_SUBSCRIPTION_ID" \
+            --resource-group "$GAME_HUB_RESOURCE_GROUP" \
+            --profile-name "$GAME_HUB_FRONT_DOOR_PROFILE" \
+            --endpoint-name "$GAME_HUB_FRONT_DOOR_ENDPOINT" \
+            --content-paths "${purge_paths[@]}" \
+            --output none
