@@ -65,8 +65,8 @@
         "The site header and relevant navigation present an accessible sign-in or authenticated-state affordance"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added an application-level authentication session provider that bootstraps from the Azure Static Web Apps /.auth/me session, resolves authenticated visitors through the same-origin /api/auth/session endpoint, validates the shared anonymous/authenticated response, and fails safely to anonymous without redirecting public content. The provider remains mounted across client-side navigation and reloads from the managed session after a refresh. The responsive site header now shows an accessible loading status, same-origin Microsoft Entra External ID sign-in affordance for anonymous visitors, or signed-in status without displaying the internal Game Hub user ID. Added deterministic loader, context, anonymous-play, and header tests and included the new runtime modules in coverage. Full yarn validate passed with 298 tests and yarn infra:check passed. No provider registration, local/social account lifecycle, return-path, sign-out, failure UI, account linking, or live Azure configuration was implemented.",
       "dependencies": ["US-002"]
     },
     {

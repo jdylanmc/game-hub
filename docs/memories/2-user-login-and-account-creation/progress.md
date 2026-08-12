@@ -16,6 +16,9 @@
   secrets use Azure Key Vault references and secret values must not enter
   source, parameters, outputs, logs, artifacts, memory, or pull requests.
 - Every new Yarn workspace needs its own `AGENTS.md`.
+- The website bootstraps display state from `/.auth/me`, calls
+  `/api/auth/session` only for an existing platform session, and retains only
+  the shared anonymous or provider-independent authenticated session shape.
 
 ## Iteration 1: Select the identity architecture and contracts
 
@@ -73,3 +76,30 @@
 - No login or account user interface, Google or Facebook provider
   registration, provider credential, live Azure deployment, account linking,
   return-path behavior, or sign-out behavior was implemented.
+
+## Iteration 3: Render anonymous and authenticated website state
+
+- Added one application-level authentication provider around the website. It
+  exposes loading plus the shared anonymous and authenticated session states,
+  remains mounted across client-side navigation, and reloads the managed
+  session after a page refresh.
+- The session loader first checks the Azure Static Web Apps `/.auth/me`
+  envelope. Anonymous, unavailable, or malformed platform sessions remain
+  anonymous and never invoke the protected application endpoint.
+- Authenticated platform sessions resolve through the same-origin
+  `/api/auth/session` endpoint. The browser accepts only the shared anonymous
+  shape or an authenticated shape containing a non-empty opaque Game Hub user
+  ID; platform identities, claims, details, and tokens are discarded.
+- Public content renders while session discovery is loading and after any
+  anonymous fallback, so browsing and game play do not trigger an
+  authentication redirect.
+- The responsive site header presents an accessible live loading status, a
+  same-origin Microsoft Entra External ID sign-in link for anonymous visitors,
+  or a signed-in status that does not display the internal user ID.
+- Added deterministic session-loader, provider, public-content, and header
+  tests and included the new runtime modules in coverage. Full `yarn validate`
+  passed with 298 tests and `yarn infra:check` passed.
+- No identity-provider registration, local or social account lifecycle,
+  return-path behavior, sign-out, duplicate-account handling, failure user
+  interface, abuse controls, account linking, or live Azure configuration was
+  implemented.
