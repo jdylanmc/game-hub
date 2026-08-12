@@ -15,8 +15,9 @@
   generators and handwritten wrappers remain in scope.
 - The shared root lint toolchain pins `eslint-plugin-jsx-a11y`,
   `eslint-plugin-import-x`, `eslint-import-resolver-typescript`, and
-  `eslint-plugin-promise`; later stories should configure these dependencies
-  through the single root flat configuration.
+  `eslint-plugin-promise`. Accessibility and import presets are active in the
+  single root flat configuration; typed promise correctness is enforced by
+  TypeScript ESLint without layering the standalone Promise preset.
 - The required protected check is currently the composite
   `Continuous integration` job, which invokes the same root lint command used
   locally.
@@ -379,3 +380,29 @@ Current inspection found these issue #27 gaps:
   state, typecheck, production build, bundle budgets, and Storybook.
 - US-008 remains next. Keep pull request #37 draft and do not describe issue
   #27 as complete or ready.
+
+## 2026-08-12 - US-008
+
+- Added `docs/linting.md` as the complete repository linting contract. It
+  documents `yarn lint`, `yarn lint:fix`, Prettier separation, the exact pinned
+  tool and rule decisions, targeted environments, TypeScript projects,
+  automatic workspace discovery, generated and imported exclusions, fix
+  safety, suppression approval, and the deliberate policy for non-code files.
+- Explicitly separated the merged pull request #32 baseline from issue #27's
+  additions. Pull request #32 supplied the initial lint command, flat
+  configuration, exclusions, suppression allowlist, workflow step, retained
+  output, and one unused-variable proof. Issue #27 supplied the safe-fix
+  command, type-aware and targeted rules, accessibility and import enforcement,
+  workspace and exclusion proofs, reasoned narrow suppressions, comprehensive
+  behavioral evidence, and protected-gate reconciliation.
+- Mapped all ten issue requirements, all five pull-request integration
+  requirements, all seven acceptance criteria, and all four open design
+  decisions to their current local or exact-head publication evidence.
+- Updated the README command and documentation index, linked the lint contract
+  from the continuous integration contract, and reconciled branch-protection
+  documentation with both required exact-head checks and process-local GitHub
+  authentication.
+- All eight planned stories are passed. The final documentation tree passed the
+  complete `yarn validate` gate. Pull request #37 records the exact-head
+  `Continuous integration` and adversarial publication evidence and remains a
+  human-reviewed, unmerged pull request.

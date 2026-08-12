@@ -153,8 +153,8 @@
         "All repository-required validation commands pass"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": "Existing continuous integration documentation describes the baseline lint command and suppression allowlist but not the complete issue #27 design or lint:fix behavior.",
+      "passes": true,
+      "notes": "Added a complete repository linting contract covering local lint and safe-fix usage, Prettier separation, exact tool and rule decisions, environment overrides, automatic workspace discovery, exclusions, suppression approval, non-code policy, and pull-request integration. The evidence reconciliation explicitly separates merged pull request #32 from issue #27 additions and maps every requirement, pull-request integration item, acceptance criterion, and open design decision to the passing local or exact-head publication gate. README, continuous integration, and branch-protection documentation now link and agree with the contract. Final yarn validate and exact-head required-check evidence are recorded in progress and pull request #37.",
       "dependencies": ["US-007"]
     }
   ]

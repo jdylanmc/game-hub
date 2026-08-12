@@ -20,6 +20,8 @@ The main site always runs at `http://localhost:1337`.
   pinned versions, and upstream documentation.
 - [Continuous Integration Contract](docs/continuous-integration.md) defines the
   reproducible local gates, retained evidence, and fail-closed merge contract.
+- [Repository Linting](docs/linting.md) defines lint and safe-fix usage, rule
+  and environment choices, exclusions, suppressions, and acceptance evidence.
 - [Branch Protection](docs/branch-protection.md) records the required merge
   controls and live verification procedure.
 - [Ralph Loop](docs/ralph-loop.md) defines the fresh-context autonomous
@@ -30,6 +32,8 @@ The main site always runs at `http://localhost:1337`.
 ```bash
 yarn generate:games     # discover game workspaces and refresh generated artifacts
 yarn dev                # generate + start Vite on port 1337
+yarn lint               # check all authored code with zero warnings
+yarn lint:fix           # apply supported ESLint fixes without formatting
 yarn validate           # reproduce the complete continuous integration contract
 yarn build              # generate + typecheck + production build
 yarn storybook          # generate + run Storybook on port 6006

@@ -39,6 +39,11 @@ The workflow runs each command directly rather than invoking a different
 continuous-integration-only implementation. It pipes output to retained logs
 without suppressing the command's exit status.
 
+The complete lint design, local fix command, rule and environment choices,
+workspace discovery, exclusions, pull request #32 baseline, and issue #27
+acceptance evidence are documented in
+[Repository Linting](linting.md).
+
 ## Fail-closed enforcement
 
 - Test integrity requires deterministic suites under `src/`, `games/`, and
@@ -131,12 +136,12 @@ after a failed gate. Missing evidence makes artifact upload fail. It contains:
 ## Merge and autonomous completion
 
 The live `main` protection described in
-[Branch Protection](branch-protection.md) requires the
-`Continuous integration` check from GitHub Actions app ID `15368` on a branch
-that is current with `main`. A missing, pending, failed, canceled, or stale
-check blocks merge. One non-last-pusher approval, Code Owner review for
-workflow changes, stale-review dismissal, and resolved conversations prevent a
-workflow change from self-approving reduced protection.
+[Branch Protection](branch-protection.md) requires both the
+`Continuous integration` check from GitHub Actions app ID `15368` and
+`Adversarial Review / unit-test-reviewer` on a branch that is current with
+`main`. A missing, pending, failed, canceled, or stale required check blocks
+merge. The adversarial result is downstream of successful deterministic
+continuous integration and never replaces it.
 
 Ralph checks open Ralph pull requests with `yarn ralph:prioritize` before
 ranking new issues. A failed or absent check is routed to its uniquely matched
