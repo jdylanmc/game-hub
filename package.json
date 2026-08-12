@@ -8,6 +8,7 @@
     "node": "24.13.0"
   },
   "workspaces": [
+    "api",
     "packages/*",
     "games/*"
   ],
@@ -53,16 +54,17 @@
     "test:ralph": "node --test .github/skills/ralph-loop/tests/*.test.mjs",
     "test": "yarn test:coverage",
     "test:coverage": "yarn test:integrity && yarn test:ralph && vitest run --sequence.shuffle --sequence.seed=29005 --coverage --reporter=default --reporter=junit --outputFile.junit=test-results/junit.xml",
-    "build": "yarn generate:games && tsc -b && vite build",
+    "build": "yarn generate:games && tsc -b && yarn workspace @game-hub/api build && vite build",
     "bundle:check": "node scripts/check-bundle-budgets.mjs",
     "build-storybook": "yarn generate:games && storybook build",
     "generate:mamba-storybook": "node scripts/generate-mamba-storybook.mjs",
     "preview": "vite preview",
     "storybook": "yarn generate:games && storybook dev -p 6006",
-    "typecheck": "yarn generate:games && tsc -b",
+    "typecheck": "yarn generate:games && tsc -b && yarn workspace @game-hub/api typecheck",
     "validate": "yarn install:check && yarn format:check && yarn lint && yarn policy:check && yarn test:ci-fail-closed && yarn security:audit && yarn test:coverage && yarn generate:check && yarn typecheck && yarn build && yarn bundle:check && yarn build-storybook"
   },
   "dependencies": {
+    "@game-hub/auth-contract": "workspace:*",
     "@game-hub/game-contract": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

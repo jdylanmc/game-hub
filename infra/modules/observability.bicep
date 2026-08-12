@@ -23,6 +23,9 @@ param containerAppName string
 @description('Asset storage account name.')
 param storageAccountName string
 
+@description('Identity storage account name.')
+param identityStorageAccountName string
+
 @description('Azure Front Door profile name.')
 param frontDoorProfileName string
 
@@ -109,6 +112,15 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' existing 
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-01-01' existing = {
   name: 'default'
   parent: storageAccount
+}
+
+resource identityStorageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' existing = {
+  name: identityStorageAccountName
+}
+
+resource identityTableService 'Microsoft.Storage/storageAccounts/tableServices@2025-01-01' existing = {
+  name: 'default'
+  parent: identityStorageAccount
 }
 
 resource frontDoorProfile 'Microsoft.Cdn/profiles@2025-01-01-preview' existing = {
@@ -213,6 +225,26 @@ resource blobServiceDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
   }
 }
 
+resource identityTableServiceDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'send-to-log-analytics'
+  scope: identityTableService
+  properties: {
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
+    workspaceId: logAnalyticsWorkspace.id
+  }
+}
+
 resource frontDoorDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'send-to-log-analytics'
   scope: frontDoorProfile
@@ -259,6 +291,7 @@ var diagnosticSettingIds = {
   assets: blobServiceDiagnostics.id
   frontend: staticWebAppDiagnostics.id
   frontDoor: frontDoorDiagnostics.id
+  identityStorage: identityTableServiceDiagnostics.id
   keyVault: keyVaultDiagnostics.id
   registry: containerRegistryDiagnostics.id
 }
@@ -285,6 +318,7 @@ output diagnosticSettingIds object = {
   assets: diagnosticSettingIds.assets
   frontend: diagnosticSettingIds.frontend
   frontDoor: diagnosticSettingIds.frontDoor
+  identityStorage: diagnosticSettingIds.identityStorage
   keyVault: diagnosticSettingIds.keyVault
   registry: diagnosticSettingIds.registry
 }

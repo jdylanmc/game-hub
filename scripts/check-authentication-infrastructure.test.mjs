@@ -64,6 +64,24 @@ describe('authentication infrastructure policy', () => {
         },
       },
     ],
+    [
+      'keyless identity storage',
+      {
+        identityStorageModule: infrastructure.identityStorageModule.replace(
+          'allowSharedKeyAccess: false',
+          'allowSharedKeyAccess: true',
+        ),
+      },
+    ],
+    [
+      'hashed platform identity storage',
+      {
+        identityStorageModule: infrastructure.identityStorageModule.replace(
+          'storesRawPlatformSubject: false',
+          'storesRawPlatformSubject: true',
+        ),
+      },
+    ],
   ])('rejects removal of the %s', (_label, overrides) => {
     expect(violations(overrides)).not.toEqual([]);
   });

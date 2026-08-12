@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const requiredTestRoots = ['src', 'games', 'packages'];
+const requiredTestRoots = ['api', 'src', 'games', 'packages'];
 const testFilePattern = /\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/;
 const prohibitedPatterns = [
   { label: 'focused test', pattern: /\b(?:describe|it|test)\.only\s*\(/ },

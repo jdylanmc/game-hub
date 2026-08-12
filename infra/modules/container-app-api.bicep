@@ -1,6 +1,6 @@
 targetScope = 'resourceGroup'
 
-metadata description = 'Creates the Azure Container Apps environment and future API application boundary.'
+metadata description = 'Creates the Azure Container Apps environment and Game Hub API application boundary.'
 
 type NonSecretEnvironmentVariable = {
   name: string

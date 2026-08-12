@@ -35,6 +35,7 @@ var resourceNames = {
   frontDoorEndpoint: take('fde-${baseName}-${uniquenessSuffix}', 46)
   frontDoorProfile: 'afd-${baseName}'
   frontendPublisherManagedIdentity: 'id-publish-web-${baseName}'
+  identityStorageAccount: take('stid${compactName}${uniquenessSuffix}', 24)
   keyVault: take('kv-${baseName}-${uniquenessSuffix}', 24)
   logAnalyticsWorkspace: 'log-${baseName}'
   secretPublisherManagedIdentity: 'id-secrets-${baseName}'

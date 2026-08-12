@@ -9,7 +9,7 @@ import tseslint from 'typescript-eslint';
 const sourceFiles = ['**/*.{js,mjs,cjs,ts,tsx}'];
 const typescriptFiles = ['**/*.{ts,tsx}'];
 const browserFiles = ['src/**/*.{ts,tsx}', 'games/*/src/**/*.{ts,tsx}', '.storybook/preview.ts'];
-const nodeTypescriptFiles = ['*.config.ts', '.storybook/main.ts', 'scripts/**/*.ts'];
+const nodeTypescriptFiles = ['*.config.ts', '.storybook/main.ts', 'api/**/*.ts', 'scripts/**/*.ts'];
 const testFiles = ['**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'];
 const reactFiles = ['src/**/*.{ts,tsx}', '.storybook/preview.ts'];
 const adversarialToolFiles = [

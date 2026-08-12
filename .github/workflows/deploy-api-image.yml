@@ -89,7 +89,7 @@ jobs:
         run: |
           az acr login --name "$GAME_HUB_REGISTRY_NAME"
           image_tag="${GAME_HUB_REGISTRY_LOGIN_SERVER}/${API_IMAGE_REPOSITORY}:sha-${GITHUB_SHA}"
-          docker build --file api/Dockerfile --tag "$image_tag" api
+          docker build --file api/Dockerfile --tag "$image_tag" .
           docker push "$image_tag"
           image_digest="$(
             az acr repository show \

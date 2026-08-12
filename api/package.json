@@ -1,0 +1,20 @@
+{
+  "name": "@game-hub/api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@azure/data-tables": "13.3.2",
+    "@azure/identity": "4.13.1"
+  },
+  "devDependencies": {
+    "@game-hub/auth-contract": "workspace:*",
+    "@types/node": "24.13.3",
+    "typescript": "5.9.3"
+  }
+}

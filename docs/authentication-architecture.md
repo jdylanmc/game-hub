@@ -79,6 +79,14 @@ provider name and Static Web Apps user ID to a generated, provider-independent
 Game Hub user ID. Email address, display name, and provider label are not
 identity keys.
 
+The API validates that the principal uses the `aad` provider alias and contains
+the built-in `authenticated` role before identity resolution. Missing,
+malformed, wrong-provider, and unauthenticated principals fail closed without
+creating a user record. The session response is either the shared anonymous
+shape or the authenticated shape containing only the internal Game Hub user
+ID; it never returns the platform subject, user details, claims, or provider
+tokens.
+
 The internal mapping is intentionally separate:
 
 ```text
@@ -89,10 +97,28 @@ This lets scores, profiles, ratings, votes, and community activity reference a
 Game Hub user ID even if authentication configuration changes. It also prevents
 an email match from silently linking or merging accounts.
 
+The durable mapping uses a dedicated Azure Tables account:
+
+- shared-key authentication is disabled and Microsoft Entra authentication is
+  the default;
+- the API's existing user-assigned runtime managed identity receives only
+  Storage Table Data Contributor access;
+- the table row key is a SHA-256 digest of the provider and platform subject,
+  so the raw platform subject is not persisted;
+- the entity contains only the generated Game Hub user ID and creation time;
+  and
+- conditional create plus conflict recovery makes concurrent first sign-ins
+  resolve the same record.
+
+The storage endpoint, table name, principal-header name, provider alias, role,
+managed-identity client ID, and port are typed non-secret environment
+configuration. No storage key or connection string is accepted.
+
 ## Shared Contract
 
-`src/auth/contract.ts` is the framework-neutral TypeScript seam used by later
-website and API stories. It defines:
+`packages/auth-contract` is the framework-neutral TypeScript seam shared by the
+website and API. `src/auth/contract.ts` re-exports it for the current website
+call sites. The contract defines:
 
 - the issue-required credential methods;
 - the selected identity and session services;
@@ -125,6 +151,9 @@ bundles, logs, artifacts, Ralph memory, or pull-request text.
 - Public identifiers such as tenant ID, application client ID, provider name,
   issuer URL, and redirect paths may be emitted as non-secret deployment
   configuration. Secret or private key material may not.
+- The identity mapping account accepts only Microsoft Entra authorization. Its
+  endpoint and table name are non-secret; account keys and connection strings
+  are disabled and absent from application configuration.
 
 The existing Azure Front Door web application firewall and authentication path
 rate limit continue to cover `/.auth/*`. Later security work must also configure
@@ -175,3 +204,6 @@ Reviewed August 12, 2026:
 - [Azure Static Web Apps custom authentication](https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-custom)
 - [Azure Static Web Apps authentication and authorization](https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-authorization)
 - [Azure Static Web Apps user information](https://learn.microsoft.com/en-us/azure/static-web-apps/user-information)
+- [Link Azure Container Apps as a Static Web Apps API](https://learn.microsoft.com/en-us/azure/static-web-apps/apis-container-apps)
+- [Authorize Azure Tables access with Microsoft Entra ID](https://learn.microsoft.com/en-us/azure/storage/tables/authorize-access-azure-active-directory)
+- [Azure Tables client library for JavaScript](https://learn.microsoft.com/en-us/javascript/api/overview/azure/data-tables-readme)

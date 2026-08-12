@@ -14,6 +14,7 @@ export function loadAuthenticationInfrastructure(root = rootDirectory) {
       ]),
     ),
     mainTemplate: readFileSync(path.join(root, 'infra/main.bicep'), 'utf8'),
+    identityStorageModule: readFileSync(path.join(root, 'infra/modules/identity-storage.bicep'), 'utf8'),
     staticWebAppModule: readFileSync(path.join(root, 'infra/modules/static-web-app.bicep'), 'utf8'),
     staticWebAppConfiguration: JSON.parse(readFileSync(path.join(root, 'public/staticwebapp.config.json'), 'utf8')),
   };
@@ -22,6 +23,7 @@ export function loadAuthenticationInfrastructure(root = rootDirectory) {
 export function validateAuthenticationInfrastructure({
   authenticationModule,
   environmentParameters,
+  identityStorageModule,
   mainTemplate,
   staticWebAppModule,
   staticWebAppConfiguration,
@@ -63,7 +65,7 @@ export function validateAuthenticationInfrastructure({
 
   for (const [environment, parameters] of Object.entries(environmentParameters)) {
     for (const [needle, setting] of [
-      ["name: 'GAME_HUB_AUTH_PROVIDER'\n    value: 'azureActiveDirectory'", 'provider'],
+      ["name: 'GAME_HUB_AUTH_PROVIDER'\n    value: 'aad'", 'provider'],
       ["name: 'GAME_HUB_AUTH_PRINCIPAL_HEADER'\n    value: 'x-ms-client-principal'", 'principal header'],
       ["name: 'GAME_HUB_AUTH_REQUIRED_ROLE'\n    value: 'authenticated'", 'required role'],
     ]) {
@@ -78,6 +80,10 @@ export function validateAuthenticationInfrastructure({
 
   for (const [needle, message] of [
     [
+      "module identityStorage './modules/identity-storage.bicep'",
+      'The entry point must compose durable identity storage.',
+    ],
+    [
       "module authenticationReadiness './modules/authentication-readiness.bicep'",
       'The entry point must compose the authentication module.',
     ],
@@ -88,8 +94,28 @@ export function validateAuthenticationInfrastructure({
       'The entry point must expose non-secret authentication configuration.',
     ],
     ['output authenticatedApiEndpoint string', 'The entry point must expose the stable authenticated API endpoint.'],
+    ["name: 'GAME_HUB_IDENTITY_STORAGE_ENDPOINT'", 'The API must receive the non-secret Azure Tables endpoint.'],
+    ["name: 'GAME_HUB_IDENTITY_TABLE_NAME'", 'The API must receive the non-secret identity table name.'],
+    ["name: 'AZURE_CLIENT_ID'", 'The API must select its user-assigned managed identity.'],
+    [
+      'output identityStorageConfiguration object',
+      'The entry point must expose the non-secret identity storage contract.',
+    ],
   ]) {
     requireText(mainTemplate, needle, message, violations);
+  }
+
+  for (const [needle, message] of [
+    ['allowSharedKeyAccess: false', 'Identity storage must disable shared-key authentication.'],
+    ['defaultToOAuthAuthentication: true', 'Identity storage must default to Microsoft Entra authentication.'],
+    ["'0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'", 'The API runtime must receive Storage Table Data Contributor only.'],
+    [
+      'Microsoft.Storage/storageAccounts/tableServices/tables',
+      'Identity storage must declare the durable user mapping table.',
+    ],
+    ['storesRawPlatformSubject: false', 'Identity storage must document that raw platform subjects are not retained.'],
+  ]) {
+    requireText(identityStorageModule, needle, message, violations);
   }
 
   const routes = Array.isArray(staticWebAppConfiguration.routes) ? staticWebAppConfiguration.routes : [];
@@ -122,7 +148,7 @@ export function validateAuthenticationInfrastructure({
     violations,
   );
 
-  const authenticationSources = `${authenticationModule}\n${staticWebAppModule}`;
+  const authenticationSources = `${authenticationModule}\n${identityStorageModule}\n${staticWebAppModule}`;
   for (const forbidden of [
     /clientSecret/i,
     /connectionString/i,

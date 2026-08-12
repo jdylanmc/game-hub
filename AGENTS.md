@@ -10,8 +10,10 @@ before editing a workspace.
 | Path | Purpose |
 | --- | --- |
 | `src/` | Host website, routes, shared components, and Storybook stories |
+| `api/` | Linked Azure Container Apps API and internal identity resolution |
 | `games/*/` | Independently packaged game workspaces |
 | `packages/game-contract/` | Shared host-to-game TypeScript contract |
+| `packages/auth-contract/` | Shared website-to-API authentication contract |
 | `scripts/` | Repository generators |
 | `docs/` | Architecture and operating documentation |
 | `.github/skills/ralph-loop/` | Local Ralph Loop skill and runner |
@@ -60,6 +62,11 @@ Website authentication uses the keyless Azure-managed Microsoft Entra ID
 provider in Azure Static Web Apps. Keep `/api/*` behind the `authenticated`
 role and the declarative Static Web Apps linked Container Apps backend; do not
 introduce a browser-facing direct API origin or provider credential.
+
+Internal identity resolution uses a dedicated Azure Tables account with shared
+key access disabled. The API runtime managed identity has only Storage Table
+Data Contributor access, and stored lookup keys are one-way hashes of the
+platform provider and subject rather than raw identity values.
 
 Azure Front Door Premium is the canonical public origin. Keep its web
 application firewall associated with `/*`, retain the managed default and bot

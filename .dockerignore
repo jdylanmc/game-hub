@@ -1,0 +1,15 @@
+.git
+.ralph-test-work
+.test-artifacts
+.yarn/install-state.gz
+**/coverage
+**/dist
+**/node_modules
+**/storybook-static
+**/test-results
+*.local
+*.tsbuildinfo
+docs/memories/**/iterations
+infra/**/*.generated.json
+infra/**/*.local.bicepparam
+infra/deployment-outputs

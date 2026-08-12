@@ -11,7 +11,7 @@ param frontendStagingEnvironmentPolicy = 'Disabled'
 param apiContainerImage = 'mcr.microsoft.com/azuredocs/containerapps-helloworld@sha256:e9b3e7c34664c7cffd7144864b0e4eec369bfde80068f9095dc63b37058bec48'
 param apiImageRepository = 'game-hub-api'
 param apiIngressExternal = true
-param apiIngressTargetPort = 80
+param apiIngressTargetPort = 8080
 param apiIngressTransport = 'auto'
 param apiMinReplicas = 1
 param apiMaxReplicas = 5
@@ -25,7 +25,7 @@ param apiEnvironmentVariables = [
   }
   {
     name: 'GAME_HUB_AUTH_PROVIDER'
-    value: 'azureActiveDirectory'
+    value: 'aad'
   }
   {
     name: 'GAME_HUB_AUTH_PRINCIPAL_HEADER'
@@ -43,6 +43,7 @@ param keyVaultPurgeProtectionEnabled = true
 param monitoringRetentionDays = 30
 param monitoringDailyIngestionCapGb = 5
 param applicationInsightsSamplingPercentage = 25
+param identityStorageSkuName = 'Standard_ZRS'
 param assetStorageSkuName = 'Standard_ZRS'
 param assetDeleteRetentionDays = 14
 param gameAssetsCacheDuration = '365.00:00:00'

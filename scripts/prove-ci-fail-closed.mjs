@@ -213,12 +213,24 @@ async function syncCurrentPolicySources() {
   for (const relativePath of [
     '.github/workflows/adversarial-review.yml',
     '.github/workflows/continuous-integration.yml',
+    'api/package.json',
+    'api/tsconfig.build.json',
+    'api/tsconfig.json',
+    'eslint.config.js',
     'package.json',
     'scripts/check-adversarial-workflow-policy.mjs',
+    'scripts/check-test-integrity.mjs',
     'scripts/check-workflow-policy.mjs',
+    'src/auth/contract.ts',
+    'vitest.config.ts',
     'yarn.lock',
   ]) {
+    await fs.mkdir(path.dirname(sandboxPath(relativePath)), { recursive: true });
     await fs.copyFile(path.join(rootDirectory, relativePath), sandboxPath(relativePath));
+  }
+
+  for (const relativePath of ['api/src', 'packages/auth-contract']) {
+    await fs.cp(path.join(rootDirectory, relativePath), sandboxPath(relativePath), { recursive: true });
   }
 }
 

@@ -27,7 +27,7 @@ the complete deployment boundary:
   service token only after keyless Microsoft Entra ID sign-in, masks it, and
   publishes the prebuilt output.
 - `deploy-api-image.yml` uses a dedicated OpenID Connect identity with
-  `AcrPush`, builds `api/Dockerfile` when the API source exists, publishes a
+  `AcrPush`, builds the `api` workspace through `api/Dockerfile`, publishes a
   commit-tagged image, resolves its digest, and updates Azure Container Apps by
   immutable digest.
 - `deploy-assets.yml` accepts reviewed repository directories, uploads with

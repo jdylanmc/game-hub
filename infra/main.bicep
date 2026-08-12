@@ -59,10 +59,10 @@ param additionalTags object = {}
 ])
 param frontendStagingEnvironmentPolicy string
 
-@description('Full container image reference used by the future API revision.')
+@description('Full container image reference used by the API revision.')
 param apiContainerImage string
 
-@description('Repository name reserved in Azure Container Registry for future API image publication.')
+@description('Repository name used for API image publication.')
 @minLength(1)
 param apiImageRepository string
 
@@ -100,7 +100,7 @@ param apiMemory string
 @minValue(1)
 param apiHttpConcurrentRequests int
 
-@description('Non-secret environment variables passed to the future API container.')
+@description('Non-secret environment variables passed to the API container.')
 param apiEnvironmentVariables NonSecretEnvironmentVariable[] = []
 
 @description('Environment variable names mapped to secure Container Apps secret references.')
@@ -130,6 +130,13 @@ param monitoringDailyIngestionCapGb int
 @minValue(1)
 @maxValue(100)
 param applicationInsightsSamplingPercentage int
+
+@description('Storage redundancy selected for durable identity mappings.')
+@allowed([
+  'Standard_LRS'
+  'Standard_ZRS'
+])
+param identityStorageSkuName string
 
 @description('Storage redundancy selected for asset blobs.')
 @allowed([
@@ -255,6 +262,18 @@ module secureConfigurationModule './modules/secure-configuration.bicep' = {
   }
 }
 
+module identityStorage './modules/identity-storage.bicep' = {
+  name: '${applicationName}-${environmentName}-identity-storage'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    apiRuntimePrincipalId: secureConfigurationModule.outputs.apiRuntimeIdentityPrincipalId
+    location: location
+    storageAccountName: foundation.outputs.resourceNames.identityStorageAccount
+    storageSkuName: identityStorageSkuName
+    tags: tags
+  }
+}
+
 module containerAppApi './modules/container-app-api.bicep' = {
   name: '${applicationName}-${environmentName}-container-app-api'
   scope: resourceGroup(targetSubscriptionId, resourceGroupName)
@@ -262,7 +281,20 @@ module containerAppApi './modules/container-app-api.bicep' = {
     appName: foundation.outputs.resourceNames.containerApp
     cpuCores: apiCpuCores
     environmentName: foundation.outputs.resourceNames.containerAppsEnvironment
-    environmentVariables: apiEnvironmentVariables
+    environmentVariables: concat(apiEnvironmentVariables, [
+      {
+        name: 'AZURE_CLIENT_ID'
+        value: secureConfigurationModule.outputs.apiRuntimeIdentityClientId
+      }
+      {
+        name: 'GAME_HUB_IDENTITY_STORAGE_ENDPOINT'
+        value: identityStorage.outputs.tableEndpoint
+      }
+      {
+        name: 'GAME_HUB_IDENTITY_TABLE_NAME'
+        value: identityStorage.outputs.tableName
+      }
+    ])
     httpConcurrentRequests: apiHttpConcurrentRequests
     image: apiContainerImage
     imagePullIdentityId: containerRegistry.outputs.imagePullIdentityId
@@ -375,6 +407,7 @@ module observability './modules/observability.bicep' = {
     containerRegistryName: containerRegistry.outputs.registryName
     dailyIngestionCapGb: monitoringDailyIngestionCapGb
     frontDoorProfileName: assetContentDelivery.outputs.profileName
+    identityStorageAccountName: identityStorage.outputs.storageAccountName
     keyVaultName: secureConfigurationModule.outputs.keyVaultName
     location: location
     logAnalyticsWorkspaceName: foundation.outputs.resourceNames.logAnalyticsWorkspace
@@ -436,8 +469,10 @@ output apiLinkedBackendId string = authenticationReadiness.outputs.linkedBackend
 @description('Stable same-origin API endpoint protected by Static Web Apps authentication.')
 output authenticatedApiEndpoint string = authenticationReadiness.outputs.authenticatedApiEndpoint
 
-@description('Non-secret frontend and API authentication configuration contract.')
-output authenticationConfiguration object = authenticationReadiness.outputs.configuration
+@description('Non-secret frontend, API, and internal identity resolution contract.')
+output authenticationConfiguration object = union(authenticationReadiness.outputs.configuration, {
+  identityResolution: identityStorage.outputs.configuration
+})
 
 @description('Non-secret public ingress path, origin, managed-rule, and rate-limit contract.')
 output publicIngressConfiguration object = publicIngress.outputs.configuration
@@ -460,7 +495,7 @@ output registryName string = containerRegistry.outputs.registryName
 @description('Azure Container Registry login server.')
 output registryLoginServer string = containerRegistry.outputs.loginServer
 
-@description('Private registry repository reserved for future API image publication.')
+@description('Private registry repository used for API image publication.')
 output apiImageRepository string = containerRegistry.outputs.apiImageRepository
 
 @description('Pull-only user-assigned managed identity resource identifier.')
@@ -497,6 +532,7 @@ output apiEndpoint string = containerAppApi.outputs.endpoint
 output apiRuntimeIdentity object = {
   clientId: secureConfigurationModule.outputs.apiRuntimeIdentityClientId
   id: secureConfigurationModule.outputs.apiRuntimeIdentityId
+  identityStorageRoleAssignmentId: identityStorage.outputs.apiRuntimeRoleAssignmentId
   keyVaultSecretsUserRoleAssignmentId: secureConfigurationModule.outputs.apiRuntimeRoleAssignmentId
   principalId: secureConfigurationModule.outputs.apiRuntimeIdentityPrincipalId
   systemAssignedPrincipalId: containerAppApi.outputs.systemAssignedPrincipalId
@@ -513,6 +549,9 @@ output apiDeployment object = union(containerAppApi.outputs.deploymentConfigurat
   runtimeIdentityId: secureConfigurationModule.outputs.apiRuntimeIdentityId
   subscriptionId: targetSubscriptionId
 })
+
+@description('Non-secret durable identity storage and managed-identity access contract.')
+output identityStorageConfiguration object = identityStorage.outputs.configuration
 
 @description('Non-secret secret-publication managed identity and least-privilege role contract.')
 output secretPublisherIdentity object = {

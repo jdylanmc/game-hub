@@ -96,6 +96,7 @@ export function validateOperationalInfrastructure({
     ['resource containerAppDiagnostics', 'Container App metrics must be configured.'],
     ['resource blobServiceDiagnostics', 'Blob diagnostics must be configured.'],
     ['resource frontDoorDiagnostics', 'Front Door diagnostics must be configured.'],
+    ['resource identityTableServiceDiagnostics', 'Identity table diagnostics must be configured.'],
     ['resource keyVaultDiagnostics', 'Key Vault diagnostics must be configured.'],
   ]) {
     requireText(observabilityModule, needle, message, violations);

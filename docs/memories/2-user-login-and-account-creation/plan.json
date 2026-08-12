@@ -51,8 +51,8 @@
         "Anonymous and authenticated session responses match the shared contract without exposing provider tokens or credentials"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added the linked Azure Container Apps API workspace and shared @game-hub/auth-contract package. The session endpoint validates only the Azure Static Web Apps x-ms-client-principal boundary, aad provider alias, and authenticated role, then returns only the anonymous or provider-independent Game Hub session shape. Added race-safe Azure Tables identity resolution using a SHA-256 platform-identity key, generated opaque user ID, dedicated keyless storage account, API runtime managed identity, Storage Table Data Contributor role, typed non-secret configuration, diagnostics, container build, and deterministic tests. No authentication UI, provider registration or credentials, live Azure deployment, or later flow behavior was introduced. Full yarn validate passed with 286 tests, and yarn infra:check passed.",
       "dependencies": ["US-001"]
     },
     {

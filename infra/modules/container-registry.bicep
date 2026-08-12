@@ -14,7 +14,7 @@ param location string
 @description('Required environment tags.')
 param tags object
 
-@description('Repository name reserved for the future API image.')
+@description('Repository name used for the Game Hub API image.')
 @minLength(1)
 param apiImageRepository string
 

@@ -4,11 +4,26 @@ export default defineConfig({
   test: {
     allowOnly: false,
     environment: 'jsdom',
-    include: ['src/**/*.test.{ts,tsx}', 'games/**/*.test.ts', 'packages/**/*.test.ts', 'scripts/**/*.test.mjs'],
+    include: [
+      'api/**/*.test.ts',
+      'src/**/*.test.{ts,tsx}',
+      'games/**/*.test.ts',
+      'packages/**/*.test.ts',
+      'scripts/**/*.test.mjs',
+    ],
     passWithNoTests: false,
     setupFiles: ['./src/test/setup.ts'],
     coverage: {
-      include: ['src/game-catalog.ts', 'src/components/games/GameStageStatus.tsx', 'src/components/ui/Button.tsx'],
+      include: [
+        'api/src/config.ts',
+        'api/src/identity-store.ts',
+        'api/src/platform-principal.ts',
+        'api/src/server.ts',
+        'api/src/session-handler.ts',
+        'src/game-catalog.ts',
+        'src/components/games/GameStageStatus.tsx',
+        'src/components/ui/Button.tsx',
+      ],
       provider: 'v8',
       reporter: ['text', 'json-summary', 'lcov'],
       reportsDirectory: 'coverage',
