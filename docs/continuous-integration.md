@@ -63,6 +63,47 @@ service, missing required artifact, or absent required check cannot produce a
 mergeable pull request. There are no retries, `continue-on-error` gates, or
 warning-only fallbacks.
 
+## ESLint suppression review
+
+Suppressions are exceptional policy changes, not local lint workarounds. First
+prefer correcting the code or narrowing the shared rule configuration. If an
+exception is still necessary:
+
+1. Use only `eslint-disable-next-line` immediately before the affected line or
+   `eslint-disable-line` on that line. File and block-wide `eslint-disable`
+   directives are forbidden.
+2. Name exactly one ESLint rule. Separate approvals are required when different
+   rules genuinely need different exceptions at distinct locations. Refactor a
+   source line rather than grouping multiple rule suppressions on one line.
+3. Add ` -- ` followed by a specific durable reason in the directive. The
+   reason must explain why the rule does not apply safely at that location; it
+   cannot be a TODO, temporary workaround, or generic statement.
+4. Add exactly one object to `config/lint-suppressions.json` with only `file`,
+   `line`, `directive`, `rule`, and `rationale`. `directive` is the exact comment
+   text without comment markers, while `rule` and `rationale` must exactly match
+   the directive.
+5. Review the source exception and allowlist entry together. Moving or changing
+   the directive requires updating its exact line-bound approval; removing it
+   requires removing the now-stale approval.
+
+For example:
+
+```json
+{
+  "file": "scripts/example.mjs",
+  "line": 42,
+  "directive": "eslint-disable-next-line no-console -- The command intentionally reports its final result to the invoking terminal.",
+  "rule": "no-console",
+  "rationale": "The command intentionally reports its final result to the invoking terminal."
+}
+```
+
+`yarn lint:suppressions` parses authored JavaScript and TypeScript comments
+rather than matching strings, requires the one-to-one exact approval, and
+rejects unapproved, broad, duplicate, stale, malformed, multi-rule, reasonless,
+or transient suppressions. Its automated policy cases cover both accepted
+line-scoped forms and every rejected category.
+
 ## Permissions, forks, and retained evidence
 
 The workflow grants only `contents: read`, uses `pull_request` rather than

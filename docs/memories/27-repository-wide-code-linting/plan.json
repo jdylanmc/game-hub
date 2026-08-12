@@ -105,8 +105,8 @@
         "Representative accepted and rejected suppression cases are automated"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "Pull request #32 added exact file/line/directive allowlisting and a minimum-length external rationale. Current evidence does not prove inline reasons, affected-rule specificity, broad-directive rejection, or representative policy cases.",
+      "passes": true,
+      "notes": "Suppression policy now parses authored source comments, permits only single-line eslint-disable-next-line or eslint-disable-line directives, requires exactly one affected rule and an identical durable inline/allowlist rationale, and enforces exact file, line, directive, rule, and rationale fields one-to-one. Thirteen automated cases prove both accepted forms, string false-positive immunity, and unapproved, broad, multi-rule, reasonless, transient, duplicate, stale, mismatched, and inexact allowlist rejection.",
       "dependencies": ["US-004"]
     },
     {

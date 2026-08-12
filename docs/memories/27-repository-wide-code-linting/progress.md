@@ -38,6 +38,11 @@
   ESLint project service without adding those standalone tools to the root
   application build. Node.js declarations are pinned directly at the runtime's
   major version.
+- Suppression policy parses JavaScript and TypeScript comments instead of raw
+  source strings. Only one-rule `eslint-disable-next-line` and
+  `eslint-disable-line` directives with a durable inline reason are eligible;
+  the allowlist must repeat the exact file, line, directive, rule, and rationale
+  once.
 
 ## 2026-08-11 - Planning
 
@@ -235,3 +240,42 @@ Current inspection found these issue #27 gaps:
   blocker; the draft remains incomplete.
 - US-005 is next. It should require narrow inline suppressions with exact rules
   and durable reasons, plus accepted and rejected policy cases.
+
+## 2026-08-12 - US-005
+
+- Fetched and merged current `origin/main` at `53aa66a` without rebasing,
+  force-pushing, or discarding the four completed lint stories. The merge also
+  incorporated the protected adversarial identity and Ralph source-resolution
+  remediations from pull requests #41 and #42.
+- Replaced raw regular-expression scanning with TypeScript ESLint comment
+  parsing so directive-like strings do not become false approvals. The policy
+  scans only authored JavaScript and TypeScript surfaces and mirrors the
+  repository's generated, imported, dependency, coverage, test-result, and
+  build-output boundaries.
+- Limited approvals to one-line `eslint-disable-next-line` or
+  `eslint-disable-line` comments naming exactly one rule. Every directive must
+  include a specific durable inline reason of at least 20 characters, and the
+  policy rejects transient TODO, FIXME, temporary, or remove-later markers.
+- Defined exact allowlist semantics: every entry contains only `file`, `line`,
+  `directive`, `rule`, and `rationale`; the rule and rationale exactly match
+  the directive; source locations, directives, and approvals are unique; and
+  stale or unapproved entries fail closed.
+- Added thirteen automated cases covering both allowed scopes, directive-like
+  string immunity, and unapproved, broad, multi-rule, reasonless, transient,
+  duplicate, stale, rule-mismatched, rationale-mismatched, and extra-field
+  policy failures.
+- Updated root agent guidance and the continuous integration contract with the
+  narrowest-scope rule, durable-reason requirements, exact JSON example, and
+  source-plus-allowlist review path.
+- Targeted evidence passed: `yarn lint:suppressions`,
+  `yarn vitest run scripts/check-lint-suppressions.test.mjs
+  --coverage.enabled=false`, `yarn lint`, and `yarn policy:check`.
+- The first full validation exposed package-registry bin-path metadata drift in
+  the newly merged lockfile during the hardened fresh-worktree proof. Refreshed
+  only that metadata with pinned Yarn under hardened mode; the second and final
+  `yarn validate` attempt passed immutable install, formatting, lint and policy,
+  all 14 fail-closed probes, security audit, 26 Ralph tests, 175 Vitest tests,
+  coverage, generation, typecheck, production build, bundle budgets, and
+  Storybook.
+- US-006 is next. It should add isolated representative lint and safe-fix
+  proofs without broadening the now-enforced suppression exception policy.
