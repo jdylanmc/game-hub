@@ -6,7 +6,13 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { acquireLock, processAlive, releaseLock, stableLockKey } from '../scripts/ralph-runtime-state.mjs';
+import {
+  acquireLock,
+  processAlive,
+  RalphRuntimeState,
+  releaseLock,
+  stableLockKey,
+} from '../scripts/ralph-runtime-state.mjs';
 import {
   collectOutput,
   createRalphFixture,
@@ -245,6 +251,73 @@ test('lock release refuses to delete a successor owner', () => {
   assert.throws(() => releaseLock(lockDir, 'first-run'), /no longer owned/);
   assert.equal(existsSync(lockDir), true);
   releaseLock(lockDir, 'second-run');
+});
+
+test('a predecessor cannot overwrite successor runtime state after takeover', () => {
+  const fixture = createRalphFixture('runtime-owner');
+  const lockName = 'runtime-owner';
+  const oldLock = acquireLock(fixture.commonDir, {
+    identity: 'runtime ownership',
+    leasePath: fixture.leasePath,
+    lockName,
+    runId: 'old-run',
+  });
+  const oldState = new RalphRuntimeState({
+    commonDir: fixture.commonDir,
+    identity: {
+      branchName: fixture.branchName,
+      issueNumber: fixture.issueNumber,
+      memoryDir: fixture.memoryDir,
+      repoNameWithOwner: 'jdylanmc/game-hub',
+      runId: 'old-run',
+      worktreePath: fixture.worktreePath,
+    },
+    issueNumber: fixture.issueNumber,
+    lockDirs: [oldLock],
+  });
+  oldState.startLease({ lastKnownHead: 'old-head' });
+  oldState.updateCheckpoint({ lastVerifiedHead: 'old-head' });
+  writeFileSync(
+    fixture.leasePath,
+    `${JSON.stringify(
+      {
+        ...readLease(fixture),
+        lastHeartbeatAt: '2026-08-11T00:00:00.000Z',
+        pid: 999999,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  const newLock = acquireLock(fixture.commonDir, {
+    identity: 'runtime ownership',
+    leasePath: fixture.leasePath,
+    lockName,
+    runId: 'new-run',
+  });
+  const newState = new RalphRuntimeState({
+    commonDir: fixture.commonDir,
+    identity: {
+      branchName: fixture.branchName,
+      issueNumber: fixture.issueNumber,
+      memoryDir: fixture.memoryDir,
+      repoNameWithOwner: 'jdylanmc/game-hub',
+      runId: 'new-run',
+      worktreePath: fixture.worktreePath,
+    },
+    issueNumber: fixture.issueNumber,
+    lockDirs: [newLock],
+  });
+  newState.startLease({ lastKnownHead: 'new-head' });
+  newState.updateCheckpoint({ lastVerifiedHead: 'new-head' });
+
+  assert.throws(() => oldState.updateLease({ phase: 'agent-execution' }), /no longer owns/);
+  assert.throws(() => oldState.updateCheckpoint({ lastVerifiedHead: 'wrong-head' }), /no longer owns/);
+  assert.equal(readLease(fixture).runId, 'new-run');
+  assert.equal(readCheckpoint(fixture).runId, 'new-run');
+  assert.equal(readCheckpoint(fixture).lastVerifiedHead, 'new-head');
+  releaseLock(newLock, 'new-run');
 });
 
 test('dirty worktrees block deterministic recovery', async () => {

@@ -812,6 +812,7 @@ export async function runRalphLoop(argv = process.argv.slice(2), { cwd = process
         worktreePath: repoRoot,
       },
       issueNumber,
+      lockDirs,
     });
 
     const initialHead = currentHead(repoRoot);

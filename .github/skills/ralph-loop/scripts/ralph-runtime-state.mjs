@@ -342,10 +342,11 @@ export function sleep(ms) {
 }
 
 export class RalphRuntimeState {
-  constructor({ commonDir, issueNumber, identity, now = () => new Date() }) {
+  constructor({ commonDir, issueNumber, identity, lockDirs = [], now = () => new Date() }) {
     this.commonDir = commonDir;
     this.issueNumber = issueNumber;
     this.identity = identity;
+    this.lockDirs = lockDirs;
     this.now = now;
     this.leasePath = leaseFilePath(commonDir, issueNumber);
     this.checkpointPath = checkpointFilePath(commonDir, issueNumber);
@@ -353,7 +354,17 @@ export class RalphRuntimeState {
     this.checkpoint = readJsonIfExists(this.checkpointPath);
   }
 
+  assertOwnership() {
+    for (const lockDir of this.lockDirs) {
+      const metadata = readLockMetadata(lockDir);
+      if (!metadata || metadata.runId !== this.identity.runId) {
+        throw new Error(`Ralph run ${this.identity.runId} no longer owns its runtime state.`);
+      }
+    }
+  }
+
   startLease({ deadlineAt = null, lastKnownHead = null, phase = 'preflight' }) {
+    this.assertOwnership();
     const startedAt = nowIso(this.now());
     this.lease = {
       version: 1,
@@ -374,8 +385,13 @@ export class RalphRuntimeState {
   }
 
   updateLease(patch = {}) {
+    this.assertOwnership();
+    const persistedLease = readJsonIfExists(this.leasePath);
+    if (persistedLease?.runId && persistedLease.runId !== this.identity.runId) {
+      throw new Error(`Ralph run ${this.identity.runId} cannot overwrite lease owned by ${persistedLease.runId}.`);
+    }
     if (!this.lease) {
-      this.lease = readJsonIfExists(this.leasePath) ?? {
+      this.lease = persistedLease ?? {
         version: 1,
         ...this.identity,
         host: os.hostname(),
@@ -403,11 +419,12 @@ export class RalphRuntimeState {
   }
 
   updateCheckpoint(patch = {}) {
+    this.assertOwnership();
     this.checkpoint = mergeRecord(this.checkpoint, patch);
     this.checkpoint = {
-      version: 1,
-      ...this.identity,
       ...this.checkpoint,
+      ...this.identity,
+      version: 1,
       updatedAt: nowIso(this.now()),
     };
     atomicWriteJson(this.checkpointPath, this.checkpoint);
