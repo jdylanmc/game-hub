@@ -233,3 +233,52 @@
 - No credential-linking policy, abuse protection, broad accessibility
   hardening, live Azure configuration, deployment verification, or later story
   was implemented.
+
+## Iteration 8: Harden accessibility and abuse protection
+
+- Added
+  `config/authentication/authentication-abuse-protection.json` as the reviewed
+  non-secret defense-in-depth contract. It requires the Azure Front Door
+  Premium default and bot rule sets, covers `/account`, `/.auth/*`, `/login`,
+  and `/logout`, keeps development in detection mode at 1,000 requests per
+  socket IP per five minutes, and enforces production prevention mode at the
+  stricter 500-request threshold.
+- Recorded the Microsoft Entra External ID browser-delegated boundary,
+  always-on smart lockout, and common networking HTTP protections. The new
+  validator rejects weakened production controls, environment drift,
+  credential-like fields, and any claim that Game Hub receives or stores
+  plaintext passwords or browser-readable sensitive values.
+- Updated the Bicep authentication rate-limit path set and infrastructure
+  policy tests so `/account` is covered and committed environment parameters
+  must match the reviewed authentication thresholds and modes.
+- Made the shared header responsive at narrow widths and added a named
+  signed-out live region. The account page now uses coherent heading
+  relationships, named atomic loading/error/completion regions, described
+  native links, responsive action widths, and explicit local, Google,
+  Facebook, verification, and reset guidance.
+- Loaded the account route asynchronously so the added accessible content does
+  not regress the reviewed landing entry budget. The production entry chunk
+  decreased from 179,926 to 176,842 bytes; the new account chunk is 5,018
+  bytes, and the complete bundle remains within all existing budgets.
+- Added deterministic abuse-policy, infrastructure-drift, screen-reader,
+  keyboard-order, and signed-out-state coverage. Full `yarn validate` passed
+  with 345 tests, and `yarn infra:check` passed for 21 modules and 9
+  environment parameter files.
+- Browser verification at 1280×900 and 320×800 confirmed the account error
+  state reflows without overlap and exposes the expected heading, alert,
+  recovery actions, and keyboard focus order. The local production preview
+  expectedly returned 404 for the managed `/.auth/me` endpoint, so anonymous,
+  loading, authenticated, and signed-out service states remain deterministic
+  test evidence until the later live-deployment story.
+- Changed `AGENTS.md`,
+  `config/authentication/authentication-abuse-protection.json`,
+  `docs/authentication-architecture.md`, `infra/README.md`,
+  `infra/modules/public-ingress.bicep`,
+  `scripts/authentication-abuse-protection.mjs` and its tests,
+  `scripts/check-public-ingress-infrastructure.mjs` and its tests,
+  `scripts/configure-external-id.mjs`, `src/App.tsx`,
+  `src/components/SiteHeader.tsx`, `src/pages/AccountPage.tsx`, and related
+  authentication tests.
+- No credential, provider secret, session token, connection string, live Azure
+  configuration, deployment verification, broad final authentication test
+  completion, or later story was implemented.

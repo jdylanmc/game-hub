@@ -1,10 +1,14 @@
 import { AUTHENTICATION_CONFIGURATION } from './auth/contract';
 import { findGame, useGameCatalog } from './game-catalog';
-import { AccountPage } from './pages/AccountPage';
 import { GamePage } from './pages/GamePage';
 import { LandingPage } from './pages/LandingPage';
 import { NotFoundPage } from './pages/NotFoundPage';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+
+const AccountPage = lazy(async () => {
+  const accountPage = await import('./pages/AccountPage');
+  return { default: accountPage.AccountPage };
+});
 
 function usePathname() {
   const [pathname, setPathname] = useState(window.location.pathname);
@@ -27,7 +31,22 @@ export function App() {
   }
 
   if (pathname === AUTHENTICATION_CONFIGURATION.accountPath) {
-    return <AccountPage />;
+    return (
+      <Suspense
+        fallback={
+          <main
+            aria-label="Loading account"
+            aria-live="polite"
+            className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-white"
+            role="status"
+          >
+            Loading account…
+          </main>
+        }
+      >
+        <AccountPage />
+      </Suspense>
+    );
   }
 
   const gameMatch = pathname.match(/^\/games\/([^/]+)$/);

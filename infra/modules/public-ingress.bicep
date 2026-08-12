@@ -155,6 +155,7 @@ resource webApplicationFirewallPolicy 'Microsoft.Network/frontDoorWebApplication
           matchConditions: [
             {
               matchValue: [
+                '/account'
                 '/.auth'
                 '/login'
                 '/logout'
@@ -302,6 +303,7 @@ output configuration object = {
     }
     authentication: {
       paths: [
+        '/account'
         '/.auth/*'
         '/login'
         '/logout'

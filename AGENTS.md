@@ -71,6 +71,12 @@ key access disabled. The API runtime managed identity has only Storage Table
 Data Contributor access, and stored lookup keys are one-way hashes of the
 platform provider and subject rather than raw identity values.
 
+Authentication abuse controls are reviewed in
+`config/authentication/authentication-abuse-protection.json`. Keep its
+environment-specific Azure Front Door rate limits, managed bot rules, and
+Microsoft Entra External ID baseline protections aligned with the Bicep
+parameters; do not place sensitive values in that contract.
+
 Azure Front Door Premium is the canonical public origin. Keep its web
 application firewall associated with `/*`, retain the managed default and bot
 rule sets, and express API, authentication, and general rate limits through

@@ -135,8 +135,8 @@
         "No password, provider credential, session token, or secret value is exposed to source control or browser-readable configuration"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a reviewed non-secret authentication abuse-protection contract that binds /account and the managed authentication endpoints to the existing Azure Front Door Premium default and bot rule sets, five-minute per-socket-IP rate limits, development detection mode, and stricter production prevention mode. The same contract records Microsoft Entra External ID browser-delegated authentication, always-on smart lockout, and common networking protections while rejecting credential-like fields and browser-readable sensitive values. Hardened the account and shared-header states with responsive layouts, coherent heading and live-region semantics, action descriptions, native keyboard order, and an explicit signed-out announcement; the account route now loads asynchronously to preserve bundle budgets. Deterministic configuration, infrastructure drift, accessibility, keyboard, and session-state tests were added. Full yarn validate passed with 345 tests, yarn infra:check passed for 21 modules and 9 environment parameter files, and desktop/mobile browser snapshots confirmed responsive error-state layout and keyboard focus order. No credential, provider secret, token, connection string, live Azure configuration, deployment verification, broad final test-completion story, or later story work was introduced.",
       "dependencies": ["US-004", "US-005", "US-006", "US-007"]
     },
     {

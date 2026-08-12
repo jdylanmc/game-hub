@@ -35,6 +35,12 @@ describe('public ingress infrastructure policy', () => {
       },
     ],
     [
+      'account entry rate limit',
+      {
+        publicIngressModule: infrastructure.publicIngressModule.replace("                '/account'\n", ''),
+      },
+    ],
+    [
       'all-path web application firewall association',
       {
         publicIngressModule: infrastructure.publicIngressModule.replace(
@@ -74,5 +80,19 @@ describe('public ingress infrastructure policy', () => {
         publicIngressModule: `${infrastructure.publicIngressModule}\nparam connectionString string`,
       }),
     ).toContain('Public ingress infrastructure contains forbidden credential field: connectionString.');
+  });
+
+  it('rejects drift from the reviewed environment-aware authentication threshold', () => {
+    expect(
+      violations({
+        environmentParameters: {
+          ...infrastructure.environmentParameters,
+          prod: infrastructure.environmentParameters.prod.replace(
+            'param authenticationRateLimitThreshold = 500',
+            'param authenticationRateLimitThreshold = 1000',
+          ),
+        },
+      }),
+    ).toContain('The prod environment must define param authenticationRateLimitThreshold = 500.');
   });
 });

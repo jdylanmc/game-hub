@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "edge": {
+    "protectedPaths": ["/account", "/.auth", "/login", "/logout"],
+    "managedRules": {
+      "defaultProtection": {
+        "type": "Microsoft_DefaultRuleSet",
+        "version": "2.1"
+      },
+      "botProtection": {
+        "type": "Microsoft_BotManagerRuleSet",
+        "version": "1.1"
+      }
+    },
+    "environments": {
+      "dev": {
+        "mode": "Detection",
+        "durationInMinutes": 5,
+        "thresholdPerSocketIp": 1000
+      },
+      "prod": {
+        "mode": "Prevention",
+        "durationInMinutes": 5,
+        "thresholdPerSocketIp": 500
+      }
+    }
+  },
+  "identityService": {
+    "authenticationSurface": "browser-delegated",
+    "credentialProcessor": "microsoft-entra-external-id",
+    "smartLockout": "enabled-by-default",
+    "commonNetworkingHttpProtection": "enabled-by-default",
+    "gameHubReceivesPlaintextPasswords": false,
+    "gameHubStoresPlaintextPasswords": false,
+    "browserConfigurationContainsSensitiveValues": false
+  }
+}

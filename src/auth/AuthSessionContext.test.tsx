@@ -111,6 +111,7 @@ describe('AuthSessionProvider', () => {
     fireEvent.click(signOutLink);
 
     expect(screen.getByLabelText('Session state')).toHaveTextContent('anonymous');
+    expect(screen.getByRole('status', { name: 'Signed out of Game Hub' })).toHaveAttribute('aria-live', 'polite');
     expect(screen.getByRole('link', { name: 'Sign in or create account' })).toBeVisible();
   });
 

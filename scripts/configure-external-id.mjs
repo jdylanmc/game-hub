@@ -12,12 +12,18 @@ import {
   reconcileExternalIdSocialProviders,
   validateExternalIdSocialProviderConfiguration,
 } from './external-id-social-providers.mjs';
+import {
+  loadAuthenticationAbuseProtectionConfiguration,
+  validateAuthenticationAbuseProtectionConfiguration,
+} from './authentication-abuse-protection.mjs';
 
 const localAccountConfiguration = loadExternalIdLocalAccountConfiguration();
 const socialProviderConfiguration = loadExternalIdSocialProviderConfiguration();
+const abuseProtectionConfiguration = loadAuthenticationAbuseProtectionConfiguration();
 const violations = [
   ...validateExternalIdLocalAccountConfiguration(localAccountConfiguration),
   ...validateExternalIdSocialProviderConfiguration(socialProviderConfiguration),
+  ...validateAuthenticationAbuseProtectionConfiguration(abuseProtectionConfiguration),
 ];
 if (violations.length > 0) {
   throw new Error(`External ID configuration failed:\n- ${violations.join('\n- ')}`);
@@ -30,7 +36,7 @@ if (apply && check && process.argv.includes('--check')) {
 }
 
 if (!apply) {
-  console.log('External ID local-account and social-provider configuration passed.');
+  console.log('External ID account, social-provider, and abuse-protection configuration passed.');
 } else {
   const applicationId = requiredEnvironmentVariable('GAME_HUB_EXTERNAL_ID_APP_ID');
   const environment = requiredEnvironmentVariable('GAME_HUB_ENVIRONMENT');

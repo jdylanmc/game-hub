@@ -41,19 +41,31 @@ export function AccountPage({ completeAuthentication = replaceLocation }: Accoun
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-6 py-16 lg:px-10 lg:py-24">
+      <main aria-labelledby="account-page-title" className="mx-auto max-w-5xl px-6 py-12 sm:py-16 lg:px-10 lg:py-24">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-300">Game Hub account</p>
-        <h1 className="mt-4 max-w-3xl font-display text-4xl font-bold tracking-tight sm:text-6xl">
+        <h1
+          id="account-page-title"
+          className="mt-4 max-w-3xl font-display text-4xl font-bold tracking-tight sm:text-6xl"
+        >
           Sign in or create an account
         </h1>
-        <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
+        <p className="mt-6 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
           Microsoft Entra External ID securely handles registration, email verification, sign-in, and password reset.
           Game Hub never receives or stores your password.
         </p>
 
         {authenticationFailure ? (
-          <Card as="section" className="mt-10 border-amber-300/30 p-7" role="alert">
-            <h2 className="font-display text-2xl font-semibold">We could not complete sign-in</h2>
+          <Card
+            aria-atomic="true"
+            aria-labelledby="authentication-error-title"
+            aria-live="assertive"
+            as="section"
+            className="mt-10 border-amber-300/30 p-6 sm:p-7"
+            role="alert"
+          >
+            <h2 id="authentication-error-title" className="font-display text-2xl font-semibold">
+              We could not complete sign-in
+            </h2>
             {authenticationFailure === 'identity_resolution_conflict' ? (
               <>
                 <p className="mt-3 leading-7 text-slate-300">
@@ -88,13 +100,29 @@ export function AccountPage({ completeAuthentication = replaceLocation }: Accoun
             )}
           </Card>
         ) : session.state === 'loading' && authenticationCompletion ? (
-          <Card as="section" className="mt-10 p-7" role="status">
-            <h2 className="font-display text-2xl font-semibold">Completing sign-in…</h2>
+          <Card
+            aria-atomic="true"
+            aria-labelledby="authentication-loading-title"
+            aria-live="polite"
+            as="section"
+            className="mt-10 p-6 sm:p-7"
+            role="status"
+          >
+            <h2 id="authentication-loading-title" className="font-display text-2xl font-semibold">
+              Completing sign-in…
+            </h2>
             <p className="mt-3 text-slate-300">Game Hub is resolving your account session.</p>
           </Card>
         ) : session.state === 'authenticated' ? (
-          <Card as="section" className="mt-10 p-7">
-            <h2 className="font-display text-2xl font-semibold">
+          <Card
+            aria-atomic="true"
+            aria-labelledby="authentication-success-title"
+            aria-live="polite"
+            as="section"
+            className="mt-10 p-6 sm:p-7"
+            role="status"
+          >
+            <h2 id="authentication-success-title" className="font-display text-2xl font-semibold">
               {authenticationCompletion ? 'Sign-in complete' : 'You are signed in'}
             </h2>
             <p className="mt-3 text-slate-300">
@@ -104,29 +132,46 @@ export function AccountPage({ completeAuthentication = replaceLocation }: Accoun
             </p>
           </Card>
         ) : session.state === 'anonymous' ? (
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
-            <Card as="section" className="p-7">
-              <h2 className="font-display text-2xl font-semibold">Email and password</h2>
-              <p className="mt-3 leading-7 text-slate-300">
-                Continue to the secure Microsoft-hosted flow. New email addresses are verified before the local account
-                is created.
-              </p>
-              <a className={buttonStyles('primary', 'mt-6')} href={signInPath}>
-                Continue with email
-              </a>
-            </Card>
+          <section aria-labelledby="account-options-title" className="mt-10">
+            <h2 id="account-options-title" className="sr-only">
+              Account options
+            </h2>
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card aria-labelledby="sign-in-title" as="section" className="p-6 sm:p-7">
+                <h3 id="sign-in-title" className="font-display text-2xl font-semibold">
+                  Sign in or register
+                </h3>
+                <p id="sign-in-description" className="mt-3 leading-7 text-slate-300">
+                  Continue to the secure Microsoft-hosted flow to use email and password, Google, or Facebook. New email
+                  accounts verify the address before registration completes.
+                </p>
+                <a
+                  aria-describedby="sign-in-description"
+                  className={buttonStyles('primary', 'mt-6 w-full sm:w-auto')}
+                  href={signInPath}
+                >
+                  Continue to secure sign-in
+                </a>
+              </Card>
 
-            <Card as="section" className="p-7">
-              <h2 className="font-display text-2xl font-semibold">Forgot your password?</h2>
-              <p className="mt-3 leading-7 text-slate-300">
-                On the secure sign-in page, enter your email, choose Next, then choose Forgot password to verify your
-                email and set a new password.
-              </p>
-              <a className={buttonStyles('secondary', 'mt-6')} href={signInPath}>
-                Reset password
-              </a>
-            </Card>
-          </div>
+              <Card aria-labelledby="reset-title" as="section" className="p-6 sm:p-7">
+                <h3 id="reset-title" className="font-display text-2xl font-semibold">
+                  Forgot your password?
+                </h3>
+                <p id="reset-description" className="mt-3 leading-7 text-slate-300">
+                  On the secure sign-in page, enter your email, choose Next, then choose Forgot password. Microsoft
+                  verifies the email before allowing a new password.
+                </p>
+                <a
+                  aria-describedby="reset-description"
+                  className={buttonStyles('secondary', 'mt-6 w-full sm:w-auto')}
+                  href={signInPath}
+                >
+                  Reset password
+                </a>
+              </Card>
+            </div>
+          </section>
         ) : null}
       </main>
     </div>

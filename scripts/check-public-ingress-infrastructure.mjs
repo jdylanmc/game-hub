@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  loadAuthenticationAbuseProtectionConfiguration,
+  validateAuthenticationAbuseProtectionConfiguration,
+} from './authentication-abuse-protection.mjs';
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -8,6 +12,7 @@ export function loadPublicIngressInfrastructure(root = rootDirectory) {
   return {
     assetContentDeliveryModule: readFileSync(path.join(root, 'infra/modules/asset-content-delivery.bicep'), 'utf8'),
     authenticationModule: readFileSync(path.join(root, 'infra/modules/authentication-readiness.bicep'), 'utf8'),
+    authenticationProtectionConfiguration: loadAuthenticationAbuseProtectionConfiguration(root),
     environmentParameters: Object.fromEntries(
       ['dev', 'prod'].map((environment) => [
         environment,
@@ -22,11 +27,13 @@ export function loadPublicIngressInfrastructure(root = rootDirectory) {
 export function validatePublicIngressInfrastructure({
   assetContentDeliveryModule,
   authenticationModule,
+  authenticationProtectionConfiguration,
   environmentParameters,
   mainTemplate,
   publicIngressModule,
 }) {
   const violations = [];
+  violations.push(...validateAuthenticationAbuseProtectionConfiguration(authenticationProtectionConfiguration));
 
   for (const [needle, message] of [
     [
@@ -39,6 +46,11 @@ export function validatePublicIngressInfrastructure({
     ["var botManagerRuleSetVersion = '1.1'", 'The bot protection rule set version must remain explicit.'],
     ["name: 'ApiRateLimit'", 'The API must have an explicit rate limit.'],
     ["name: 'AuthenticationRateLimit'", 'Authentication paths must have an explicit rate limit.'],
+    [
+      "matchValue: [\n                '/account'\n                '/.auth'",
+      'Authentication rate limiting must cover the account entry page.',
+    ],
+    ["'/.auth/*'", 'The protected authentication contract must cover managed authentication endpoints.'],
     ["name: 'GeneralRateLimit'", 'General frontend and asset traffic must have an explicit rate limit.'],
     ["ruleType: 'RateLimitRule'", 'Rate limiting must use Azure Front Door web application firewall rules.'],
     ["matchVariable: 'RequestUri'", 'Rate limits must be scoped by request path.'],
@@ -98,11 +110,13 @@ export function validatePublicIngressInfrastructure({
   );
 
   for (const [environment, parameters] of Object.entries(environmentParameters)) {
+    const edgeSettings = authenticationProtectionConfiguration.edge.environments[environment];
     for (const needle of [
       'param apiRateLimitThreshold = ',
-      'param authenticationRateLimitThreshold = ',
+      `param authenticationRateLimitThreshold = ${edgeSettings.thresholdPerSocketIp}`,
       'param generalRateLimitThreshold = ',
-      'param rateLimitDurationInMinutes = 5',
+      `param rateLimitDurationInMinutes = ${edgeSettings.durationInMinutes}`,
+      `param webApplicationFirewallMode = '${edgeSettings.mode}'`,
     ]) {
       requireText(parameters, needle, `The ${environment} environment must define ${needle.trim()}.`, violations);
     }

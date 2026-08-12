@@ -19,6 +19,15 @@ platform diagnostic settings complete the operational baseline. Protected
 GitHub Actions workflows perform infrastructure, frontend, API image, and asset
 publication without storing an Azure credential.
 
+Authentication abuse protection is reviewed in
+`config/authentication/authentication-abuse-protection.json`. The Azure Front
+Door web application firewall applies the managed default and bot rule sets to
+all routes and gives `/account`, `/.auth/*`, `/login`, and `/logout` a dedicated
+environment-aware rate limit. Development remains in detection mode for tuning;
+production enforces prevention mode with the stricter threshold. Microsoft
+Entra External ID adds always-on smart lockout and common networking
+protections on the hosted credential surface.
+
 ## Layout
 
 | Path | Responsibility |

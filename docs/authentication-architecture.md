@@ -205,6 +205,36 @@ user-details value. The conflict state does not guess whether two credentials
 belong to one person, and it does not create an account-linking policy. The
 issue's multi-credential linking decision remains deferred.
 
+## Accessibility and Abuse Protection
+
+The `/account` entry page keeps the account lifecycle understandable before the
+browser leaves Game Hub. Native links remain keyboard operable, each action is
+associated with its explanatory text, the responsive cards collapse to one
+column on narrow screens, and loading, error, completed, authenticated, and
+signed-out changes use named live regions. The single Microsoft-hosted flow
+then owns the login, registration, verified-email, and password-reset forms, so
+Game Hub never renders a credential control.
+
+`config/authentication/authentication-abuse-protection.json` is the reviewed
+non-secret defense-in-depth contract. It binds the account entry and managed
+authentication paths to the Azure Front Door Premium web application firewall:
+
+- the Microsoft default and bot manager rule sets cover every public route;
+- `/account`, `/.auth/*`, `/login`, and `/logout` have the dedicated
+  authentication rate limit;
+- development uses detection mode with 1,000 requests per socket IP in five
+  minutes so the policy can be tuned; and
+- production uses prevention mode with the stricter 500-request threshold.
+
+Microsoft Entra External ID supplies the identity-service layer. Browser-
+delegated authentication keeps credentials off the application surface, smart
+lockout is always enabled to mitigate password guessing, and the service's
+common networking protections limit malformed and abusive request patterns.
+The committed policy checker prevents either environment from drifting from
+these controls and rejects credential-like fields. This repository proof does
+not claim that infrastructure or tenant state is already deployed; live
+verification remains a later story.
+
 ## Social Provider Federation
 
 `config/authentication/external-id-social-providers.json` declares Google and
@@ -260,11 +290,11 @@ bundles, logs, artifacts, Ralph memory, or pull-request text.
   endpoint and table name are non-secret; account keys and connection strings
   are disabled and absent from application configuration.
 
-The existing Azure Front Door web application firewall and authentication path
-rate limit continue to cover `/.auth/*`. Later security work must also configure
-the identity service's registration and credential-attack protections and
-verify them with live evidence; this architecture decision alone does not claim
-that protection is deployed.
+The Azure Front Door web application firewall and authentication path rate
+limit cover the account and managed authentication entry points. Microsoft
+Entra External ID supplies always-on smart lockout and common networking
+protections for the hosted identity surface. Live deployment and verification
+remain separate from this reviewed configuration.
 
 ## Deferred Issue Decisions
 
@@ -309,6 +339,8 @@ Reviewed August 12, 2026:
 - [Create an identity provider with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/identitycontainer-post-identityproviders)
 - [Update an identity provider with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/identityproviderbase-update)
 - [Enable self-service password reset](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-enable-password-reset-customers)
+- [Security fundamentals for external tenants](https://learn.microsoft.com/en-us/entra/external-id/customers/concept-security-customers)
+- [Microsoft Entra smart lockout](https://learn.microsoft.com/en-us/entra/identity/authentication/howto-password-smart-lockout)
 - [Create an authentication events flow with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/identitycontainer-post-authenticationeventsflows)
 - [Link an application to a user flow with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/authenticationconditionsapplications-post-includeapplications)
 - [Update the email authentication method with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/emailauthenticationmethodconfiguration-update)
@@ -316,5 +348,7 @@ Reviewed August 12, 2026:
 - [Azure Static Web Apps authentication and authorization](https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-authorization)
 - [Azure Static Web Apps user information](https://learn.microsoft.com/en-us/azure/static-web-apps/user-information)
 - [Link Azure Container Apps as a Static Web Apps API](https://learn.microsoft.com/en-us/azure/static-web-apps/apis-container-apps)
+- [Azure Front Door web application firewall best practices](https://learn.microsoft.com/en-us/azure/web-application-firewall/afds/waf-front-door-best-practices)
+- [Configure an Azure Front Door rate-limit rule](https://learn.microsoft.com/en-us/azure/web-application-firewall/afds/waf-front-door-rate-limit-configure)
 - [Authorize Azure Tables access with Microsoft Entra ID](https://learn.microsoft.com/en-us/azure/storage/tables/authorize-access-azure-active-directory)
 - [Azure Tables client library for JavaScript](https://learn.microsoft.com/en-us/javascript/api/overview/azure/data-tables-readme)
