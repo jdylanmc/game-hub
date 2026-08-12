@@ -71,8 +71,8 @@
         "Rules that conflict with the React JSX runtime, TypeScript, Storybook, or generated boundaries are resolved through narrow documented overrides"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "Pull request #32 enabled React recommended, JSX runtime, and React Hooks flat recommended rules. Accessibility and dedicated import enforcement are not installed or demonstrated.",
+      "passes": true,
+      "notes": "Enabled JSX accessibility recommended rules with custom Link and Button element mappings, retained React recommended, JSX runtime, and React Hooks rules, and enabled import-x resolution, export, duplicate, and leading-import correctness across authored source. TypeScript named-import validation and namespace-like tool APIs use narrow documented overrides. A temporary TSX probe proved invalid, unresolved, duplicate, and body imports plus React, Hooks, and accessibility violations fail with actionable diagnostics.",
       "dependencies": ["US-001", "US-002"]
     },
     {

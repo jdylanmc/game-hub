@@ -140,3 +140,32 @@ Current inspection found these issue #27 gaps:
   `yarn policy:check`, and `yarn format:check`.
 - US-003 is next. It should activate the pinned accessibility and import
   plugins while preserving these environment boundaries.
+
+## 2026-08-11 - US-003
+
+- Enabled the recommended `eslint-plugin-jsx-a11y` rules for React source and
+  mapped the shared `Link` and `Button` components to their native elements so
+  accessibility checks follow the rendered semantics.
+- Enabled `eslint-plugin-import-x` resolution, export validation, duplicate
+  detection, and leading-import ordering across authored JavaScript and
+  TypeScript. TypeScript remains authoritative for named TypeScript imports,
+  while the ESLint configuration and Mamba generator have narrow documented
+  interop overrides for namespace-like tool APIs.
+- Updated `Link` to render `children` explicitly, preserving behavior while
+  making its accessible anchor content visible to static analysis.
+- Verified a temporary TypeScript React probe failed with actionable
+  `import-x/default`, `import-x/no-duplicates`, `import-x/no-unresolved`,
+  `import-x/first`, `jsx-a11y/alt-text`, `react/jsx-no-undef`, and
+  `react-hooks/rules-of-hooks` diagnostics. Effective-configuration checks
+  confirmed React, Hooks, and accessibility rules apply to host and Storybook
+  TSX while shared package source receives import and TypeScript rules without
+  React globals or rules.
+- Files changed: `eslint.config.js`, `src/components/Link.tsx`, `plan.json`, and
+  `progress.md`.
+- Passed the complete `yarn validate` gate: immutable install, formatting,
+  lint, policy, fail-closed proofs, dependency audit, tests and coverage,
+  generated-state verification, typecheck, production build, bundle budgets,
+  and Storybook build.
+- US-004 is next. It should prove automatic future workspace coverage and
+  deliberate generated, imported, and output exclusions without broadening
+  this story's rule configuration.
