@@ -201,7 +201,7 @@ afterEach(async () => {
 });
 
 describe('publishAdversarialEvidence', () => {
-  it('publishes an exact exception as a warning and neutral check while retaining immutable audit evidence', async () => {
+  it('retains an exact exception as a warning without overriding a confirmed FAIL', async () => {
     const transport = new FakeGitHubTransport();
     const result = reviewResult([finding()]);
     const publication = await publishAdversarialEvidence({
@@ -210,7 +210,7 @@ describe('publishAdversarialEvidence', () => {
     });
     const artifact = await readJson(publication.artifactPath);
 
-    expect(publication.conclusion).toBe('neutral');
+    expect(publication.conclusion).toBe('failure');
     expect(transport.createCalls[0].request.output.annotations[0].annotation_level).toBe('warning');
     expect(artifact.result).toEqual(result);
     expect(artifact.exceptions.applications).toHaveLength(1);
@@ -272,13 +272,13 @@ describe('publishAdversarialEvidence', () => {
     expect(transport.createCalls).toHaveLength(0);
   });
 
-  it('maps advisory findings to neutral warnings and blocking findings to failures', async () => {
+  it('maps PASS findings to success warnings and confirmed blockers to failures', async () => {
     const advisoryTransport = new FakeGitHubTransport();
     const advisory = finding({ severity: 'ADVISORY', confidence: 'MEDIUM' });
     const advisoryPublication = await publishAdversarialEvidence(
       options(advisoryTransport, reviewResult([advisory]), 'advisory'),
     );
-    expect(advisoryPublication.conclusion).toBe('neutral');
+    expect(advisoryPublication.conclusion).toBe('success');
     expect(advisoryTransport.createCalls[0].request.output.annotations[0].annotation_level).toBe('warning');
 
     const blockingTransport = new FakeGitHubTransport();

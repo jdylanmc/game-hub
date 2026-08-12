@@ -62,3 +62,19 @@
   scripts/resolve-adversarial-reviewer-matrix.test.mjs
   --coverage.enabled=false`; `yarn policy:adversarial-workflow`; `yarn
   agents:validate`; `yarn typecheck`.
+
+### US-004 — Publish independent checks and deterministic fan-in
+
+- **Confirmed seams:** `publishAdversarialEvidence` and
+  `evaluateAdversarialFanIn` with injected check/evidence records.
+- **Red:** The fan-in test could not import an implementation, so no
+  independently attributable exact-head evidence was structurally evaluated.
+- **Green:** Publisher conclusions now map PASS to success, confirmed or
+  platform FAIL to failure, and compute-only INCONCLUSIVE to neutral. Fan-in
+  rejects missing, duplicate, stale, mismatched, failed, or provenance-invalid
+  evidence and keeps valid INCONCLUSIVE evidence neutral. The protected-base
+  workflow adds a separately published `Adversarial Review / fan-in` check.
+- **Broader checks:** `yarn vitest run
+  scripts/publish-adversarial-evidence.test.mjs
+  scripts/fan-in-adversarial-evidence.test.mjs
+  --coverage.enabled=false`; `yarn typecheck`.

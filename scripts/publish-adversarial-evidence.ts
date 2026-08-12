@@ -377,10 +377,10 @@ function decodeMetadata(text: unknown): PublishedCheckMetadata | undefined {
 
 function conclusionFor(result: JsonObject, exceptions: ExceptionEvaluation): 'success' | 'neutral' | 'failure' {
   const verdict = isObject(result.verdict) ? result.verdict : {};
-  if (verdict.decision === 'ERROR' || exceptions.unexceptedBlockingFindingFingerprints.length > 0) {
-    return 'failure';
-  }
-  return verdict.severity === 'ADVISORY' || exceptions.applications.length > 0 ? 'neutral' : 'success';
+  void exceptions;
+  if (verdict.decision === 'PASS') return 'success';
+  if (verdict.decision === 'INCONCLUSIVE' && verdict.kind === 'COMPUTE') return 'neutral';
+  return 'failure';
 }
 
 function checkSummary(result: JsonObject, findingCount: number, exceptions: ExceptionEvaluation): string {

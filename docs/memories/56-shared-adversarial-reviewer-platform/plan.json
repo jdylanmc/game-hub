@@ -80,7 +80,7 @@
         "Workflow policy tests prove publication and fan-in are deterministic protected-base jobs and every enabled reviewer remains independently attributable."
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Public test seams: publish-adversarial-evidence CLI/library and a new fan-in CLI with fake GitHub/evidence transports."
     },
     {
