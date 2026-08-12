@@ -1,0 +1,17 @@
+{
+  "id": "alpha",
+  "title": "Alpha",
+  "tagline": "Alpha fixture",
+  "description": "A deterministic fixture game named Alpha.",
+  "accent": "#111111",
+  "secondaryAccent": "#222222",
+  "technology": "Three.js",
+  "order": 2,
+  "controls": [
+    {
+      "action": "Start",
+      "inputs": ["Spacebar"]
+    }
+  ],
+  "instructions": ["Start the Alpha fixture."]
+}

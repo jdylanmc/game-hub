@@ -61,7 +61,20 @@ jobs:
         run: yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log
 
       - name: Run tests with coverage
-        run: yarn test:coverage 2>&1 | tee continuous-integration-evidence/test.log
+        id: unit_tests
+        run: yarn test:ci 2>&1 | tee continuous-integration-evidence/test.log
+
+      - name: Retain unit test evidence for 14 days
+        if: ${{ always() && steps.unit_tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: unit-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            continuous-integration-evidence/test.log
+            test-results/junit.xml
+            coverage/
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Build production website
         run: yarn build 2>&1 | tee continuous-integration-evidence/build.log

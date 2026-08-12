@@ -1,5 +1,20 @@
-import type { GameHost, GameInstance, GameManifest } from '@game-hub/game-contract';
+import {
+  createSeededRandomSource,
+  createSubmitScoreOnce,
+  type GameHost,
+  type GameInstance,
+  type GameManifest,
+  type RandomSource,
+  type SimulationClock,
+} from '@game-hub/game-contract';
 import manifestData from '../game.manifest.json';
+import {
+  createFloppyBirdSimulationState,
+  flightSpeedForScore,
+  FLOPPY_BIRD_LAYOUT,
+  stepFloppyBirdSimulation,
+  type FloppyBirdObstacleState,
+} from './simulation';
 import {
   AmbientLight,
   BoxGeometry,
@@ -25,34 +40,19 @@ import {
 const manifest = manifestData as GameManifest;
 
 const VIEW_HEIGHT = 22;
-const PLAYFIELD_TOP = 9.5;
-const PLAYFIELD_BOTTOM = -9.5;
-const BIRD_X = -6.4;
-const BIRD_RADIUS = 0.85;
-const FLAP_VELOCITY = 7.4;
-const GRAVITY = 20.5;
-const BASE_SPEED = 7.2;
-const MAX_SPEED = 10.6;
-const BASE_GAP = 5.8;
-const MIN_GAP = 4.35;
-const BASE_SPACING = 8.8;
-const MIN_SPACING = 7.1;
-const OBSTACLE_WIDTH = 2.4;
+const {
+  birdX: BIRD_X,
+  obstacleWidth: OBSTACLE_WIDTH,
+  playfieldBottom: PLAYFIELD_BOTTOM,
+  playfieldTop: PLAYFIELD_TOP,
+} = FLOPPY_BIRD_LAYOUT;
 const OBSTACLE_COLORS = ['#38bdf8', '#f59e0b', '#34d399', '#fb7185', '#a855f7'];
-const GAP_PATTERN_Y = [-3.8, -2.3, -0.9, 0.9, 2.3, 3.8];
-const INITIAL_GAP_SEQUENCE = [2, 4, 1, 5];
-const INITIAL_STYLE_SEQUENCE = [0, 2, 1, 4];
 
-interface Obstacle {
+interface ObstacleView {
   accentRing: Mesh;
   bottomSegment: Mesh;
-  colorIndex: number;
-  gapHeight: number;
-  gapY: number;
   group: Group;
-  scored: boolean;
   topSegment: Mesh;
-  x: number;
 }
 
 interface ParallaxMarker {
@@ -60,6 +60,12 @@ interface ParallaxMarker {
   offset: number;
   speedScale: number;
   y: number;
+}
+
+export interface FloppyBirdRuntimeOptions {
+  clock?: SimulationClock;
+  random?: RandomSource;
+  scoreOccurredAt?: () => string;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -105,7 +111,7 @@ function createWingGeometry(): ShapeGeometry {
   return new ShapeGeometry(shape);
 }
 
-function createObstacle(styleColor: string): Obstacle {
+function createObstacle(styleColor: string): ObstacleView {
   const group = new Group();
   const segmentGeometry = new BoxGeometry(OBSTACLE_WIDTH, 1, 1.1);
   const ringGeometry = new TorusGeometry(0.68, 0.11, 12, 28);
@@ -137,30 +143,24 @@ function createObstacle(styleColor: string): Obstacle {
   return {
     accentRing,
     bottomSegment,
-    colorIndex: 0,
-    gapHeight: BASE_GAP,
-    gapY: 0,
     group,
-    scored: false,
     topSegment,
-    x: 0,
   };
 }
 
-function setObstacleLayout(obstacle: Obstacle): void {
-  const topHeight = PLAYFIELD_TOP - (obstacle.gapY + obstacle.gapHeight / 2);
-  const bottomHeight = obstacle.gapY - obstacle.gapHeight / 2 - PLAYFIELD_BOTTOM;
+function setObstacleLayout(obstacle: ObstacleView, state: Readonly<FloppyBirdObstacleState>): void {
+  const topHeight = PLAYFIELD_TOP - (state.gapY + state.gapHeight / 2);
+  const bottomHeight = state.gapY - state.gapHeight / 2 - PLAYFIELD_BOTTOM;
 
-  obstacle.group.position.x = obstacle.x;
+  obstacle.group.position.x = state.x;
   obstacle.topSegment.scale.y = topHeight;
   obstacle.bottomSegment.scale.y = bottomHeight;
-  obstacle.topSegment.position.set(0, obstacle.gapY + obstacle.gapHeight / 2 + topHeight / 2, 0);
+  obstacle.topSegment.position.set(0, state.gapY + state.gapHeight / 2 + topHeight / 2, 0);
   obstacle.bottomSegment.position.set(0, PLAYFIELD_BOTTOM + bottomHeight / 2, 0);
-  obstacle.accentRing.position.set(0, obstacle.gapY, 0.2);
+  obstacle.accentRing.position.set(0, state.gapY, 0.2);
 }
 
-function setObstacleColor(obstacle: Obstacle, colorIndex: number): void {
-  obstacle.colorIndex = colorIndex;
+function setObstacleColor(obstacle: ObstacleView, colorIndex: number): void {
   const color = OBSTACLE_COLORS[colorIndex];
   const topMaterial = obstacle.topSegment.material as MeshStandardMaterial;
   const bottomMaterial = obstacle.bottomSegment.material as MeshStandardMaterial;
@@ -191,7 +191,11 @@ function resizeRenderer(camera: OrthographicCamera, renderer: WebGLRenderer, can
 
 export { manifest };
 
-export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInstance {
+export function createGame(
+  canvas: HTMLCanvasElement,
+  host: GameHost,
+  runtime: Readonly<FloppyBirdRuntimeOptions> = {},
+): GameInstance {
   const renderer = new WebGLRenderer({ antialias: true, canvas });
   const scene = new Scene();
   const camera = new OrthographicCamera(-16, 16, VIEW_HEIGHT / 2, -VIEW_HEIGHT / 2, 0.1, 100);
@@ -260,26 +264,25 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   });
   const leftWing = new Mesh(wingGeometry, wingMaterial.clone());
   const rightWing = new Mesh(wingGeometry, wingMaterial.clone());
-  const obstacles: Obstacle[] = [];
+  const obstacles: ObstacleView[] = [];
   const floorMarkers: ParallaxMarker[] = [];
   const topMarkers: ParallaxMarker[] = [];
+  const clock: SimulationClock = runtime.clock ?? {
+    nowMilliseconds: () => performance.now(),
+  };
+  const random = runtime.random ?? createSeededRandomSource(Math.trunc(clock.nowMilliseconds() * 1_000));
+  const scoreOccurredAt = runtime.scoreOccurredAt ?? (() => new Date().toISOString());
 
   let animationFrameId = 0;
   let disposed = false;
+  let started = false;
   let phase: 'ready' | 'running' | 'paused' | 'game-over' = 'ready';
   let phaseBeforePause: 'ready' | 'running' = 'ready';
   let phaseMessage = 'Press Space, click, or tap to flap upward.';
-  let score = 0;
-  let birdY = 0;
-  let birdVelocity = 0;
-  let wingBeat = 0;
-  let ambience = 0;
   let lastFrameTime = 0;
-  let highestObstacleX = 0;
-  let submittedScore = false;
-  let previousGapIndex = INITIAL_GAP_SEQUENCE[INITIAL_GAP_SEQUENCE.length - 1];
-  let previousStyleIndex = INITIAL_STYLE_SEQUENCE[INITIAL_STYLE_SEQUENCE.length - 1];
+  let simulation = createFloppyBirdSimulationState();
   let startedAt = 0;
+  const submitScoreOnce = createSubmitScoreOnce(host);
 
   renderer.setClearColor(new Color('#020617'));
   renderer.shadowMap.enabled = false;
@@ -304,21 +307,11 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
 
   scene.add(backgroundPlane, glowPlane, floor, ceiling, bird, ambientLight, directionalLight);
 
-  for (let index = 0; index < 4; index += 1) {
-    const obstacle = createObstacle(OBSTACLE_COLORS[index % OBSTACLE_COLORS.length]);
-    const gapIndex = INITIAL_GAP_SEQUENCE[index % INITIAL_GAP_SEQUENCE.length];
-    const styleIndex = INITIAL_STYLE_SEQUENCE[index % INITIAL_STYLE_SEQUENCE.length];
-    const x = 9 + index * BASE_SPACING;
+  for (const obstacleState of simulation.obstacles) {
+    const obstacle = createObstacle(OBSTACLE_COLORS[obstacleState.colorIndex]);
 
-    previousGapIndex = gapIndex;
-    previousStyleIndex = styleIndex;
-    obstacle.x = x;
-    obstacle.gapY = GAP_PATTERN_Y[gapIndex];
-    obstacle.gapHeight = BASE_GAP;
-    obstacle.scored = false;
-    setObstacleColor(obstacle, styleIndex);
-    setObstacleLayout(obstacle);
-    highestObstacleX = x;
+    setObstacleColor(obstacle, obstacleState.colorIndex);
+    setObstacleLayout(obstacle, obstacleState);
     obstacles.push(obstacle);
     scene.add(obstacle.group);
   }
@@ -348,7 +341,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       type: 'hud',
       detail,
       label: 'Gates cleared',
-      score,
+      score: simulation.score,
     });
   };
 
@@ -362,78 +355,38 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
     host.emitEvent({ type: 'announcement', message, politeness });
   };
 
-  const difficulty = () => clamp(score / 24, 0, 1);
-  const obstacleGap = () => lerp(BASE_GAP, MIN_GAP, difficulty());
-  const obstacleSpacing = () => lerp(BASE_SPACING, MIN_SPACING, difficulty());
-  const flightSpeed = () => lerp(BASE_SPEED, MAX_SPEED, difficulty());
-
-  const nextGapIndex = () => {
-    let candidates = GAP_PATTERN_Y.map((_, index) => index).filter(
-      (index) => index !== previousGapIndex && Math.abs(index - previousGapIndex) > 1,
-    );
-
-    if (candidates.length === 0) {
-      candidates = GAP_PATTERN_Y.map((_, index) => index).filter((index) => index !== previousGapIndex);
-    }
-
-    const picked = candidates[Math.floor(Math.random() * candidates.length)];
-    previousGapIndex = picked;
-    return picked;
-  };
-
-  const nextStyleIndex = () => {
-    const candidates = OBSTACLE_COLORS.map((_, index) => index).filter((index) => index !== previousStyleIndex);
-    const picked = candidates[Math.floor(Math.random() * candidates.length)];
-    previousStyleIndex = picked;
-    return picked;
-  };
-
-  const recycleObstacle = (obstacle: Obstacle) => {
-    obstacle.x = highestObstacleX + obstacleSpacing();
-    highestObstacleX = obstacle.x;
-    obstacle.gapHeight = obstacleGap();
-    obstacle.gapY = GAP_PATTERN_Y[nextGapIndex()] * lerp(1, 0.84, difficulty());
-    obstacle.scored = false;
-    setObstacleColor(obstacle, nextStyleIndex());
-    setObstacleLayout(obstacle);
-  };
-
   const finishRun = (reason: string) => {
-    if (phase === 'game-over') {
+    if (disposed || phase === 'game-over') {
       return;
     }
 
     emitPhase('game-over', reason);
-    emitAnnouncement(`Game over. Final score ${score}.`, 'assertive');
+    emitAnnouncement(`Game over. Final score ${simulation.score}.`, 'assertive');
     emitHud('Crash detected. Restart to try another run.');
 
-    if (!submittedScore) {
-      submittedScore = true;
-      host.submitScore({
-        gameId: manifest.id,
-        score,
-        occurredAt: new Date().toISOString(),
-        metadata: {
-          durationSeconds: Math.max(0, Math.round((performance.now() - startedAt) / 1000)),
-          technology: manifest.technology,
-        },
-      });
-    }
+    submitScoreOnce({
+      gameId: manifest.id,
+      score: simulation.score,
+      occurredAt: scoreOccurredAt(),
+      metadata: {
+        durationSeconds: Math.max(0, Math.round((clock.nowMilliseconds() - startedAt) / 1000)),
+        technology: manifest.technology,
+      },
+    });
   };
 
   const flap = () => {
-    if (phase === 'paused' || phase === 'game-over') {
+    if (disposed || phase === 'paused' || phase === 'game-over') {
       return;
     }
 
     if (phase === 'ready') {
-      startedAt = performance.now();
+      startedAt = clock.nowMilliseconds();
       emitPhase('running', 'Glide cleanly through the gates and keep the disk centered.');
       emitAnnouncement('Run started.');
     }
 
-    birdVelocity = FLAP_VELOCITY;
-    wingBeat = 1;
+    simulation = stepFloppyBirdSimulation(simulation, { flap: true, phase }, 0, random);
   };
 
   const updateMarkers = (time: number, speed: number) => {
@@ -454,27 +407,6 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
         marker.y,
         -0.25,
       );
-    }
-  };
-
-  const detectCollision = () => {
-    if (birdY + BIRD_RADIUS >= PLAYFIELD_TOP || birdY - BIRD_RADIUS <= PLAYFIELD_BOTTOM) {
-      finishRun('The floppy disk clipped the boundary.');
-      return;
-    }
-
-    for (const obstacle of obstacles) {
-      const overlapsX =
-        BIRD_X + BIRD_RADIUS > obstacle.x - OBSTACLE_WIDTH / 2 &&
-        BIRD_X - BIRD_RADIUS < obstacle.x + OBSTACLE_WIDTH / 2;
-      const outsideGap =
-        birdY + BIRD_RADIUS > obstacle.gapY + obstacle.gapHeight / 2 ||
-        birdY - BIRD_RADIUS < obstacle.gapY - obstacle.gapHeight / 2;
-
-      if (overlapsX && outsideGap) {
-        finishRun('A gate closed in before the wings could clear it.');
-        return;
-      }
     }
   };
 
@@ -502,61 +434,43 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
 
     const deltaSeconds = lastFrameTime === 0 ? 0 : Math.min((timestamp - lastFrameTime) / 1000, 0.05);
     lastFrameTime = timestamp;
+    const previousSimulation = simulation;
+    const speed = flightSpeedForScore(simulation.score);
 
-    if (phase !== 'paused') {
-      ambience += deltaSeconds;
+    simulation = stepFloppyBirdSimulation(simulation, { flap: false, phase }, deltaSeconds, random);
+
+    for (let nextScore = previousSimulation.score + 1; nextScore <= simulation.score; nextScore += 1) {
+      emitHud(`Speed ${Math.round(flightSpeedForScore(nextScore) * 42)} rpm`);
+      emitAnnouncement(`Score ${nextScore}.`);
     }
 
-    const speed = flightSpeed();
-
-    if (phase === 'ready') {
-      birdY = Math.sin(ambience * 2.4) * 0.45;
-      birdVelocity = 0;
+    if (simulation.collisionReason) {
+      finishRun(simulation.collisionReason);
     }
 
-    if (phase === 'running') {
-      birdVelocity -= GRAVITY * deltaSeconds;
-      birdY += birdVelocity * deltaSeconds;
-
-      for (const obstacle of obstacles) {
-        obstacle.x -= speed * deltaSeconds;
-
-        if (!obstacle.scored && obstacle.x + OBSTACLE_WIDTH / 2 < BIRD_X) {
-          obstacle.scored = true;
-          score += 1;
-          emitHud(`Speed ${Math.round(flightSpeed() * 42)} rpm`);
-          emitAnnouncement(`Score ${score}.`);
-        }
-
-        if (obstacle.x < -19) {
-          recycleObstacle(obstacle);
-        } else {
-          highestObstacleX = Math.max(highestObstacleX, obstacle.x);
-          setObstacleLayout(obstacle);
-        }
-      }
-
-      detectCollision();
-    }
-
-    wingBeat = Math.max(0, wingBeat - deltaSeconds * 2.6);
     const wingRotation =
       phase === 'running'
-        ? lerp(0.15, 1.2, clamp((birdVelocity + 8) / 16, 0, 1)) + wingBeat * 0.35
-        : 0.55 + Math.sin(ambience * 5) * 0.2;
+        ? lerp(0.15, 1.2, clamp((simulation.birdVelocity + 8) / 16, 0, 1)) + simulation.wingBeat * 0.35
+        : 0.55 + Math.sin(simulation.ambience * 5) * 0.2;
 
     leftWing.rotation.z = wingRotation;
     rightWing.rotation.z = -wingRotation;
-    bird.position.set(BIRD_X, birdY, 0);
-    bird.rotation.z = phase === 'running' ? clamp(birdVelocity * 0.06, -0.55, 0.6) : -0.08;
-    glowPlane.rotation.z = ambience * 0.1;
+    bird.position.set(BIRD_X, simulation.birdY, 0);
+    bird.rotation.z = phase === 'running' ? clamp(simulation.birdVelocity * 0.06, -0.55, 0.6) : -0.08;
+    glowPlane.rotation.z = simulation.ambience * 0.1;
 
-    for (const obstacle of obstacles) {
+    obstacles.forEach((obstacle, index) => {
+      const obstacleState = simulation.obstacles[index];
+      const previousObstacleState = previousSimulation.obstacles[index];
+
+      if (obstacleState.colorIndex !== previousObstacleState.colorIndex) {
+        setObstacleColor(obstacle, obstacleState.colorIndex);
+      }
       obstacle.accentRing.rotation.z += deltaSeconds * 0.55;
-      setObstacleLayout(obstacle);
-    }
+      setObstacleLayout(obstacle, obstacleState);
+    });
 
-    updateMarkers(ambience, speed);
+    updateMarkers(simulation.ambience, speed);
     renderer.render(scene, camera);
   };
 
@@ -569,10 +483,15 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
 
   return {
     start() {
-      render(performance.now());
+      if (disposed || started) {
+        return;
+      }
+
+      started = true;
+      render(clock.nowMilliseconds());
     },
     pause() {
-      if (phase === 'paused' || phase === 'game-over') {
+      if (disposed || phase === 'paused' || phase === 'game-over') {
         return;
       }
 
@@ -581,7 +500,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       emitAnnouncement('Game paused.');
     },
     resume() {
-      if (phase !== 'paused') {
+      if (disposed || phase !== 'paused') {
         return;
       }
 
@@ -596,6 +515,10 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       emitAnnouncement('Game resumed.');
     },
     dispose() {
+      if (disposed) {
+        return;
+      }
+
       disposed = true;
       canvas.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('keydown', onKeyDown);

@@ -1,0 +1,18 @@
+{
+  "id": "featured",
+  "title": "Featured",
+  "tagline": "Featured fixture",
+  "description": "A featured fixture game sorted before lower-order games.",
+  "accent": "#555555",
+  "secondaryAccent": "#666666",
+  "technology": "Three.js",
+  "featured": true,
+  "order": 50,
+  "controls": [
+    {
+      "action": "Start",
+      "inputs": ["Click", "Touch"]
+    }
+  ],
+  "instructions": ["Start the featured fixture."]
+}

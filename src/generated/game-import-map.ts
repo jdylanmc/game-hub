@@ -2,6 +2,7 @@
 // Do not edit by hand.
 
 import type { GameModule } from '@game-hub/game-contract';
+import { createGameModuleLoader } from '../game-module-loader';
 
 export const registeredGameIds = ["floppy-bird","neon-drift","orbital-stack"] as const;
 
@@ -31,10 +32,7 @@ const gameImportMap = {
   },
 } satisfies Record<RegisteredGameId, () => Promise<GameModule>>;
 
-export function hasGameLoader(gameId: string): gameId is RegisteredGameId {
-  return Object.prototype.hasOwnProperty.call(gameImportMap, gameId);
-}
+const gameModuleLoader = createGameModuleLoader(registeredGameIds, gameImportMap);
 
-export function loadGameModule(gameId: RegisteredGameId): Promise<GameModule> {
-  return gameImportMap[gameId]();
-}
+export const hasGameLoader = gameModuleLoader.hasGameLoader;
+export const loadGameModule = gameModuleLoader.loadGameModule;

@@ -5,6 +5,9 @@ export interface GameControl {
   inputs: string[];
 }
 
+// Type-only seam for future controller adapters; normalization semantics are not defined yet.
+export type ControllerInputNormalizer<RawInput, NormalizedInput> = (input: Readonly<RawInput>) => NormalizedInput;
+
 export interface GameManifest {
   id: string;
   title: string;
@@ -56,6 +59,22 @@ export interface GameHost {
   submitScore: (result: GameScore) => void;
 }
 
+export type SubmitScoreOnce = (result: GameScore) => boolean;
+
+export function createSubmitScoreOnce(host: Pick<GameHost, 'submitScore'>): SubmitScoreOnce {
+  let submitted = false;
+
+  return (result) => {
+    if (submitted) {
+      return false;
+    }
+
+    submitted = true;
+    host.submitScore(result);
+    return true;
+  };
+}
+
 export interface GameInstance {
   start: () => void;
   pause: () => void;
@@ -67,3 +86,5 @@ export interface GameModule {
   manifest: GameManifest;
   createGame: (canvas: HTMLCanvasElement, host: GameHost) => GameInstance;
 }
+
+export * from './simulation';

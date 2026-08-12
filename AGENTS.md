@@ -20,6 +20,12 @@ Read [Game Hub Architecture](docs/architecture.md) before planning a change. It
 defines the system boundaries, pinned technology versions, official
 documentation links, and required architectural invariants.
 
+Pure game state progression belongs in each workspace's `src/simulation.ts`.
+Keep it independent of Three.js, canvas, browser animation loops, and ambient
+random or timing globals; pass state, input, elapsed time, and a shared
+`@game-hub/game-contract` random source explicitly. `src/index.ts` adapts that
+state to rendering, browser input, and host events.
+
 ## Required Commands
 
 Run the smallest commands that cover the files you changed. The repository
@@ -32,6 +38,7 @@ yarn build-storybook
 yarn generate:check
 yarn policy:check
 yarn bundle:check
+yarn test
 yarn infra:check
 ```
 
@@ -51,6 +58,10 @@ evidence.
 
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
+
+Use `yarn test:watch` for interactive Vitest development. Use `yarn test` or
+`yarn test:ci` for deterministic non-watch validation; the latter is the
+canonical continuous integration command.
 
 Infrastructure changes must use the Bicep version in
 `infra/.bicep-version`. Run `yarn infra:install` to install that version through
@@ -88,13 +99,20 @@ Run `yarn generate:check` after changing game workspace metadata or discovery
 logic. It fails when generation changes Git state or the committed catalog
 outputs are dirty.
 
+Test generator discovery and rendering through
+`generateGameWorkspaceArtifacts` with repository-local fixtures and a fixture
+import-map path. Unit tests must not invoke the writer against committed
+generated outputs.
+
 ## Continuous Integration
 
 `.github/workflows/continuous-integration.yml` runs the same root validation
 commands as local development. Keep action references pinned to full commit
 SHAs, preserve least-privilege permissions and fork safety, and retain the
 workflow's logs, test results, coverage, production build, and Storybook
-evidence. Fresh `node-modules` runners must bootstrap with direct
+evidence. Publish the canonical test log, JUnit result, and coverage as a
+dedicated 14-day artifact after every executed test step, including failures.
+Fresh `node-modules` runners must bootstrap with direct
 `yarn install --immutable` before invoking package scripts. Every command piped
 to an evidence log must run with Bash `pipefail` semantics.
 
@@ -165,6 +183,12 @@ weakened ownership rules.
 Keep at least one deterministic test under each of `src/`, `games/`, and
 `packages/`. Do not commit focused, skipped, todo, or quarantined tests; the root
 test command rejects those states and enforces coverage thresholds.
+
+Unit tests install browser, fetch, storage, animation-frame, performance-time,
+timer, and Three.js doubles explicitly through `src/test/` boundaries. The
+shared setup denies ambient live fetches, fails on unexpected global
+properties, and restores Testing Library renders, mocks, modules, timers,
+globals, storage, and document state after every test.
 
 ## GitHub CLI Account
 

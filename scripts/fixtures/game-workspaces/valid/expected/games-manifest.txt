@@ -1,0 +1,69 @@
+{
+  "games": [
+    {
+      "id": "featured",
+      "title": "Featured",
+      "tagline": "Featured fixture",
+      "description": "A featured fixture game sorted before lower-order games.",
+      "accent": "#555555",
+      "secondaryAccent": "#666666",
+      "technology": "Three.js",
+      "featured": true,
+      "order": 50,
+      "controls": [
+        {
+          "action": "Start",
+          "inputs": [
+            "Click",
+            "Touch"
+          ]
+        }
+      ],
+      "instructions": [
+        "Start the featured fixture."
+      ]
+    },
+    {
+      "id": "alpha",
+      "title": "Alpha",
+      "tagline": "Alpha fixture",
+      "description": "A deterministic fixture game named Alpha.",
+      "accent": "#111111",
+      "secondaryAccent": "#222222",
+      "technology": "Three.js",
+      "order": 2,
+      "controls": [
+        {
+          "action": "Start",
+          "inputs": [
+            "Spacebar"
+          ]
+        }
+      ],
+      "instructions": [
+        "Start the Alpha fixture."
+      ]
+    },
+    {
+      "id": "beta",
+      "title": "Beta",
+      "tagline": "Beta fixture",
+      "description": "A deterministic fixture game named Beta.",
+      "accent": "#333333",
+      "secondaryAccent": "#444444",
+      "technology": "Three.js",
+      "order": 2,
+      "controls": [
+        {
+          "action": "Start",
+          "inputs": [
+            "Enter"
+          ]
+        }
+      ],
+      "instructions": [
+        "Start the Beta fixture."
+      ]
+    }
+  ]
+}

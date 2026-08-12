@@ -1,5 +1,13 @@
-import type { GameHost, GameInstance, GameManifest } from '@game-hub/game-contract';
+import {
+  createSeededRandomSource,
+  type GameHost,
+  type GameInstance,
+  type GameManifest,
+  type RandomSource,
+  type SimulationClock,
+} from '@game-hub/game-contract';
 import manifestData from '../game.manifest.json';
+import { createNeonDriftSimulationState, stepNeonDriftSimulation } from './simulation';
 import {
   AmbientLight,
   BoxGeometry,
@@ -21,6 +29,11 @@ import {
 
 const manifest = manifestData as GameManifest;
 const VIEW_HEIGHT = 22;
+
+export interface NeonDriftRuntimeOptions {
+  clock?: SimulationClock;
+  random?: RandomSource;
+}
 
 function disposeMaterial(material: Material | Material[]): void {
   if (Array.isArray(material)) {
@@ -63,7 +76,11 @@ function resizeRenderer(camera: OrthographicCamera, renderer: WebGLRenderer, can
 
 export { manifest };
 
-export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInstance {
+export function createGame(
+  canvas: HTMLCanvasElement,
+  host: GameHost,
+  runtime: Readonly<NeonDriftRuntimeOptions> = {},
+): GameInstance {
   const renderer = new WebGLRenderer({ antialias: true, canvas });
   const scene = new Scene();
   const camera = new OrthographicCamera(-16, 16, VIEW_HEIGHT / 2, -VIEW_HEIGHT / 2, 0.1, 100);
@@ -76,14 +93,18 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   const laneMarkers: Mesh[] = [];
   const stars: Mesh[] = [];
 
-  let animationFrameId = 0;
+  const clock: SimulationClock = runtime.clock ?? {
+    nowMilliseconds: () => performance.now(),
+  };
+  const random = runtime.random ?? createSeededRandomSource(0x4e454f4e);
+
+  let animationFrameId: number | null = null;
   let disposed = false;
+  let started = false;
   let phase: 'running' | 'paused' = 'running';
-  let lastFrame = 0;
+  let lastFrame: number | null = null;
   let nextHudUpdateAt = 0;
-  let time = 0;
-  let driftCombo = 18;
-  let boostPulse = 0;
+  let simulation = createNeonDriftSimulationState();
 
   renderer.setClearColor(new Color('#020617'));
   camera.position.z = 24;
@@ -141,7 +162,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       type: 'hud',
       detail,
       label: 'Drift combo',
-      score: Math.round(driftCombo),
+      score: Math.round(simulation.driftCombo),
     });
   };
 
@@ -150,12 +171,11 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   };
 
   const onPointerDown = () => {
-    if (phase === 'paused') {
+    if (disposed || phase === 'paused') {
       return;
     }
 
-    boostPulse = 1;
-    driftCombo = Math.min(99, driftCombo + 7);
+    simulation = stepNeonDriftSimulation(simulation, { boost: true }, 0, random);
     emitHud('Boost pulse engaged.');
     emitAnnouncement('Boost pulse engaged.');
   };
@@ -168,25 +188,27 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
     animationFrameId = window.requestAnimationFrame(render);
     resizeRenderer(camera, renderer, canvas);
 
-    const delta = lastFrame === 0 ? 0 : Math.min((timestamp - lastFrame) / 1000, 0.05);
+    const delta = lastFrame === null ? 0 : Math.min((timestamp - lastFrame) / 1000, 0.05);
     lastFrame = timestamp;
 
     if (phase !== 'paused') {
-      time += delta;
-      driftCombo = Math.max(12, driftCombo - delta * 1.8);
-      boostPulse = Math.max(0, boostPulse - delta * 1.9);
+      simulation = stepNeonDriftSimulation(simulation, { boost: false }, delta, random);
     }
 
-    ship.position.set(Math.sin(time * 1.4) * 4.1, Math.sin(time * 2.1) * 0.55, 0);
-    ship.rotation.z = Math.sin(time * 1.4) * 0.24;
-    glow.rotation.z = time * 0.06;
-    glow.material.opacity = 0.05 + boostPulse * 0.08;
+    ship.position.set(
+      Math.sin(simulation.elapsedSeconds * 1.4) * 4.1,
+      Math.sin(simulation.elapsedSeconds * 2.1) * 0.55,
+      0,
+    );
+    ship.rotation.z = Math.sin(simulation.elapsedSeconds * 1.4) * 0.24;
+    glow.rotation.z = simulation.elapsedSeconds * 0.06;
+    glow.material.opacity = 0.05 + simulation.boostPulse * 0.08;
 
     laneMarkers.forEach((marker, index) => {
       const lane = (index % 3) - 1;
-      const offset = (time * (7.2 + boostPulse * 2.6) + index * 1.8) % 30;
+      const offset = (simulation.elapsedSeconds * (7.2 + simulation.boostPulse * 2.6) + index * 1.8) % 30;
       marker.position.set(15 - offset, lane * 2.4, -0.2);
-      marker.scale.x = 1 + boostPulse * 0.7;
+      marker.scale.x = 1 + simulation.boostPulse * 0.7;
     });
 
     stars.forEach((star, index) => {
@@ -196,9 +218,9 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       }
     });
 
-    if (time >= nextHudUpdateAt) {
-      emitHud(`${Math.round(280 + driftCombo * 4)} km/h lane energy`);
-      nextHudUpdateAt = time + 0.2;
+    if (simulation.elapsedSeconds >= nextHudUpdateAt) {
+      emitHud(`${Math.round(280 + simulation.driftCombo * 4)} km/h lane energy`);
+      nextHudUpdateAt = simulation.elapsedSeconds + 0.2;
     }
     renderer.render(scene, camera);
   };
@@ -215,10 +237,15 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
 
   return {
     start() {
-      render(performance.now());
+      if (disposed || started) {
+        return;
+      }
+
+      started = true;
+      render(clock.nowMilliseconds());
     },
     pause() {
-      if (phase === 'paused') {
+      if (disposed || phase === 'paused') {
         return;
       }
 
@@ -231,12 +258,12 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       emitAnnouncement('Neon Drift paused.');
     },
     resume() {
-      if (phase !== 'paused') {
+      if (disposed || phase !== 'paused') {
         return;
       }
 
       phase = 'running';
-      lastFrame = 0;
+      lastFrame = null;
       host.emitEvent({
         type: 'phase',
         phase: 'running',
@@ -245,9 +272,15 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       emitAnnouncement('Neon Drift resumed.');
     },
     dispose() {
+      if (disposed) {
+        return;
+      }
+
       disposed = true;
       canvas.removeEventListener('pointerdown', onPointerDown);
-      window.cancelAnimationFrame(animationFrameId);
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
       disposeSceneGraph(scene);
       renderer.dispose();
     },

@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import {
   validateContinuousIntegrationBootstrapPolicy,
   validateLintIntegrationPolicy,
+  validateTestEvidencePolicy,
+  validateTestIntegrationPolicy,
 } from './check-workflow-policy.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -16,6 +18,8 @@ const ralphIterationPrompt = readFileSync(
 );
 const lintBehaviorProof = readFileSync(path.join(root, 'scripts/prove-lint-behavior.mjs'), 'utf8');
 const continuousIntegrationFailureProof = readFileSync(path.join(root, 'scripts/prove-ci-fail-closed.mjs'), 'utf8');
+const testIntegrity = readFileSync(path.join(root, 'scripts/check-test-integrity.mjs'), 'utf8');
+const vitestConfig = readFileSync(path.join(root, 'vitest.config.ts'), 'utf8');
 
 function lintPolicy(overrides = {}) {
   return validateLintIntegrationPolicy({
@@ -23,6 +27,25 @@ function lintPolicy(overrides = {}) {
     lintBehaviorProof,
     packageManifest,
     ralphIterationPrompt,
+    workflow,
+    ...overrides,
+  });
+}
+
+function testPolicy(overrides = {}) {
+  return validateTestIntegrationPolicy({
+    continuousIntegrationFailureProof,
+    packageManifest,
+    testIntegrity,
+    vitestConfig,
+    workflow,
+    ...overrides,
+  });
+}
+
+function testEvidencePolicy(overrides = {}) {
+  return validateTestEvidencePolicy({
+    continuousIntegrationFailureProof,
     workflow,
     ...overrides,
   });
@@ -126,5 +149,150 @@ describe('lint integration policy', () => {
     ],
   ])('rejects weakening or removal of %s', (_label, overrides) => {
     expect(lintPolicy(overrides)).not.toEqual([]);
+  });
+});
+
+describe('test integration policy', () => {
+  it('accepts the canonical watch, deterministic run, discovery, and workflow contract', () => {
+    expect(testPolicy()).toEqual([]);
+  });
+
+  it.each([
+    [
+      'an interactive default test command',
+      {
+        packageManifest: {
+          ...packageManifest,
+          scripts: { ...packageManifest.scripts, test: 'yarn test:watch' },
+        },
+      },
+    ],
+    [
+      'focused tests',
+      {
+        vitestConfig: vitestConfig.replace('allowOnly: false', 'allowOnly: true'),
+      },
+    ],
+    [
+      'unbounded test timeouts',
+      {
+        vitestConfig: vitestConfig.replace('testTimeout: 10_000', 'testTimeout: 0'),
+      },
+    ],
+    [
+      'automatic workspace discovery',
+      {
+        vitestConfig: vitestConfig.replace(
+          'include: createVitestIncludePatterns(packageManifest)',
+          "include: ['src/**/*.test.ts']",
+        ),
+      },
+    ],
+    [
+      'the canonical workflow command',
+      {
+        workflow: workflow.replace('run: yarn test:ci 2>&1', 'run: yarn test:coverage 2>&1'),
+      },
+    ],
+    [
+      'the canonical test failure proof count',
+      {
+        continuousIntegrationFailureProof: continuousIntegrationFailureProof.replace(
+          "runSandbox(yarnExecutable, ['test:ci'])",
+          "runSandbox(yarnExecutable, ['test:coverage'])",
+        ),
+      },
+    ],
+    [
+      'the canonical test failure proof matrix',
+      {
+        continuousIntegrationFailureProof: continuousIntegrationFailureProof.replace(
+          "label: 'coverage regression'",
+          "label: 'coverage drift'",
+        ),
+      },
+    ],
+  ])('rejects weakening or removal of %s', (_label, overrides) => {
+    expect(testPolicy(overrides)).not.toEqual([]);
+  });
+});
+
+describe('test evidence policy', () => {
+  it('accepts failure-safe JUnit, coverage, and diagnostic publication with fixed retention', () => {
+    expect(testEvidencePolicy()).toEqual([]);
+  });
+
+  it.each([
+    [
+      'the canonical deterministic test command',
+      {
+        workflow: workflow.replace('run: yarn test:ci 2>&1', 'run: yarn test:coverage 2>&1'),
+      },
+    ],
+    [
+      'the canonical fail-closed test command',
+      {
+        workflow: workflow.replace(
+          'run: yarn test:ci-fail-closed 2>&1',
+          'run: node scripts/prove-ci-fail-closed.mjs 2>&1',
+        ),
+      },
+    ],
+    [
+      'failure-safe publication',
+      {
+        workflow: workflow.replace("if: ${{ always() && steps.unit_tests.outcome != 'skipped' }}", 'if: success()'),
+      },
+    ],
+    [
+      'the diagnostic test log',
+      {
+        workflow: workflow.replace(
+          '            continuous-integration-evidence/test.log\n            test-results/junit.xml',
+          '            test-results/junit.xml',
+        ),
+      },
+    ],
+    [
+      'the JUnit result',
+      {
+        workflow: workflow.replace(
+          '            test-results/junit.xml\n            coverage/',
+          '            coverage/',
+        ),
+      },
+    ],
+    [
+      'coverage reports',
+      {
+        workflow: workflow.replace(
+          '            coverage/\n          if-no-files-found: error',
+          '          if-no-files-found: error',
+        ),
+      },
+    ],
+    [
+      'missing-evidence failure',
+      {
+        workflow: workflow.replace('          if-no-files-found: error', '          if-no-files-found: warn'),
+      },
+    ],
+    [
+      '14-day retention',
+      {
+        workflow: workflow.replace('          retention-days: 14', '          retention-days: 1'),
+      },
+    ],
+    [
+      'the failing-test artifact assertions',
+      {
+        continuousIntegrationFailureProof: continuousIntegrationFailureProof.replace(
+          'await assertCanonicalTestFailureEvidence();',
+          'await Promise.resolve();',
+        ),
+      },
+    ],
+  ])('rejects removal or weakening of %s', (_label, overrides) => {
+    expect(testEvidencePolicy(overrides)).not.toEqual([]);
   });
 });

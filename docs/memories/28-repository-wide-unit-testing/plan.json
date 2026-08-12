@@ -1,0 +1,242 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 28,
+  "issueTitle": "Repository-Wide Unit Testing",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/28",
+  "branchName": "ralph/issue-28-repository-wide-unit-testing",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 3,
+    "dependencies": [30, 27],
+    "changeScopes": [
+      "vitest.config.ts",
+      "package.json",
+      "yarn.lock",
+      "src",
+      "games/floppy-bird",
+      "games/neon-drift",
+      "games/orbital-stack",
+      "packages/game-contract",
+      "scripts",
+      "public/generated",
+      "docs",
+      ".github/workflows"
+    ]
+  },
+  "publication": {
+    "requiredStatusChecks": ["Continuous integration"],
+    "adversarialStatusChecks": ["Adversarial Review / unit-test-reviewer"]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Complete watch and continuous-integration commands",
+      "description": "Reconcile the pull request #32 Vitest baseline and define distinct local watch, deterministic run, and continuous-integration commands that discover every current workspace without global tools.",
+      "acceptanceCriteria": [
+        "Root commands provide an interactive watch mode and a deterministic non-watch continuous-integration mode",
+        "The canonical test command covers host, game, shared-package, and repository-script suites automatically",
+        "Vitest configuration defines bounded timeouts, deterministic ordering or seeds, and no-test and focused-test failure behavior"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Added explicit test:watch and deterministic test/test:ci commands while retaining test:coverage as a compatibility alias. Vitest now derives host, Yarn workspace, and repository-script globs from package.json; uses a fixed shuffle seed; disables retries; bounds test, hook, and teardown timeouts; and fails on focused or empty runs. Test integrity derives its roots from the same workspace declarations. Workflow policy, the protected workflow, local validation, and the representative assertion proof use test:ci."
+    },
+    {
+      "id": "US-002",
+      "title": "Extract deterministic simulation primitives",
+      "description": "Introduce pure simulation boundaries and reusable deterministic clock, random-source, and stepping helpers without constructing Three.js renderers or browser input.",
+      "acceptanceCriteria": [
+        "Game simulation can advance from explicit state, input, elapsed time, and seeded randomness",
+        "Tests can control clocks and random values without mutating ambient globals",
+        "Simulation helpers run in Node without a canvas, browser animation loop, or WebGL context"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Added dependency-free SimulationClock, manual clock, seeded RandomSource, clock sampling, and generic state stepping primitives to @game-hub/game-contract. Extracted pure simulation modules for FloppyBird, Neon Drift, and Orbital Stack; their Three.js/browser adapters now advance state from explicit input, elapsed time, and supplied randomness. Added Node-environment deterministic primitive tests covering clock control, replayable seeds, explicit reducer inputs, immutable state progression, clamping, and invalid-input rejection.",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-003",
+      "title": "Test FloppyBird flight physics",
+      "description": "Cover ready-state motion, flap velocity, gravity integration, frame-delta clamping, and deterministic state progression in the pure FloppyBird simulation.",
+      "acceptanceCriteria": [
+        "Flap, gravity, position, and frame-delta behavior have deterministic assertions",
+        "Ready and running phases advance only according to their documented rules",
+        "The suite requires no browser or Three.js scene construction"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Added Node-environment tests for deterministic ready-state bobbing, explicit ready-to-running progression, exact flap velocity, gravity and position integration, immutable repeatable advancement, and the 50-millisecond frame-delta cap. Moved the existing gameplay delta cap into the pure FloppyBird simulation boundary so direct callers receive the same bounded physics without browser, canvas, WebGL, Three.js scene construction, ambient clocks, or ambient randomness.",
+      "dependencies": ["US-002"]
+    },
+    {
+      "id": "US-004",
+      "title": "Test FloppyBird obstacles and scoring",
+      "description": "Cover seeded obstacle generation and recycling, collision boundaries, one-time gate scoring, and score-based speed, gap, and spacing difficulty.",
+      "acceptanceCriteria": [
+        "Identical seeds produce identical obstacle sequences and different valid seeds remain bounded",
+        "Boundary and gate collisions distinguish safe passage from game over",
+        "Each obstacle scores once and difficulty changes reach their documented caps"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Added Node-environment tests for repeatable seeded obstacle recycling across valid seeds, bounded gap and style generation, exact playfield and gate collision edges, safe gate passage, one-time per-gate scoring, and score-based speed, gap, and spacing progression at the base, midpoint, cap, and beyond-cap scores. Corrected recycling to anchor new gates to the post-movement rightmost obstacle so configured spacing remains exact.",
+      "dependencies": ["US-003"]
+    },
+    {
+      "id": "US-005",
+      "title": "Test FloppyBird lifecycle and final score",
+      "description": "Cover pause and resume semantics, input suppression, lifecycle events, disposal, and idempotent final-score submission with a controlled clock.",
+      "acceptanceCriteria": [
+        "Pause freezes simulation and resume preserves the correct prior phase",
+        "Repeated terminal events submit exactly one final score with deterministic metadata",
+        "Dispose removes listeners and prevents further animation, events, or score submission"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Added deterministic JSDOM lifecycle coverage with mocked WebGL rendering and controlled animation frames, simulation clock, random source, and score timestamp. Pause now freezes every simulation field; resume restores ready or running with a zero-delta first frame; paused and terminal input is suppressed; ready, running, paused, resumed, and game-over host events are asserted; repeated terminal frames submit one exact score payload; and idempotent disposal removes listeners, cancels animation, disposes rendering, and blocks stale or public lifecycle work.",
+      "dependencies": ["US-004"]
+    },
+    {
+      "id": "US-006",
+      "title": "Test Neon Drift lifecycle",
+      "description": "Separate and test Neon Drift state progression, boost behavior, host events, pause and resume, start, and disposal independently of rendering.",
+      "acceptanceCriteria": [
+        "Boost and decay behavior is deterministic under explicit time steps",
+        "Pause and resume produce correct idempotent phase and announcement events",
+        "Start and dispose behavior does not leak animation frames or input listeners"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Added Node-environment tests for explicit-time boost pulses, decay, floors, immutability, and repeatable state progression. Added deterministic lifecycle coverage with an injected clock and random source plus mocked rendering and controlled animation frames. Start, pause, resume, announcements, boost input, disposal, animation cancellation, stale callbacks, and pointer-listener cleanup are idempotent and require no real browser rendering.",
+      "dependencies": ["US-002"]
+    },
+    {
+      "id": "US-007",
+      "title": "Test Orbital Stack lifecycle",
+      "description": "Separate and test Orbital Stack state progression, stack limits, host events, pause and resume, start, and disposal independently of rendering.",
+      "acceptanceCriteria": [
+        "Stack increments and maximum limits are deterministic",
+        "Pause suppresses input and resume restores lifecycle behavior without duplicate events",
+        "Start and dispose behavior does not leak animation frames or input listeners"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Added Node-environment tests for explicit-time stack progression, deterministic plate increments, the eighteen-plate cap, immutability, repeatability, and unused randomness. Added deterministic lifecycle coverage with an injected clock and random source plus mocked rendering and controlled animation frames. Start, pause, resume, lifecycle announcements, plate input, disposal, animation cancellation, stale callbacks, and pointer-listener cleanup are idempotent and require no real browser rendering.",
+      "dependencies": ["US-002"]
+    },
+    {
+      "id": "US-008",
+      "title": "Test manifests and workspace generation",
+      "description": "Make generator logic directly testable and cover manifest validation, workspace discovery, sorting, duplicate identifiers, missing files, generated catalog output, import-map output, loader failures, and unknown games.",
+      "acceptanceCriteria": [
+        "Generator tests use isolated repository-local fixtures and do not modify committed generated outputs",
+        "Valid workspaces produce stable manifest and import-map text in documented order",
+        "Malformed manifests, duplicate identifiers, missing entries, unknown games, and dynamic import failures report actionable errors"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Refactored game workspace generation into import-safe exported validation, discovery, rendering, artifact, and writing functions while retaining the direct command entry point. Added repository-local read-only fixtures and ten deterministic tests for manifest types, workspace discovery and documented sorting, ignored non-packages, exact generated manifest and import-map text, committed-output isolation, duplicate ids, malformed manifests, missing metadata and files, unknown game ids, and genuine rejected dynamic import functions. Generated loaders now delegate to a tested helper that preserves the requested id, registered ids, original failure message, and Error cause. Targeted checks, yarn generate:check, and the full yarn validate contract passed with 311 Vitest tests.",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-009",
+      "title": "Expand shared contract tests",
+      "description": "Cover the shared lifecycle, event, score, manifest, and host boundary with compile-time fixtures and runtime behavior helpers where behavior exists.",
+      "acceptanceCriteria": [
+        "All lifecycle phases and event variants are exercised through representative host-game interactions",
+        "Score payload and one-time submission helpers are covered without duplicating private host channels",
+        "Future controller-input normalization has an explicit test seam without inventing unimplemented product behavior"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Expanded the shared contract suite with compile-time fixtures for phases, events, manifests, manifest indexes, scores, modules, hosts, and a generic type-only ControllerInputNormalizer seam. Added createSubmitScoreOnce on the public GameHost score channel, adopted it in FloppyBird's existing terminal-score path, and proved complete metadata is delivered once despite duplicate attempts. Runtime host-game interactions exercise every lifecycle phase, phase/HUD/announcement event variants, canvas and host identity, lifecycle disposal, and polite, assertive, and default announcements. Targeted checks, yarn generate:check, and the full yarn validate contract passed with 313 Vitest tests.",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-010",
+      "title": "Cover host and component state",
+      "description": "Add behavior-focused tests for critical catalog, loader, page, game-stage, and reusable component states without relying solely on snapshots.",
+      "acceptanceCriteria": [
+        "Loading, ready, error, paused, running, game-over, missing-game, and retry states are covered where implemented",
+        "User interactions assert visible behavior, accessibility semantics, callbacks, and state transitions",
+        "Tests avoid implementation-detail assertions and broad snapshots"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Added behavior-focused JSDOM coverage for App routing, landing and game pages, catalog loading and failure transitions, missing routes, successful module loading, PlayableGame loading/ready/running/paused/game-over/error/retry transitions, HUD and score callbacks, game-stage actions, presentation cards, internal links, advertisement states, avatar fallbacks, and avatar upload validation, replacement, and reset. Assertions use visible copy, accessible roles/names/descriptions, callbacks, history changes, and user interactions without broad snapshots or production-only test hooks. Full yarn validate passed with 344 Vitest tests.",
+      "dependencies": ["US-001", "US-008", "US-009"]
+    },
+    {
+      "id": "US-011",
+      "title": "Standardize mocks and global cleanup",
+      "description": "Provide explicit reusable boundaries for browser APIs, fetch, storage, animation frames, performance time, and Three.js construction, with fail-safe cleanup after every test.",
+      "acceptanceCriteria": [
+        "Shared setup restores mocks, modules, timers, globals, document state, and Testing Library renders after each test",
+        "Browser, network, storage, model, and renderer dependencies are mocked explicitly at their boundaries",
+        "Unit suites make no live Azure, GitHub, advertising, identity, payment, or artificial-intelligence service calls"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Added reusable explicit boundaries for fetch, scroll and object URLs, local and session storage, controlled animation frames, performance time, fake timers, and Three.js WebGLRenderer construction. Game lifecycle, catalog, link, and avatar suites now use those narrow helpers instead of duplicated global stubs. Shared setup cleans Testing Library renders, fake timers, module caches, mocks, environment and global stubs, storage, and document state after every test, then reinstalls a deny-by-default ambient fetch guard. Direct proofs verify cleanup and fail closed for Azure, GitHub, advertising, identity, payment, and artificial-intelligence destinations while existing model and service tests retain injected credentials and transports.",
+      "dependencies": ["US-005", "US-006", "US-007", "US-010"]
+    },
+    {
+      "id": "US-012",
+      "title": "Expand coverage and define ratcheting",
+      "description": "Measure the intended host, game simulation, generator, and shared-contract surfaces; enforce reviewed thresholds; and add a documented ratchet that identifies untested files without rewarding exclusions.",
+      "acceptanceCriteria": [
+        "Coverage includes the new pure game logic, generator logic, shared contract behavior, and critical host state",
+        "Enforced thresholds fail on regression and use a documented baseline and ratcheting procedure",
+        "Coverage artifacts identify untested files and exclusions are narrow and justified"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Expanded V8 coverage from three host files to explicit authored host, all game source, pure game simulation, shared-contract, and game-workspace generator surfaces. Enforced exact reviewed global and surface baselines: global 94.84% statements, 85.06% branches, 94.36% functions, and 95.27% lines; host 95.88/86.29/100/95.65; all game source 96.47/87.86/90.52/97.39; pure simulations 97.05/92/93.54/98.92; contract 97.43/94.73/100/97.43; generator 82.4/70.27/87.5/82.07. Added report-on-failure coverage artifacts and a focused baseline/ratchet document requiring manual upward updates, per-file review, and no exclusion-based escapes. No production code or tests were changed because the existing suites already met the truthful measured thresholds.",
+      "dependencies": ["US-003", "US-004", "US-005", "US-006", "US-007", "US-008", "US-009", "US-010", "US-011"]
+    },
+    {
+      "id": "US-013",
+      "title": "Prove test failures and integrity gates",
+      "description": "Extend representative fail-closed proofs for assertions, missing suites, focused or skipped tests, leaked globals, timeouts, and coverage regressions.",
+      "acceptanceCriteria": [
+        "A representative assertion failure exits nonzero through the canonical continuous-integration test command",
+        "Focused, skipped, todo, quarantined, missing, timed-out, and under-covered suites fail for the intended reason",
+        "Proofs run in isolated repository-local worktrees or fixtures and leave the issue worktree clean"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Extended the repository-local detached-worktree harness with nine deterministic proofs that invoke yarn test:ci and require nonzero, probe-specific evidence for an assertion failure, a required suite with no tests, focused/exclusive, skipped, todo, and quarantined tests, an unexpected leaked global, the bounded 10-second timeout, and an authored-source coverage regression. Shared cleanup now removes and rejects unexpected global properties while allowing framework-owned React and Three.js markers. Workflow policy requires the complete proof matrix and canonical command wiring. Stabilized the pre-existing Ralph heartbeat fixture by waiting atomically for agent-execution plus its child PID, preventing an unrelated phase-write race from invalidating repeated canonical proofs. The harness restores every mutation, removes its worktree and fixture root, and now verifies 22 representative continuous-integration failures overall.",
+      "dependencies": ["US-011", "US-012"]
+    },
+    {
+      "id": "US-014",
+      "title": "Publish test-specific continuous-integration evidence",
+      "description": "Reconcile the existing workflow with canonical test commands, concise failure output, machine-readable results, coverage artifacts, retention, and Ralph completion policy.",
+      "acceptanceCriteria": [
+        "Pull requests and main updates run the canonical deterministic test command",
+        "JUnit, coverage, and diagnostic evidence upload even when tests fail, with documented retention",
+        "Workflow policy rejects removal or weakening of mandatory test commands and artifacts"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "The pull-request and main workflow retains the canonical yarn test:ci command and now publishes a dedicated unit-test-evidence artifact immediately after every executed test step, including failures. The 14-day artifact requires the piped diagnostic test log, JUnit XML, and complete coverage directory. Workflow policy rejects command aliases, missing or weakened artifact paths, success-only publication, missing-evidence tolerance, retention changes, and loss of the failure-artifact proof. The isolated fail-closed harness runs the exact piped canonical assertion failure and verifies its diagnostic log, failing JUnit result, JSON coverage summary, and LCOV report; it also proves success-only publication is rejected, bringing the full matrix to 23 representative failures.",
+      "dependencies": ["US-013"]
+    },
+    {
+      "id": "US-015",
+      "title": "Document the unit-test contract",
+      "description": "Document test boundaries, commands, conventions, deterministic helpers, mocking and cleanup, timeouts, retry and flaky-test policy, coverage ratcheting, and acceptance-criterion evidence.",
+      "acceptanceCriteria": [
+        "Documentation distinguishes unit, component, browser, integration, visual-regression, and performance responsibilities",
+        "Retry policy forbids masking deterministic failures and defines how flaky tests are detected and repaired",
+        "Every issue acceptance criterion is reconciled to passing repository and continuous-integration evidence"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Added the repository unit-test contract covering canonical watch, deterministic, coverage, fail-closed, and full-validation commands; the distinct unit, component, browser, integration, visual-regression, and performance responsibilities; deterministic clocks, random sources, simulation stepping, browser and renderer doubles; deny-by-default network isolation and complete cleanup; 10-second bounds and strict zero-retry policy; flaky-test detection and repair; exact coverage thresholds and upward ratcheting; unsharded fresh-runner continuous integration; 14-day diagnostic, JUnit, and coverage artifacts; workspace onboarding; and a one-to-one evidence map for all seven issue acceptance criteria. Reconciled stale continuous-integration threshold text and linked the contract from the README. Full yarn validate passed on the first attempt.",
+      "dependencies": ["US-014"]
+    }
+  ]
+}

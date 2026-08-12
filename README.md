@@ -24,6 +24,12 @@ The main site always runs at `http://localhost:1337`.
   reproducible local gates, retained evidence, and fail-closed merge contract.
 - [Repository Linting](docs/linting.md) defines lint and safe-fix usage, rule
   and environment choices, exclusions, suppressions, and acceptance evidence.
+- [Unit-Test Contract](docs/unit-testing.md) defines test-layer boundaries,
+  commands, deterministic helpers, cleanup, flaky-test policy, and issue
+  acceptance evidence.
+- [Unit-Test Coverage Baseline](docs/unit-test-coverage.md) defines measured
+  source surfaces, justified exclusions, enforced thresholds, and the reviewed
+  ratchet procedure.
 - [Branch Protection](docs/branch-protection.md) records the required merge
   controls and live verification procedure.
 - [Ralph Loop](docs/ralph-loop.md) defines the fresh-context autonomous
@@ -36,6 +42,9 @@ yarn generate:games     # discover game workspaces and refresh generated artifac
 yarn dev                # generate + start Vite on port 1337
 yarn lint               # check all authored code with zero warnings
 yarn lint:fix           # apply supported ESLint fixes without formatting
+yarn test:watch         # run the automatically discovered tests interactively
+yarn test               # run the deterministic unit-test contract
+yarn test:ci-fail-closed # prove representative test and repository failures block
 yarn validate           # reproduce the complete continuous integration contract
 yarn build              # generate + typecheck + production build
 yarn storybook          # generate + run Storybook on port 6006

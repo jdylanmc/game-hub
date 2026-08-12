@@ -1,0 +1,11 @@
+{
+  "id": "broken",
+  "tagline": "Missing title",
+  "description": "This fixture intentionally omits its required title.",
+  "accent": "#111111",
+  "secondaryAccent": "#222222",
+  "technology": "Three.js",
+  "order": 1,
+  "controls": [],
+  "instructions": []
+}

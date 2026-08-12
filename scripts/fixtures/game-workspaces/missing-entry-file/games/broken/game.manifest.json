@@ -1,0 +1,12 @@
+{
+  "id": "missing-entry-file",
+  "title": "Missing Entry File",
+  "tagline": "Missing entry module",
+  "description": "This fixture points to an entry module that does not exist.",
+  "accent": "#111111",
+  "secondaryAccent": "#222222",
+  "technology": "Three.js",
+  "order": 1,
+  "controls": [],
+  "instructions": []
+}

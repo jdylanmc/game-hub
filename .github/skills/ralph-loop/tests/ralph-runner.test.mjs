@@ -54,10 +54,11 @@ test('heartbeat advances while the child stays silent', async () => {
   });
 
   await waitForLease(fixture);
-  await waitFor(() => readLease(fixture)?.phase === 'agent-execution');
-  const initialLease = readLease(fixture);
+  const initialLease = await waitFor(() => {
+    const lease = readLease(fixture);
+    return lease?.phase === 'agent-execution' && Number.isInteger(lease.childPid) ? lease : false;
+  });
   const firstHeartbeat = initialLease.lastHeartbeatAt;
-  assert.ok(Number.isInteger(initialLease.childPid));
   await waitFor(() => {
     const lease = readLease(fixture);
     return lease?.lastHeartbeatAt !== firstHeartbeat ? lease.lastHeartbeatAt : false;

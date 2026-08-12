@@ -36,4 +36,42 @@ describe('GameStageStatus', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(container.firstChild).toHaveClass('pointer-events-none');
   });
+
+  it.each([
+    ['ready', 'Ready', 'Ready to play'],
+    ['error', 'Load error', 'Workspace unavailable'],
+  ] as const)('renders the noninteractive %s state', (state, eyebrow, title) => {
+    const { container } = render(
+      <GameStageStatus accent="#60a5fa" message={`${title} details.`} state={state} title={title} />,
+    );
+
+    expect(screen.getByText(eyebrow)).toBeVisible();
+    expect(screen.getByRole('heading', { name: title })).toBeVisible();
+    expect(screen.getByText(`${title} details.`)).toBeVisible();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(container.firstChild).toHaveClass('pointer-events-none');
+  });
+
+  it('renders game-over score and restart behavior', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+
+    render(
+      <GameStageStatus
+        accent="#f59e0b"
+        actionLabel="Restart run"
+        message="Final gate missed."
+        onAction={onAction}
+        score={12_345}
+        state="game-over"
+        title="Run complete"
+      />,
+    );
+
+    expect(screen.getByText('Run complete', { selector: 'p' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Run complete' })).toBeVisible();
+    expect(screen.getByText('12,345')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Restart run' }));
+    expect(onAction).toHaveBeenCalledOnce();
+  });
 });

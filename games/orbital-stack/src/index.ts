@@ -1,5 +1,13 @@
-import type { GameHost, GameInstance, GameManifest } from '@game-hub/game-contract';
+import {
+  createSeededRandomSource,
+  type GameHost,
+  type GameInstance,
+  type GameManifest,
+  type RandomSource,
+  type SimulationClock,
+} from '@game-hub/game-contract';
 import manifestData from '../game.manifest.json';
+import { createOrbitalStackSimulationState, stepOrbitalStackSimulation } from './simulation';
 import {
   AmbientLight,
   Color,
@@ -21,6 +29,11 @@ import {
 
 const manifest = manifestData as GameManifest;
 const VIEW_HEIGHT = 22;
+
+export interface OrbitalStackRuntimeOptions {
+  clock?: SimulationClock;
+  random?: RandomSource;
+}
 
 function disposeMaterial(material: Material | Material[]): void {
   if (Array.isArray(material)) {
@@ -63,7 +76,11 @@ function resizeRenderer(camera: OrthographicCamera, renderer: WebGLRenderer, can
 
 export { manifest };
 
-export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInstance {
+export function createGame(
+  canvas: HTMLCanvasElement,
+  host: GameHost,
+  runtime: Readonly<OrbitalStackRuntimeOptions> = {},
+): GameInstance {
   const renderer = new WebGLRenderer({ antialias: true, canvas });
   const scene = new Scene();
   const camera = new OrthographicCamera(-16, 16, VIEW_HEIGHT / 2, -VIEW_HEIGHT / 2, 0.1, 100);
@@ -72,13 +89,18 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   const satellites: Mesh[] = [];
   const stackLayers: Mesh[] = [];
 
-  let animationFrameId = 0;
+  const clock: SimulationClock = runtime.clock ?? {
+    nowMilliseconds: () => performance.now(),
+  };
+  const random = runtime.random ?? createSeededRandomSource(0x4f524249);
+
+  let animationFrameId: number | null = null;
   let disposed = false;
+  let started = false;
   let phase: 'running' | 'paused' = 'running';
-  let lastFrame = 0;
+  let lastFrame: number | null = null;
   let nextHudUpdateAt = 0;
-  let time = 0;
-  let stackHeight = 3;
+  let simulation = createOrbitalStackSimulationState();
 
   renderer.setClearColor(new Color('#020617'));
   camera.position.z = 24;
@@ -134,7 +156,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
     });
     stackLayers.length = 0;
 
-    for (let index = 0; index < stackHeight; index += 1) {
+    for (let index = 0; index < simulation.stackHeight; index += 1) {
       const layer = new Mesh(
         new CylinderGeometry(2.2 - index * 0.08, 2.45 - index * 0.08, 0.62, 36),
         new MeshStandardMaterial({
@@ -158,7 +180,7 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       type: 'hud',
       detail,
       label: 'Stack height',
-      score: stackHeight,
+      score: simulation.stackHeight,
     });
   };
 
@@ -167,14 +189,19 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
   };
 
   const onPointerDown = () => {
-    if (phase === 'paused') {
+    if (disposed || phase === 'paused') {
       return;
     }
 
-    stackHeight = Math.min(18, stackHeight + 1);
-    rebuildStack();
+    const nextSimulation = stepOrbitalStackSimulation(simulation, { addPlate: true }, 0, random);
+
+    if (nextSimulation.stackHeight !== simulation.stackHeight) {
+      simulation = nextSimulation;
+      rebuildStack();
+    }
+
     emitHud('Another plate locked into orbit.');
-    emitAnnouncement(`Stack height ${stackHeight}.`);
+    emitAnnouncement(`Stack height ${simulation.stackHeight}.`);
   };
 
   const render = (timestamp: number) => {
@@ -185,27 +212,27 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
     animationFrameId = window.requestAnimationFrame(render);
     resizeRenderer(camera, renderer, canvas);
 
-    const delta = lastFrame === 0 ? 0 : Math.min((timestamp - lastFrame) / 1000, 0.05);
+    const delta = lastFrame === null ? 0 : Math.min((timestamp - lastFrame) / 1000, 0.05);
     lastFrame = timestamp;
 
     if (phase !== 'paused') {
-      time += delta;
+      simulation = stepOrbitalStackSimulation(simulation, { addPlate: false }, delta, random);
     }
 
-    orbitGroup.rotation.y = time * 0.95;
-    orbitGroup.rotation.x = Math.sin(time * 0.4) * 0.25;
-    orbitRing.rotation.z = time * 0.18;
+    orbitGroup.rotation.y = simulation.elapsedSeconds * 0.95;
+    orbitGroup.rotation.x = Math.sin(simulation.elapsedSeconds * 0.4) * 0.25;
+    orbitRing.rotation.z = simulation.elapsedSeconds * 0.18;
 
     satellites.forEach((satellite, index) => {
-      const angle = time * 0.9 + index * ((Math.PI * 2) / satellites.length);
+      const angle = simulation.elapsedSeconds * 0.9 + index * ((Math.PI * 2) / satellites.length);
       const radius = 6.2 + (index % 2) * 0.45;
       satellite.position.set(Math.cos(angle) * radius, -0.4 + Math.sin(angle * 1.4) * 1.2, Math.sin(angle) * 1.1);
     });
 
-    stackGroup.rotation.y = Math.sin(time * 0.45) * 0.2;
-    if (time >= nextHudUpdateAt) {
-      emitHud(`Tap to extend the tower beyond ${stackHeight} plates.`);
-      nextHudUpdateAt = time + 0.25;
+    stackGroup.rotation.y = Math.sin(simulation.elapsedSeconds * 0.45) * 0.2;
+    if (simulation.elapsedSeconds >= nextHudUpdateAt) {
+      emitHud(`Tap to extend the tower beyond ${simulation.stackHeight} plates.`);
+      nextHudUpdateAt = simulation.elapsedSeconds + 0.25;
     }
     renderer.render(scene, camera);
   };
@@ -222,10 +249,15 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
 
   return {
     start() {
-      render(performance.now());
+      if (disposed || started) {
+        return;
+      }
+
+      started = true;
+      render(clock.nowMilliseconds());
     },
     pause() {
-      if (phase === 'paused') {
+      if (disposed || phase === 'paused') {
         return;
       }
 
@@ -238,12 +270,12 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       emitAnnouncement('Orbital Stack paused.');
     },
     resume() {
-      if (phase !== 'paused') {
+      if (disposed || phase !== 'paused') {
         return;
       }
 
       phase = 'running';
-      lastFrame = 0;
+      lastFrame = null;
       host.emitEvent({
         type: 'phase',
         phase: 'running',
@@ -252,9 +284,15 @@ export function createGame(canvas: HTMLCanvasElement, host: GameHost): GameInsta
       emitAnnouncement('Orbital Stack resumed.');
     },
     dispose() {
+      if (disposed) {
+        return;
+      }
+
       disposed = true;
       canvas.removeEventListener('pointerdown', onPointerDown);
-      window.cancelAnimationFrame(animationFrameId);
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
       disposeSceneGraph(scene);
       renderer.dispose();
     },
