@@ -514,3 +514,7 @@
   `f8ad8715f13edc9bb5ecb737f695461a311848e1`. The resolver commit was rebased
   onto that exact main head in `fix/issue-30-ralph-source-resolution`, and issue
   #30 was reopened after GitHub closed it at merge.
+- A later Continuous Integration attempt on the unchanged PR #37 head triggered
+  post-merge protected run `31562408350` from main `f8ad871`. It resolved issue
+  #27, authenticated with the merged immutable credential, and updated exact
+  check `94006743369` to `PASS` with zero findings.

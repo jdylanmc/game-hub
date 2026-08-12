@@ -210,3 +210,11 @@ commit `f8ad8715f13edc9bb5ecb737f695461a311848e1`. GitHub closed issue #30 at
 merge; it was reopened immediately because the resolver correction still
 requires review and merge. The resolver commit was rebased onto that exact main
 head on branch `fix/issue-30-ralph-source-resolution`.
+
+Continuous Integration attempt 3 on the unchanged PR #37 head triggered a
+second, fully post-merge protected run
+[`31562408350`](https://github.com/jdylanmc/game-hub/actions/runs/31562408350).
+It checked out main `f8ad8715f13edc9bb5ecb737f695461a311848e1`,
+resolved issue #27, authenticated through the merged immutable credential, and
+updated exact-head check `94006743369` to `PASS` with zero findings. This is the
+authoritative combined post-merge OIDC and live resolver-workaround proof.
