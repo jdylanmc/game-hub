@@ -35,6 +35,13 @@ yarn bundle:check
 yarn infra:check
 ```
 
+Adversarial reviewer calibration is versioned and fail-closed. Use
+`yarn calibrate:adversarial --mode fixture` for deterministic local evaluation;
+only a complete real-Azure report that passes
+`yarn calibration:check --report <path>` is eligible for promotion. Recalibrate
+after any fingerprinted model, prompt, tool, framework, schema, policy, or
+architecture change.
+
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
 
@@ -52,7 +59,51 @@ outputs are dirty.
 commands as local development. Keep action references pinned to full commit
 SHAs, preserve least-privilege permissions and fork safety, and retain the
 workflow's logs, test results, coverage, production build, and Storybook
-evidence.
+evidence. Fresh `node-modules` runners must bootstrap with direct
+`yarn install --immutable` before invoking package scripts. Every command piped
+to an evidence log must run with Bash `pipefail` semantics.
+
+Order deterministic gates from cheapest to most expensive so formatting,
+linting, policy, generation, type, and test failures stop work before builds,
+Storybook, fail-closed simulations, or model-backed review. Adversarial-agent
+workflows must depend on the complete deterministic workflow succeeding; they
+must not consume model capacity while any deterministic gate is missing,
+pending, canceled, or failing.
+
+`yarn context:collect` creates bounded adversarial-review evidence from local
+Git objects and explicit issue/pull-request metadata. It treats every collected
+value as inert untrusted data and must never check out, import, install, build,
+test, or execute pull-request content.
+
+Adversarial source-issue resolution accepts canonical Ralph markers, matching
+`issue-<number>` branch identity, and explicit close/fix/resolve/track/address
+declarations. Generic prose such as a dependency's "issue #N" is not identity;
+conflicting canonical signals must fail closed.
+
+`yarn review:adversarial` consumes only a ready context packet. Keep its
+versioned system policy separate from the human review prompt, authenticate with
+Microsoft Entra ID, register no model tools, restrict Azure OpenAI destinations,
+and return schema-valid blocking errors whenever bounded execution cannot
+produce a policy-safe verdict.
+
+`yarn publish:adversarial` validates reviewer output again before publishing one
+agent-specific GitHub check for the exact head commit. It writes a retained,
+redacted evidence bundle; the artifact is authoritative when repeated runs
+supersede annotations. Publication must remain downstream of complete
+deterministic continuous integration.
+
+`.github/workflows/adversarial-review.yml` runs only from protected default-
+branch code after the exact pull-request head passes complete deterministic
+continuous integration. Never check out or execute pull-request code in that
+workflow. Preserve its three deterministic capacity lanes, two exact-head
+revalidations, least-privilege job permissions, promoted-calibration gate, and
+90-day evidence retention.
+
+Microsoft Entra ID federated credentials for repository workflows must use
+GitHub's immutable subject format with both owner and repository numeric IDs.
+Keep the exact protected-environment mappings in
+`infra/federated-identity-*.bicepparam` and deploy them through the pinned,
+subscription-guarded Bicep path; never restore name-only repository subjects.
 
 `yarn policy:check` rejects unapproved lint suppressions and weakened workflow
 invariants. Record an exceptional suppression with a specific rationale in
@@ -132,6 +183,8 @@ must not be committed.
 Before ranking an unassigned issue, run `yarn ralph:prioritize`. A blocking open
 Ralph pull request must map to exactly one matching issue memory; missing or
 ambiguous identity stops selection rather than falling through to new work.
+Ralph completion and prioritization use `config/ralph-required-checks.json`;
+every listed check must exist exactly once and succeed for the current head SHA.
 
 Follow [Ralph Loop](docs/ralph-loop.md) for the full model and safety rules.
 

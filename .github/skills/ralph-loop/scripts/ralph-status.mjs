@@ -67,6 +67,7 @@ export function requiredStatusChecksFromPlan(plan) {
 export function summarizeRequiredChecks(checks, requiredNames) {
   if (!requiredNames.length) {
     return {
+      duplicates: [],
       failure: [],
       missing: [],
       pending: [],
@@ -77,9 +78,11 @@ export function summarizeRequiredChecks(checks, requiredNames) {
   }
 
   const byName = new Map();
+  const occurrences = new Map();
   for (const check of checks) {
     const name = normalizeCheckName(check);
     if (!name) continue;
+    occurrences.set(name, (occurrences.get(name) ?? 0) + 1);
     const state = normalizeCheckState(check);
     const current = byName.get(name);
     const currentRank = current === 'failure' ? 3 : current === 'pending' ? 2 : current === 'success' ? 1 : 0;
@@ -93,8 +96,13 @@ export function summarizeRequiredChecks(checks, requiredNames) {
   const pending = [];
   const failure = [];
   const success = [];
+  const duplicates = [];
 
   for (const requiredName of requiredNames) {
+    if ((occurrences.get(requiredName) ?? 0) > 1) {
+      duplicates.push(requiredName);
+      continue;
+    }
     const state = byName.get(requiredName);
     if (state === 'failure') {
       failure.push(requiredName);
@@ -108,11 +116,19 @@ export function summarizeRequiredChecks(checks, requiredNames) {
   }
 
   return {
+    duplicates,
     failure,
     missing,
     pending,
     requiredNames,
-    state: failure.length ? 'failure' : pending.length ? 'pending' : missing.length ? 'missing' : 'success',
+    state:
+      duplicates.length || failure.length
+        ? 'failure'
+        : pending.length
+          ? 'pending'
+          : missing.length
+            ? 'missing'
+            : 'success',
     success,
   };
 }

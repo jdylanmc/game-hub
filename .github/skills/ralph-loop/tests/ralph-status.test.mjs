@@ -107,6 +107,26 @@ test('missing adversarial checks block otherwise passing completion', () => {
   assert.equal(snapshot.status, 'adversarial-check-blocked');
 });
 
+test('duplicated required checks fail closed', () => {
+  const fixture = createRalphFixture('status-duplicate', {
+    planPatch: {
+      publication: {
+        adversarialStatusChecks: ['Adversarial review'],
+      },
+    },
+  });
+  markStoriesPassed(fixture);
+  writeGhState(fixture, {
+    adversarialState: 'success',
+    checkState: 'success',
+    duplicateAdversarialCheck: true,
+  });
+  const snapshot = publishedSnapshot(fixture);
+  assert.deepEqual(snapshot.adversarialStatusChecks.duplicates, ['Adversarial review']);
+  assert.equal(snapshot.adversarialState, 'failure');
+  assert.equal(snapshot.status, 'adversarial-check-blocked');
+});
+
 test('passing required checks on the published head report completion', () => {
   const fixture = createRalphFixture('status-complete');
   markStoriesPassed(fixture);

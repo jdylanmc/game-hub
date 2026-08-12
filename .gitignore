@@ -13,6 +13,9 @@ test-results
 *.tsbuildinfo
 docs/memories/**/iterations/*.log
 .ralph-test-work/
+.ci-fail-closed-proof-*/
+.adversarial-context-test-work/
+.live-review/
 .ralph-orchestration*.json
 infra/**/*.local.bicepparam
 infra/**/*.generated.json
