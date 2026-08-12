@@ -1,9 +1,8 @@
 # Gilfoyle security contract
 
 Gilfoyle is the security-specialized reviewer on the shared adversarial-agent
-platform. Its registration is deliberately disabled during the contract story;
-later stories add security context, deterministic evidence, calibration,
-workflow publication, exceptions, and branch protection.
+platform. Its registration remains disabled until protected calibration and
+later workflow, exception, and branch-protection stories complete.
 
 ## Independent attribution
 
@@ -63,8 +62,11 @@ configuration, Azure deployment and workload identity, benchmark inputs, and
 report artifact. Unsigned, untrusted, stale, replayed, mismatched, or tampered
 evidence blocks.
 
-Gilfoyle remains disabled and unpromoted until a later story runs a new
-threshold-passing Azure calibration through that protected workflow.
+Gilfoyle has a dedicated 24-case corpus, strict detection/false-positive/error/
+agreement/cost/latency thresholds, a single-concurrency runtime, a dedicated
+versioned Azure deployment, and a manual protected calibration workflow. It
+remains disabled and unpromoted until that workflow runs from protected main
+and produces a threshold-passing, same-run verified attestation.
 
 ## Finding contract
 

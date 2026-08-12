@@ -20,6 +20,7 @@ const baseline = {
       'utf8',
     ),
   ),
+  workflow: fs.readFileSync(path.join(root, '.github/workflows/adversarial-calibration.yml'), 'utf8'),
 };
 
 function cloneBaseline() {
@@ -69,7 +70,23 @@ describe('calibration attestation repository policy', () => {
     expect(validateCalibrationAttestationPolicy(input)).toEqual(
       expect.arrayContaining([
         'Calibration attestation commands are not mandatory repository policy.',
-        'Gilfoyle calibration must remain unpromoted after the attestation story.',
+        'Gilfoyle promotion thresholds must remain strict and unpromoted without valid evidence.',
+      ]),
+    );
+  });
+
+  it('rejects a non-protected, unpinned, or secret-backed calibration workflow', () => {
+    const input = cloneBaseline();
+    input.workflow = input.workflow
+      .replace("if: github.ref == 'refs/heads/main'", "if: github.ref == 'refs/heads/feature'")
+      .replace('actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6', 'actions/attest@v4')
+      .replace('contents: read', 'write-all')
+      .concat('\nAZURE_OPENAI_API_KEY: unsafe\n');
+    expect(validateCalibrationAttestationPolicy(input)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('refs/heads/main'),
+        expect.stringContaining('not pinned'),
+        'Protected calibration workflow exposes credentials or weakens fail-closed execution.',
       ]),
     );
   });

@@ -374,7 +374,7 @@ function validateGilfoyleSecurityContract(repoRoot: string): ContractValidation 
   }
   if (
     agent.version !== '1.0.0' ||
-    agent.promptVersion !== '1.0.0' ||
+    agent.promptVersion !== '1.1.0' ||
     agent.toolsVersion !== '1.0.0' ||
     agent.contextConfigVersion !== '1.1.0' ||
     agent.contextConfigFile !== 'config/adversarial-agents/gilfoyle-security-architect/context.json' ||
@@ -388,9 +388,10 @@ function validateGilfoyleSecurityContract(repoRoot: string): ContractValidation 
 
   const prompt = fs.readFileSync(path.join(repoRoot, agent.promptFile), 'utf8');
   for (const fragment of [
-    '**Version**: 1.0.0',
+    '**Version**: 1.1.0',
     '**Agent Name**: gilfoyle-security-architect',
     '## Threat Model',
+    '## Evidence Interpretation',
     '## Actionable Finding Requirements',
     '## Attribution',
     '## Decision Rules',
@@ -430,7 +431,8 @@ function validateGilfoyleSecurityContract(repoRoot: string): ContractValidation 
     engine.expectedDeploymentId !== 'game-hub-gilfoyle-security-architect' ||
     !Array.isArray(engine.allowedTools) ||
     engine.allowedTools.length !== 0 ||
-    objectProperty(engine, 'limits')?.maxConcurrentReviews !== 1
+    objectProperty(engine, 'limits')?.maxConcurrentReviews !== 1 ||
+    objectProperty(engine, 'limits')?.maxEstimatedCostUsd !== 0.02
   ) {
     errors.push('Gilfoyle engine contract must retain its independent deployment, no-tool boundary, and capacity.');
   }

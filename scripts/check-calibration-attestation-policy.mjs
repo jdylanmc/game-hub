@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function validateCalibrationAttestationPolicy({ policy, packageJson, source, promotionPolicy }) {
+function validateCalibrationAttestationPolicy({ policy, packageJson, source, promotionPolicy, workflow }) {
   const violations = [];
   const requiredRootProperties = [
     'attestationAction',
@@ -160,11 +160,69 @@ function validateCalibrationAttestationPolicy({ policy, packageJson, source, pro
     violations.push('Calibration attestation commands are not mandatory repository policy.');
   }
   if (
-    promotionPolicy.status !== 'contract-only' ||
+    promotionPolicy.status !== 'calibration-required' ||
     promotionPolicy.promotionAllowed !== false ||
-    promotionPolicy.requiredRunMode !== 'azure'
+    promotionPolicy.requiredRunMode !== 'azure' ||
+    promotionPolicy.minimumCases !== 24 ||
+    promotionPolicy.minimumRepetitionsPerCase !== 2 ||
+    promotionPolicy.thresholds?.minimumBlockingPatternDetectionRate !== 1 ||
+    promotionPolicy.thresholds?.maximumStrongFalsePositiveRate !== 0.05 ||
+    promotionPolicy.thresholds?.maximumAdvisoryEscalationRate !== 0 ||
+    promotionPolicy.thresholds?.maximumMissedCriticalScenarios !== 0 ||
+    promotionPolicy.thresholds?.maximumMissedControlBypassCases !== 0 ||
+    promotionPolicy.thresholds?.minimumReviewerAgreementRate !== 0.95 ||
+    promotionPolicy.thresholds?.maximumAverageCostUsd !== 0.1 ||
+    promotionPolicy.thresholds?.maximumTotalCostUsd !== 0.25 ||
+    promotionPolicy.thresholds?.maximumP95LatencyMs !== 60000 ||
+    promotionPolicy.thresholds?.maximumErrorRate !== 0
   ) {
-    violations.push('Gilfoyle calibration must remain unpromoted after the attestation story.');
+    violations.push('Gilfoyle promotion thresholds must remain strict and unpromoted without valid evidence.');
+  }
+  const workflowFragments = [
+    'name: Adversarial calibration',
+    'workflow_dispatch:',
+    "if: github.ref == 'refs/heads/main'",
+    'environment: adversarial-review',
+    'attestations: write',
+    'contents: read',
+    'id-token: write',
+    'group: adversarial-calibration-protected',
+    'cancel-in-progress: false',
+    'ADVERSARIAL_AGENT_NAME: gilfoyle-security-architect',
+    "ADVERSARIAL_CALIBRATION_MODE: 'true'",
+    'AZURE_OPENAI_DEPLOYMENT_ID: game-hub-gilfoyle-security-architect',
+    'subscription-id: 11213dbd-39fe-46ba-87db-5f5e8c449aed',
+    'yarn install --immutable',
+    '--mode azure',
+    '--agent gilfoyle-security-architect',
+    '--repetitions 2',
+    'yarn calibration:check',
+    'uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+    'retention-days: 90',
+    'yarn calibration:attestation:create',
+    'uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6',
+    'yarn calibration:attestation:verify',
+  ];
+  for (const fragment of workflowFragments) {
+    if (!workflow.includes(fragment)) {
+      violations.push(`Protected calibration workflow is missing invariant: ${fragment}`);
+    }
+  }
+  if (
+    workflow.includes('pull_request_target') ||
+    workflow.includes('continue-on-error') ||
+    workflow.includes('AZURE_OPENAI_API_KEY') ||
+    workflow.includes('OPENAI_API_KEY') ||
+    workflow.includes('client-secret') ||
+    workflow.includes('write-all')
+  ) {
+    violations.push('Protected calibration workflow exposes credentials or weakens fail-closed execution.');
+  }
+  for (const line of workflow.split('\n')) {
+    const actionReference = line.match(/^\s*uses:\s*[^@\s]+@([^\s#]+)/);
+    if (actionReference && !/^[0-9a-f]{40}$/.test(actionReference[1])) {
+      violations.push(`Calibration action is not pinned to an immutable commit: ${line.trim()}`);
+    }
   }
   return violations;
 }
@@ -183,11 +241,13 @@ const promotionPolicy = JSON.parse(
     'utf8',
   ),
 );
+const workflow = fs.readFileSync(path.join(root, '.github/workflows/adversarial-calibration.yml'), 'utf8');
 const violations = validateCalibrationAttestationPolicy({
   policy,
   packageJson,
   source,
   promotionPolicy,
+  workflow,
 });
 if (violations.length > 0) {
   throw new Error(`Calibration attestation policy failed:\n${violations.join('\n')}`);

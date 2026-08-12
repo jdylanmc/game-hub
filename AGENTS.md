@@ -49,6 +49,12 @@ inputs, report artifact, and verified timestamps. Repository-authored JSON,
 unsigned bundles, stale or replayed runs, and mismatched evidence cannot
 self-assert promotion.
 
+Use `--agent gilfoyle-security-architect` for Gilfoyle fixture, Azure, and
+promotion checks. Its protected calibration workflow is manual, main-only,
+single-concurrency, Microsoft Entra ID/OpenID Connect authenticated, and bound
+to the dedicated `game-hub-gilfoyle-security-architect` deployment. Never use a
+feature-branch run or a locally generated report as promotion evidence.
+
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
 

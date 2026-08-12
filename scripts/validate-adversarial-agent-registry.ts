@@ -232,7 +232,11 @@ function validateAgentRegistry(
   return { valid: errors.length === 0, errors, agents };
 }
 
-function loadAgentRegistration(repoRoot: string, agentName: string): AgentRegistration {
+function loadAgentRegistration(
+  repoRoot: string,
+  agentName: string,
+  options: { allowDisabledForCalibration?: boolean } = {},
+): AgentRegistration {
   const registryPath = path.join(repoRoot, 'config/adversarial-agents/agents-config.json');
   const registry: unknown = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
   const validation = validateAgentRegistry(repoRoot, registry);
@@ -240,7 +244,9 @@ function loadAgentRegistration(repoRoot: string, agentName: string): AgentRegist
     throw new Error(`Adversarial agent registry is invalid: ${validation.errors.join(' ')}`);
   }
   const agent = validation.agents.find((candidate) => candidate.name === agentName);
-  if (!agent || !agent.enabled) throw new Error(`Adversarial agent is not enabled: ${agentName}`);
+  if (!agent || (!agent.enabled && !options.allowDisabledForCalibration)) {
+    throw new Error(`Adversarial agent is not enabled: ${agentName}`);
+  }
   return agent;
 }
 

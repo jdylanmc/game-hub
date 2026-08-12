@@ -39,8 +39,8 @@ artifact, report, and configuration.
 
 ## Protected workflow sequence
 
-US-004B must implement this order without accepting report or predicate content
-from workflow inputs:
+The protected calibration workflow implements this order without accepting
+report or predicate content from workflow inputs:
 
 1. Start only through `workflow_dispatch` on protected `main`, enter the
    `adversarial-review` environment, and record the workflow start time.
@@ -97,8 +97,10 @@ run rather than bypass verification.
 
 ## Promotion remains blocked
 
-The Gilfoyle promotion policy remains `contract-only` with
-`promotionAllowed: false`. There is no active Gilfoyle calibration report and
-no calibration workflow in US-004A. A signed report that misses thresholds is
-still not promotable, and a threshold-passing unsigned report is also not
+The Gilfoyle promotion policy remains `calibration-required` with
+`promotionAllowed: false` until a complete protected run passes thresholds and
+same-run verification. The trust policy intentionally requires
+`refs/heads/main`; a feature branch cannot self-attest or self-promote its own
+workflow and configuration. A signed report that misses thresholds is still
+not promotable, and a threshold-passing unsigned or non-main report is also not
 promotable.

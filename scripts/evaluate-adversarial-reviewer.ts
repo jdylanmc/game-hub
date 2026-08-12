@@ -6,6 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AdversarialReviewerEngine, createReviewerFromEnvironment } from './review-adversarial-context.ts';
 import { stableStringify } from './collect-adversarial-context.ts';
+import { expectedReportFingerprintComponents } from './calibration-attestation.ts';
+import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
 
 const REPORT_SCHEMA_VERSION = '1.0.0';
 
@@ -17,6 +19,8 @@ interface BenchmarkCase {
   strength: 'weak' | 'strong' | 'advisory';
   critical: boolean;
   expectedCategory: string | null;
+  expectedSecuritySeverity?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | null;
+  expectedControlBypass?: 'CONFIRMED' | 'UNCERTAIN' | 'NONE';
   production: string;
   test: string;
 }
@@ -35,11 +39,14 @@ interface PromotionPolicy {
   thresholds: {
     minimumBlockingPatternDetectionRate: number;
     maximumStrongFalsePositiveRate: number;
+    maximumAdvisoryEscalationRate?: number;
+    maximumMissedControlBypassCases?: number;
     maximumMissedCriticalScenarios: number;
     minimumReviewerAgreementRate: number;
     maximumAverageCostUsd: number;
     maximumP95LatencyMs: number;
     maximumErrorRate: number;
+    maximumTotalCostUsd?: number;
   };
   invalidationInputs: string[];
 }
@@ -72,12 +79,17 @@ interface CalibrationMetrics {
   strongCaseCount: number;
   falsePositiveCount: number;
   strongFalsePositiveRate: number;
+  advisoryCaseCount?: number;
+  advisoryEscalationCount?: number;
+  advisoryEscalationRate?: number;
   missedCriticalScenarios: string[];
+  missedControlBypassCases?: string[];
   reviewerAgreementRate: number;
   totalTokens: number;
   averageCostUsd: number;
   p95LatencyMs: number;
   errorRate: number;
+  totalCostUsd?: number;
 }
 
 interface CalibrationFingerprint {
@@ -88,6 +100,7 @@ interface CalibrationFingerprint {
 interface CalibrationReport extends JsonObject {
   schemaVersion: string;
   reportVersion: string;
+  agentName?: string;
   corpusVersion: string;
   promotionPolicyVersion: string;
   runMode: 'fixture' | 'azure';
@@ -114,11 +127,14 @@ function loadJson(filePath: string): JsonObject {
   return value;
 }
 
-function loadCorpus(repoRoot: string): BenchmarkCorpus {
-  const corpus = loadJson(
-    path.join(repoRoot, 'config/adversarial-agents/benchmarks.json'),
-  ) as unknown as BenchmarkCorpus;
-  if (corpus.version !== '1.0.4' || !Array.isArray(corpus.cases) || corpus.cases.length < 18) {
+function loadCorpus(repoRoot: string, agentName = 'unit-test-reviewer'): BenchmarkCorpus {
+  const registration = loadAgentRegistration(repoRoot, agentName, { allowDisabledForCalibration: true });
+  const corpus = loadJson(path.join(repoRoot, registration.benchmarkCorpusFile)) as unknown as BenchmarkCorpus;
+  if (
+    !/^\d+\.\d+\.\d+$/.test(corpus.version) ||
+    !Array.isArray(corpus.cases) ||
+    corpus.cases.length < (agentName === 'gilfoyle-security-architect' ? 24 : 18)
+  ) {
     throw new Error('Benchmark corpus is incomplete');
   }
   const ids = new Set<string>();
@@ -137,24 +153,27 @@ function loadCorpus(repoRoot: string): BenchmarkCorpus {
   return corpus;
 }
 
-function loadPromotionPolicy(repoRoot: string): PromotionPolicy {
-  const policy = loadJson(
-    path.join(repoRoot, 'config/adversarial-agents/promotion-policy.json'),
-  ) as unknown as PromotionPolicy;
+function loadPromotionPolicy(repoRoot: string, agentName = 'unit-test-reviewer'): PromotionPolicy {
+  const registration = loadAgentRegistration(repoRoot, agentName, { allowDisabledForCalibration: true });
+  const policy = loadJson(path.join(repoRoot, registration.promotionPolicyFile)) as unknown as PromotionPolicy;
   if (policy.version !== '1.0.0' || policy.requiredRunMode !== 'azure' || policy.minimumRepetitionsPerCase < 2) {
     throw new Error('Promotion policy is malformed');
   }
   return policy;
 }
 
-function calibrationFingerprint(repoRoot: string): CalibrationFingerprint {
+function calibrationFingerprint(repoRoot: string, agentName = 'unit-test-reviewer'): CalibrationFingerprint {
+  if (agentName === 'gilfoyle-security-architect') {
+    const components = expectedReportFingerprintComponents(repoRoot, agentName);
+    return { components, sha256: sha256(stableStringify(components)) };
+  }
   const registry = loadJson(path.join(repoRoot, 'config/adversarial-agents/agents-config.json'));
   const agents = Array.isArray(registry.agents) ? registry.agents : [];
   const agent = agents.find(
     (candidate): candidate is JsonObject => isObject(candidate) && candidate.name === 'unit-test-reviewer',
   );
   if (!agent) throw new Error('unit-test-reviewer is not registered');
-  const corpus = loadCorpus(repoRoot);
+  const corpus = loadCorpus(repoRoot, agentName);
   const schema = loadJson(path.join(repoRoot, 'config/adversarial-agents/schema.json'));
   const policy = loadJson(path.join(repoRoot, 'config/adversarial-agents/policy.json'));
   const reviewerConfigPath = path.join(repoRoot, 'config/adversarial-agents/reviewer-engine.json');
@@ -187,7 +206,7 @@ function calibrationFingerprint(repoRoot: string): CalibrationFingerprint {
   return { components, sha256: sha256(stableStringify(components)) };
 }
 
-function benchmarkPacket(benchmark: BenchmarkCase, index: number): JsonObject {
+function benchmarkPacket(benchmark: BenchmarkCase, index: number, agentName = 'unit-test-reviewer'): JsonObject {
   const headSha = sha256(`benchmark:${benchmark.id}`).slice(0, 40);
   return {
     schemaVersion: '1.0.0',
@@ -214,12 +233,40 @@ function benchmarkPacket(benchmark: BenchmarkCase, index: number): JsonObject {
       productionDiff: benchmark.production,
       testDiff: benchmark.test,
     },
-    changes: { production: [], tests: [], other: [] },
-    repositoryContext: {},
+    changes: {
+      production: [
+        {
+          path: 'src/benchmark.ts',
+          startLine: 1,
+          endLine: Math.max(1, benchmark.production.split('\n').length),
+          patch: benchmark.production,
+        },
+      ],
+      tests: [
+        {
+          path: 'src/benchmark.test.ts',
+          startLine: 1,
+          endLine: Math.max(1, benchmark.test.split('\n').length),
+          patch: benchmark.test,
+        },
+      ],
+      other: [],
+    },
+    repositoryContext:
+      agentName === 'gilfoyle-security-architect'
+        ? {
+            securityReviewMode: 'calibration',
+            evidenceIsInert: true,
+            executableContentAllowed: false,
+          }
+        : {},
   };
 }
 
-function normalizedResult(result: JsonObject): {
+function normalizedResult(
+  result: JsonObject,
+  agentName = 'unit-test-reviewer',
+): {
   decision: string;
   severity: string;
   blockingCategories: string[];
@@ -231,7 +278,12 @@ function normalizedResult(result: JsonObject): {
   const verdict = isObject(result.verdict) ? result.verdict : {};
   const findings = Array.isArray(result.findings) ? result.findings : [];
   const blockingCategories = findings
-    .filter((finding) => isObject(finding) && finding.severity === 'BLOCKING' && finding.confidence === 'HIGH')
+    .filter(
+      (finding) =>
+        isObject(finding) &&
+        finding.severity === 'BLOCKING' &&
+        (agentName === 'gilfoyle-security-architect' || finding.confidence === 'HIGH'),
+    )
     .map((finding) => String((finding as JsonObject).category))
     .sort();
   const summary = isObject(result.summary) ? result.summary : {};
@@ -259,10 +311,17 @@ function rounded(value: number): number {
   return Number(value.toFixed(6));
 }
 
-function computeMetrics(corpus: BenchmarkCorpus, caseResults: CalibrationCaseResult[]): CalibrationMetrics {
+function computeMetrics(
+  corpus: BenchmarkCorpus,
+  caseResults: CalibrationCaseResult[],
+  agentName = 'unit-test-reviewer',
+): CalibrationMetrics {
   const byId = new Map(caseResults.map((result) => [result.id, result]));
   const weakCases = corpus.cases.filter((benchmark) => benchmark.strength === 'weak');
-  const strongCases = corpus.cases.filter((benchmark) => benchmark.strength !== 'weak');
+  const strongCases = corpus.cases.filter((benchmark) =>
+    agentName === 'gilfoyle-security-architect' ? benchmark.strength === 'strong' : benchmark.strength !== 'weak',
+  );
+  const advisoryCases = corpus.cases.filter((benchmark) => benchmark.strength === 'advisory');
   const detected = weakCases.filter((benchmark) => {
     const runs = byId.get(benchmark.id)?.runs ?? [];
     return runs.every((run) => run.decision === 'FAIL' && run.blockingCategories.length > 0);
@@ -274,6 +333,16 @@ function computeMetrics(corpus: BenchmarkCorpus, caseResults: CalibrationCaseRes
     .filter((benchmark) => benchmark.critical && !detected.includes(benchmark))
     .map((benchmark) => benchmark.id)
     .sort();
+  const missedControlBypassCases = weakCases
+    .filter(
+      (benchmark) =>
+        ['CONFIRMED', 'UNCERTAIN'].includes(String(benchmark.expectedControlBypass)) && !detected.includes(benchmark),
+    )
+    .map((benchmark) => benchmark.id)
+    .sort();
+  const advisoryEscalations = advisoryCases.filter((benchmark) =>
+    (byId.get(benchmark.id)?.runs ?? []).some((run) => run.decision === 'FAIL'),
+  );
   let agreementComparisons = 0;
   let agreements = 0;
   for (const result of caseResults) {
@@ -287,7 +356,7 @@ function computeMetrics(corpus: BenchmarkCorpus, caseResults: CalibrationCaseRes
   const runs = caseResults.flatMap((result) => result.runs);
   const totalCost = runs.reduce((sum, run) => sum + run.estimatedCostUsd, 0);
   const errors = runs.filter((run) => run.error).length;
-  return {
+  const metrics: CalibrationMetrics = {
     weakCaseCount: weakCases.length,
     truePositiveCount: detected.length,
     blockingPatternDetectionRate: rounded(detected.length / Math.max(1, weakCases.length)),
@@ -301,6 +370,14 @@ function computeMetrics(corpus: BenchmarkCorpus, caseResults: CalibrationCaseRes
     p95LatencyMs: percentile95(runs.map((run) => run.latencyMs)),
     errorRate: rounded(errors / Math.max(1, runs.length)),
   };
+  if (agentName === 'gilfoyle-security-architect') {
+    metrics.advisoryCaseCount = advisoryCases.length;
+    metrics.advisoryEscalationCount = advisoryEscalations.length;
+    metrics.advisoryEscalationRate = rounded(advisoryEscalations.length / Math.max(1, advisoryCases.length));
+    metrics.missedControlBypassCases = missedControlBypassCases;
+    metrics.totalCostUsd = rounded(totalCost);
+  }
+  return metrics;
 }
 
 function reportHash(report: JsonObject): string {
@@ -342,14 +419,16 @@ function isCalibrationRun(value: unknown): value is CalibrationRun {
 
 async function evaluateBenchmarks(options: {
   repoRoot: string;
+  agentName?: string;
   runMode: 'fixture' | 'azure';
   repetitionsPerCase: number;
   reviewerFactory: (benchmark: BenchmarkCase, repetition: number, index: number) => ReviewerLike;
   now?: () => number;
   generatedAt?: string;
 }): Promise<CalibrationReport> {
-  const corpus = loadCorpus(options.repoRoot);
-  const promotionPolicy = loadPromotionPolicy(options.repoRoot);
+  const agentName = options.agentName ?? 'unit-test-reviewer';
+  const corpus = loadCorpus(options.repoRoot, agentName);
+  const promotionPolicy = loadPromotionPolicy(options.repoRoot, agentName);
   if (options.repetitionsPerCase < 1) throw new Error('At least one repetition is required');
   const now = options.now ?? Date.now;
   const caseResults: CalibrationCaseResult[] = [];
@@ -360,9 +439,9 @@ async function evaluateBenchmarks(options: {
     for (let repetition = 0; repetition < options.repetitionsPerCase; repetition += 1) {
       const reviewer = options.reviewerFactory(benchmark, repetition, index);
       const start = now();
-      const result = await reviewer.review(benchmarkPacket(benchmark, index));
+      const result = await reviewer.review(benchmarkPacket(benchmark, index, agentName));
       const latencyMs = Math.max(0, now() - start);
-      const normalized = normalizedResult(result);
+      const normalized = normalizedResult(result, agentName);
       runs.push({
         repetition,
         decision: normalized.decision,
@@ -380,15 +459,16 @@ async function evaluateBenchmarks(options: {
   const report: CalibrationReport = {
     schemaVersion: REPORT_SCHEMA_VERSION,
     reportVersion: '1.0.0',
+    ...(agentName === 'gilfoyle-security-architect' ? { agentName } : {}),
     corpusVersion: corpus.version,
     promotionPolicyVersion: promotionPolicy.version,
     runMode: options.runMode,
     generatedAt: options.generatedAt ?? new Date(now()).toISOString(),
     repetitionsPerCase: options.repetitionsPerCase,
     complete: true,
-    calibrationFingerprint: calibrationFingerprint(options.repoRoot),
+    calibrationFingerprint: calibrationFingerprint(options.repoRoot, agentName),
     caseResults,
-    metrics: computeMetrics(corpus, caseResults),
+    metrics: computeMetrics(corpus, caseResults, agentName),
     reportSha256: '',
   };
   report.reportSha256 = reportHash(report);
@@ -398,12 +478,13 @@ async function evaluateBenchmarks(options: {
 function validatePromotionReport(
   repoRoot: string,
   value: unknown,
+  agentName = 'unit-test-reviewer',
 ): { promotable: boolean; reasons: string[]; metrics?: CalibrationMetrics } {
   const reasons: string[] = [];
   if (!isObject(value)) return { promotable: false, reasons: ['Report must be a JSON object.'] };
   const report = value as unknown as CalibrationReport;
-  const corpus = loadCorpus(repoRoot);
-  const policy = loadPromotionPolicy(repoRoot);
+  const corpus = loadCorpus(repoRoot, agentName);
+  const policy = loadPromotionPolicy(repoRoot, agentName);
   if (report.reportSha256 !== reportHash(report)) reasons.push('Report hash is invalid.');
   if (
     report.schemaVersion !== REPORT_SCHEMA_VERSION ||
@@ -417,7 +498,10 @@ function validatePromotionReport(
     reasons.push('Only a real Azure calibration run can promote the check.');
   }
   if (report.complete !== true) reasons.push('Calibration report is incomplete.');
-  if (stableStringify(report.calibrationFingerprint) !== stableStringify(calibrationFingerprint(repoRoot))) {
+  if (agentName === 'gilfoyle-security-architect' && report.agentName !== 'gilfoyle-security-architect') {
+    reasons.push('Calibration report agent identity is invalid.');
+  }
+  if (stableStringify(report.calibrationFingerprint) !== stableStringify(calibrationFingerprint(repoRoot, agentName))) {
     reasons.push('Calibration fingerprint is stale.');
   }
   const structurallyValidCaseResults =
@@ -446,7 +530,7 @@ function validatePromotionReport(
   ) {
     reasons.push('Required benchmark cases or repetitions are missing.');
   }
-  const computedMetrics = computeMetrics(corpus, report.caseResults);
+  const computedMetrics = computeMetrics(corpus, report.caseResults, agentName);
   if (stableStringify(report.metrics) !== stableStringify(computedMetrics)) {
     reasons.push('Reported metrics do not match case evidence.');
   }
@@ -457,8 +541,20 @@ function validatePromotionReport(
   if (computedMetrics.strongFalsePositiveRate > thresholds.maximumStrongFalsePositiveRate) {
     reasons.push('Strong-example false-positive threshold failed.');
   }
+  if (
+    thresholds.maximumAdvisoryEscalationRate !== undefined &&
+    Number(computedMetrics.advisoryEscalationRate) > thresholds.maximumAdvisoryEscalationRate
+  ) {
+    reasons.push('Advisory-case escalation threshold failed.');
+  }
   if (computedMetrics.missedCriticalScenarios.length > thresholds.maximumMissedCriticalScenarios) {
     reasons.push('Critical scenarios were missed.');
+  }
+  if (
+    thresholds.maximumMissedControlBypassCases !== undefined &&
+    (computedMetrics.missedControlBypassCases?.length ?? 0) > thresholds.maximumMissedControlBypassCases
+  ) {
+    reasons.push('Security-control bypass cases were missed.');
   }
   if (computedMetrics.reviewerAgreementRate < thresholds.minimumReviewerAgreementRate) {
     reasons.push('Reviewer agreement threshold failed.');
@@ -472,10 +568,48 @@ function validatePromotionReport(
   if (computedMetrics.errorRate > thresholds.maximumErrorRate) {
     reasons.push('Reviewer error-rate threshold failed.');
   }
+  if (
+    thresholds.maximumTotalCostUsd !== undefined &&
+    Number(computedMetrics.totalCostUsd) > thresholds.maximumTotalCostUsd
+  ) {
+    reasons.push('Total calibration cost threshold failed.');
+  }
   return { promotable: reasons.length === 0, reasons, metrics: computedMetrics };
 }
 
-function oracleFinding(benchmark: BenchmarkCase): JsonObject {
+function oracleFinding(benchmark: BenchmarkCase, agentName = 'unit-test-reviewer'): JsonObject {
+  if (agentName === 'gilfoyle-security-architect') {
+    const securitySeverity = benchmark.expectedSecuritySeverity ?? 'HIGH';
+    const securityControlBypass = benchmark.expectedControlBypass ?? 'NONE';
+    return {
+      id: `${benchmark.expectedCategory?.toUpperCase().replace(/-/g, '') ?? 'SECURITY'}-1`,
+      title: `Unsafe ${benchmark.scenario}`,
+      category: benchmark.expectedCategory,
+      securitySeverity,
+      severity:
+        ['CRITICAL', 'HIGH'].includes(securitySeverity) || ['CONFIRMED', 'UNCERTAIN'].includes(securityControlBypass)
+          ? 'BLOCKING'
+          : 'ADVISORY',
+      confidence: 'HIGH',
+      securityControlBypass,
+      description: `The benchmark contains a concrete ${benchmark.scenario} weakness.`,
+      citations: {
+        productionFiles: [
+          {
+            path: 'src/benchmark.ts',
+            startLine: 1,
+            endLine: Math.max(1, benchmark.production.split('\n').length),
+            snippet: benchmark.production,
+          },
+        ],
+        testFiles: [],
+      },
+      exploitOrFailureScenario: `An attacker can exploit the ${benchmark.scenario} weakness under the stated trust boundary.`,
+      impact: 'The weakness can violate confidentiality, integrity, availability, or privilege boundaries.',
+      remediation: 'Apply the safe paired benchmark control.',
+      verificationGuidance: 'Run the paired deterministic safe benchmark and a negative abuse case.',
+    };
+  }
   return {
     id: `${benchmark.expectedCategory?.toUpperCase().replace(/-/g, '') ?? 'BENCHMARK'}-1`,
     title: `Weak ${benchmark.scenario} coverage`,
@@ -507,27 +641,33 @@ function oracleFinding(benchmark: BenchmarkCase): JsonObject {
   };
 }
 
-function oracleModelResult(benchmark: BenchmarkCase): JsonObject {
-  const findings = benchmark.strength === 'weak' ? [oracleFinding(benchmark)] : [];
+function oracleModelResult(benchmark: BenchmarkCase, agentName = 'unit-test-reviewer'): JsonObject {
+  const findings =
+    benchmark.strength === 'weak' || benchmark.strength === 'advisory' ? [oracleFinding(benchmark, agentName)] : [];
+  const blocking = findings.some((finding) => finding.severity === 'BLOCKING');
   return {
     schemaVersion: '1.0.0',
     findingVersion: 'ignored@2000-01-01T00:00:00Z',
     attribution: {},
     verdict: {
-      decision: findings.length > 0 ? 'FAIL' : 'PASS',
-      severity: findings.length > 0 ? 'BLOCKING' : 'INFO',
-      blockingFindingsCount: findings.length,
-      advisoryFindingsCount: 0,
+      decision: blocking ? 'FAIL' : 'PASS',
+      severity: blocking ? 'BLOCKING' : findings.length > 0 ? 'ADVISORY' : 'INFO',
+      blockingFindingsCount: blocking ? findings.length : 0,
+      advisoryFindingsCount: blocking ? 0 : findings.length,
       policyDecisionRationale: 'Deterministic benchmark oracle.',
     },
     findings,
   };
 }
 
-function createFixtureReviewer(repoRoot: string, benchmark: BenchmarkCase): AdversarialReviewerEngine {
+function createFixtureReviewer(
+  repoRoot: string,
+  benchmark: BenchmarkCase,
+  agentName = 'unit-test-reviewer',
+): AdversarialReviewerEngine {
   const transport = {
     complete: async () => ({
-      content: JSON.stringify(oracleModelResult(benchmark)),
+      content: JSON.stringify(oracleModelResult(benchmark, agentName)),
       promptTokens: 1000,
       completionTokens: 500,
     }),
@@ -535,7 +675,12 @@ function createFixtureReviewer(repoRoot: string, benchmark: BenchmarkCase): Adve
   return new AdversarialReviewerEngine({
     repoRoot,
     endpoint: 'https://fixture.openai.azure.com',
-    deploymentId: 'game-hub-unit-test-reviewer',
+    deploymentId:
+      agentName === 'gilfoyle-security-architect'
+        ? 'game-hub-gilfoyle-security-architect'
+        : 'game-hub-unit-test-reviewer',
+    agentName,
+    calibrationMode: agentName === 'gilfoyle-security-architect',
     transport,
     clock: {
       now: () => Date.parse('2000-01-01T00:00:00Z'),
@@ -549,11 +694,13 @@ function parseArguments(args: string[]): {
   outputPath?: string;
   reportPath?: string;
   repetitions: number;
+  agentName: string;
 } {
   let mode: 'fixture' | 'azure' | 'check' = 'fixture';
   let outputPath: string | undefined;
   let reportPath: string | undefined;
   let repetitions = 2;
+  let agentName = 'unit-test-reviewer';
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === '--mode') {
       const value = args[++index];
@@ -562,9 +709,11 @@ function parseArguments(args: string[]): {
     } else if (args[index] === '--output') outputPath = args[++index];
     else if (args[index] === '--report') reportPath = args[++index];
     else if (args[index] === '--repetitions') repetitions = Number(args[++index]);
+    else if (args[index] === '--agent') agentName = args[++index] ?? '';
     else throw new Error(`Unknown argument: ${args[index]}`);
   }
-  return { mode, outputPath, reportPath, repetitions };
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(agentName)) throw new Error('Invalid agent name');
+  return { mode, outputPath, reportPath, repetitions, agentName };
 }
 
 async function main(): Promise<void> {
@@ -573,7 +722,7 @@ async function main(): Promise<void> {
   if (args.mode === 'check') {
     if (!args.reportPath) throw new Error('--report is required in check mode');
     const report: unknown = JSON.parse(fs.readFileSync(path.resolve(repoRoot, args.reportPath), 'utf8'));
-    const result = validatePromotionReport(repoRoot, report);
+    const result = validatePromotionReport(repoRoot, report, args.agentName);
     process.stdout.write(`${stableStringify(result, 2)}\n`);
     process.exitCode = result.promotable ? 0 : 3;
     return;
@@ -581,6 +730,7 @@ async function main(): Promise<void> {
   let logicalTime = Date.parse('2000-01-01T00:00:00Z');
   const report = await evaluateBenchmarks({
     repoRoot,
+    agentName: args.agentName,
     runMode: args.mode,
     repetitionsPerCase: args.repetitions,
     generatedAt: args.mode === 'fixture' ? '2000-01-01T00:00:00.000Z' : new Date().toISOString(),
@@ -593,7 +743,7 @@ async function main(): Promise<void> {
         : Date.now,
     reviewerFactory:
       args.mode === 'fixture'
-        ? (benchmark) => createFixtureReviewer(repoRoot, benchmark)
+        ? (benchmark) => createFixtureReviewer(repoRoot, benchmark, args.agentName)
         : () => createReviewerFromEnvironment(repoRoot),
   });
   const serialized = `${stableStringify(report, 2)}\n`;

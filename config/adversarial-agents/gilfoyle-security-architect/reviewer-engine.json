@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "apiVersion": "2025-04-01-preview",
   "credentialScope": "https://cognitiveservices.azure.com/.default",
   "expectedDeploymentId": "game-hub-gilfoyle-security-architect",
@@ -10,13 +10,13 @@
   "limits": {
     "maxContextBytes": 2097152,
     "maxInputTokens": 500000,
-    "maxOutputTokens": 8000,
+    "maxOutputTokens": 6000,
     "maxOutputBytes": 131072,
     "timeoutMs": 120000,
     "maxRetries": 2,
     "retryBaseDelayMs": 250,
     "maxConcurrentReviews": 1,
-    "maxEstimatedCostUsd": 0.25,
+    "maxEstimatedCostUsd": 0.02,
     "inputUsdPerMillionTokens": 0.4,
     "outputUsdPerMillionTokens": 1.6
   },

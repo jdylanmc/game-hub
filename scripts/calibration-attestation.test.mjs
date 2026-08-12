@@ -59,8 +59,9 @@ function writeReport() {
   const report = {
     schemaVersion: '1.0.0',
     reportVersion: '1.0.0',
-    corpusVersion: '0.1.0',
-    promotionPolicyVersion: '0.1.0',
+    agentName: 'gilfoyle-security-architect',
+    corpusVersion: '1.0.0',
+    promotionPolicyVersion: '1.0.0',
     runMode: 'azure',
     generatedAt: '2026-08-12T06:00:00.000Z',
     repetitionsPerCase: 2,
@@ -168,8 +169,8 @@ describe('protected calibration predicate', () => {
     expect(predicate.azureDeployment).toEqual(policy.azureDeployment);
     expect(predicate.agentConfiguration.sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(predicate.benchmarkInputs).toMatchObject({
-      version: '0.1.0',
-      caseCount: 0,
+      version: '1.0.0',
+      caseCount: 24,
       sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
     });
     expect(predicate.calibrationReport).toMatchObject({

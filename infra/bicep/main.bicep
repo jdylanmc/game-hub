@@ -33,6 +33,9 @@ param resourceNamePrefix string = 'game-hub-adversarial'
 @description('Azure OpenAI deployment name.')
 param modelDeploymentId string = 'game-hub-unit-test-reviewer'
 
+@description('Dedicated Azure OpenAI deployment name for Gilfoyle calibration and review.')
+param gilfoyleModelDeploymentId string = 'game-hub-gilfoyle-security-architect'
+
 @description('Budget start date. Defaults to the first day of the deployment month.')
 param budgetStartDate string = utcNow('yyyy-MM-01')
 
@@ -57,6 +60,7 @@ module inference './resources.bicep' = {
     environment: environment
     location: location
     modelDeploymentId: modelDeploymentId
+    gilfoyleModelDeploymentId: gilfoyleModelDeploymentId
     resourceNamePrefix: resourceNamePrefix
     reviewerPrincipalId: reviewerPrincipalId
     tags: commonTags
@@ -117,6 +121,7 @@ resource budget 'Microsoft.Consumption/budgets@2024-08-01' = {
 output resourceGroupName string = resourceGroup.name
 output openaiEndpoint string = inference.outputs.openaiEndpoint
 output modelDeploymentId string = inference.outputs.modelDeploymentId
+output gilfoyleModelDeploymentId string = inference.outputs.gilfoyleModelDeploymentId
 output modelName string = inference.outputs.modelName
 output modelVersion string = inference.outputs.modelVersion
 output modelSku string = inference.outputs.modelSku

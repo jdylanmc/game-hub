@@ -39,6 +39,7 @@
     "policy:adversarial-workflow": "node scripts/check-adversarial-workflow-policy.mjs",
     "calibrate:adversarial": "node scripts/evaluate-adversarial-reviewer.ts",
     "calibration:check": "node scripts/evaluate-adversarial-reviewer.ts --mode check",
+    "calibration:gilfoyle:check": "node scripts/evaluate-adversarial-reviewer.ts --mode check --agent gilfoyle-security-architect",
     "calibration:attestation:create": "node scripts/calibration-attestation.ts create",
     "calibration:attestation:verify": "node scripts/calibration-attestation.ts verify",
     "policy:calibration-attestation": "node scripts/check-calibration-attestation-policy.mjs",

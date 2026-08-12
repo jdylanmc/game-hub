@@ -6,6 +6,7 @@ param environment string
 param location string
 param resourceNamePrefix string
 param modelDeploymentId string
+param gilfoyleModelDeploymentId string
 param reviewerPrincipalId string
 param tags object
 
@@ -54,6 +55,26 @@ resource deployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01
   }
 }
 
+resource gilfoyleDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+  parent: account
+  name: gilfoyleModelDeploymentId
+  dependsOn: [
+    deployment
+  ]
+  sku: {
+    name: modelSku
+    capacity: 50
+  }
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: modelName
+      version: modelVersion
+    }
+    versionUpgradeOption: 'NoAutoUpgrade'
+  }
+}
+
 resource reviewerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(reviewerPrincipalId)) {
   name: guid(account.id, reviewerPrincipalId, cognitiveServicesOpenAIUserRoleId)
   scope: account
@@ -66,6 +87,7 @@ resource reviewerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if 
 
 output openaiEndpoint string = account.properties.endpoint
 output modelDeploymentId string = deployment.name
+output gilfoyleModelDeploymentId string = gilfoyleDeployment.name
 output modelName string = modelName
 output modelVersion string = modelVersion
 output modelSku string = modelSku

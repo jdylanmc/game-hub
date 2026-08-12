@@ -87,7 +87,7 @@
       ],
       "priority": 5,
       "passes": false,
-      "notes": "Blocked after two authorized keyless Azure calibration attempts. The final attempt was not promotable: 27.27% blocking detection, 9.09% safe false positives, 50% advisory escalation, 6.25% errors, and 93.75% agreement. All incomplete implementation and failed reports were removed. Do not retry without a new authorized calibration budget; US-004A must pass first.",
+      "notes": "Calibration implementation is complete and the dedicated keyless Azure deployment is live at the pinned subscription/resource/version with capacity 50. The 24-case fixture path passes strict metrics, runtime/schema failures fail closed, and the protected attested workflow is versioned. A fresh real-Azure model attempt was intentionally not started because US-004A requires the exact workflow and configuration to execute from protected refs/heads/main, while this workflow exists only on draft PR #39's feature branch. A branch or local run would have invalid provenance and cannot promote. Model attempts: 0; model cost: $0.00. US-004B remains blocked pending a human-approved sequencing path that places the reviewed calibration workflow/configuration on protected main without merging or bypassing the unfinished issue.",
       "dependencies": ["US-004A"]
     },
     {

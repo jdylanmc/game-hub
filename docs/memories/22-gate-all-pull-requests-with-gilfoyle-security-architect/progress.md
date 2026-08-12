@@ -208,3 +208,52 @@
   blocked on a new authorized calibration budget and must meet the existing
   detection, false-positive, advisory-escalation, error, and agreement
   thresholds with a genuine same-run protected attestation.
+
+## 2026-08-12 - US-004B calibration-ready checkpoint
+
+- Implemented Gilfoyle's calibration-only runtime path for a disabled agent,
+  dedicated schema and policy validation, confidence-independent security
+  blocking, exact configuration fingerprints, strict reconciliation, and
+  fail-closed model/runtime errors.
+- Added a 24-case corpus: 11 vulnerable and 11 paired safe cases covering every
+  required scenario plus prompt-injection control bypass, and two medium
+  advisory cases. Promotion requires 100% blocking detection, at most 5% safe
+  false positives, zero advisory escalation, zero missed critical or
+  control-bypass cases, at least 95% agreement, zero errors, at most $0.10
+  average cost, at most $0.25 total cost, and at most 60-second p95 latency.
+- Tuned only Gilfoyle's versioned prompt and dedicated runtime configuration.
+  The reviewed runtime is sequential, allows no tools, caps each request at
+  $0.02, and retains the existing severity/control-bypass thresholds.
+- Added the main-only `Adversarial calibration` workflow with exact protected
+  checkout, Microsoft Entra ID/OpenID Connect, explicit subscription
+  `11213dbd-39fe-46ba-87db-5f5e8c449aed`, exact dedicated deployment checks,
+  two repetitions, threshold enforcement before signing, pinned
+  `actions/attest`, same-run verification, and 90-day sanitized evidence.
+- Added declarative Bicep for the dedicated
+  `game-hub-gilfoyle-security-architect` GPT-4.1 mini `2025-04-14`
+  GlobalStandard deployment at capacity 50. The first apply encountered a
+  transient parent-resource conflict; serializing the child deployments and
+  reapplying converged successfully. The deployment is `Succeeded`; local
+  authentication remains disabled and the existing workload identity keeps its
+  narrow Azure OpenAI inference role.
+- Deterministic fixture metrics passed: 100% blocking detection, 0% safe false
+  positives, 0% advisory escalation, zero missed critical/control-bypass cases,
+  100% agreement, 0% errors, $0.0576 total estimated fixture cost, and 10 ms p95
+  synthetic latency. Fixture evidence was deleted after validation because it
+  cannot promote.
+- Complete `yarn validate` passed: immutable install, formatting, lint, policy,
+  20 lint proofs, 17 continuous-integration fail-closed simulations,
+  dependency audit, 250 tests, coverage, generation, type checking, production
+  build, bundle budgets, and Storybook. Both production and test Bicep
+  parameter files compiled.
+- Promotion failed closed before model access. US-004A pins the trusted signer,
+  workflow SHA, source SHA, and source ref to the same exact
+  `refs/heads/main` commit. Draft PR #39 cannot run its new workflow as that
+  trusted main commit, and a feature-branch or local run would produce invalid
+  attestation provenance. No fresh Azure model calls were made, so attempts
+  remain 0 and model cost is $0.00; no report, predicate, bundle, or active
+  calibration file was retained.
+- US-004B remains incomplete. Resolving the blocker requires a human-approved
+  publication sequence that first places the reviewed calibration workflow and
+  fingerprinted configuration on protected main without bypassing the draft
+  issue's unfinished later stories. Gilfoyle remains disabled and unpromoted.

@@ -11,3 +11,4 @@ param budgetContactEmails = [
 param reviewerPrincipalId = ''
 param resourceNamePrefix = 'game-hub-adversarial'
 param modelDeploymentId = 'game-hub-unit-test-reviewer'
+param gilfoyleModelDeploymentId = 'game-hub-gilfoyle-security-architect'

@@ -85,5 +85,37 @@ verdict policy version/hash, system policy, reviewer engine configuration,
 benchmark corpus, or architecture fingerprint changes. Re-run calibration
 before any later story can make the model-backed check required.
 
+## Gilfoyle calibration
+
+Gilfoyle uses its independent 24-case corpus and promotion policy:
+
+- 11 vulnerable cases and 11 paired safe cases cover authorization bypass,
+  injection, secret exposure, workflow escalation, dependency risk, Bicep
+  privilege, archive traversal, unsafe deserialization, race conditions,
+  cleanup leaks, and prompt-injection control bypass;
+- two medium advisory cases prove that a real weakness without a control bypass
+  does not become a blocking verdict;
+- every vulnerable case must block, safe false positives may not exceed 5%,
+  advisory escalation and missed critical/control-bypass cases must be zero,
+  agreement must be at least 95%, errors must be zero, average cost must remain
+  at most $0.10, total calibration cost at most $0.25, and p95 latency at most
+  60 seconds; and
+- calibration is sequential with a reviewed per-request cost ceiling.
+
+Run the deterministic path locally:
+
+```bash
+yarn calibrate:adversarial --mode fixture \
+  --agent gilfoyle-security-architect \
+  --repetitions 2 \
+  --output test-results/gilfoyle-calibration-fixture.json
+```
+
+Only `.github/workflows/adversarial-calibration.yml` may perform the real Azure
+run. It uses the protected `adversarial-review` environment, Microsoft Entra ID
+OpenID Connect, subscription `11213dbd-39fe-46ba-87db-5f5e8c449aed`, and the
+dedicated versioned deployment. The workflow checks strict thresholds before
+creating and verifying the same-run GitHub artifact attestation.
+
 Model-backed evaluation remains downstream of complete deterministic
 continuous integration. No workflow invokes it in US-005.
