@@ -42,8 +42,8 @@
         "The baseline repository passes yarn lint after the toolchain change"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "Pull request #32 already added pinned ESLint, TypeScript ESLint, React, and React Hooks dependencies plus yarn lint. The missing lint:fix command and final plugin set require current implementation and verification."
+      "passes": true,
+      "notes": "Pinned the accessibility, import, TypeScript import resolver, and promise plugins at the root. Added yarn lint:fix as ESLint --fix with the same root config and zero-warning policy as yarn lint; verified it left the baseline diff unchanged."
     },
     {
       "id": "US-002",

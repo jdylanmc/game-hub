@@ -13,6 +13,10 @@
   strengthening reason and scope requirements.
 - Generated and imported Mamba snapshots are not authored lint targets, but
   generators and handwritten wrappers remain in scope.
+- The shared root lint toolchain pins `eslint-plugin-jsx-a11y`,
+  `eslint-plugin-import-x`, `eslint-import-resolver-typescript`, and
+  `eslint-plugin-promise`; later stories should configure these dependencies
+  through the single root flat configuration.
 - The required protected check is currently the composite
   `Continuous integration` job, which invokes the same root lint command used
   locally.
@@ -78,6 +82,28 @@ Current inspection found these issue #27 gaps:
 - Pull request #32 is merged at commit
   `fb8daa2ccb95dce92acba06cd0f3ba76fb8ba0b7`; its recorded
   `Continuous integration` check succeeded before merge.
-- No issue #27 story is marked passed. Existing baseline behavior is evidence
-  for planning only and must be re-verified against each completed story's
+- US-001 is now passed. Existing baseline behavior for the remaining stories
+  is planning evidence only and must be re-verified against each story's
   acceptance criteria.
+
+## 2026-08-11 - US-001
+
+- Recovered the cancelled quota-exhausted runner state through Ralph dry-run
+  preflight, which archived the prior stopped lease before validating this
+  clean worktree.
+- Added root `yarn lint:fix` as
+  `eslint . --fix --max-warnings 0`, preserving the same root configuration and
+  zero-warning policy as `yarn lint`.
+- Pinned the remaining shared toolchain dependencies:
+  `eslint-plugin-jsx-a11y` 6.10.2, `eslint-plugin-import-x` 4.17.1,
+  `eslint-import-resolver-typescript` 4.4.5, and
+  `eslint-plugin-promise` 7.3.0. Yarn also pinned the accessibility plugin type
+  package at 6.10.1.
+- Files changed: `package.json`, `yarn.lock`, `plan.json`, and `progress.md`.
+- Verified `yarn lint:fix` did not change the pre-existing implementation diff,
+  then passed `yarn lint`, `yarn install --immutable`, `yarn format:check`,
+  `yarn policy:check`, `yarn test`, `yarn typecheck`, `yarn build`,
+  `yarn bundle:check`, `yarn generate:check`, `yarn build-storybook`, and
+  `yarn npm audit --all --recursive --severity high`.
+- US-002 is next. It should activate typed TypeScript rules and precise
+  environment overrides using this pinned shared toolchain.
