@@ -1,0 +1,327 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jdylanmc/game-hub/config/adversarial-agents/gilfoyle-security-architect/schema.json",
+  "title": "Gilfoyle Security Architect Finding Schema",
+  "description": "Strict actionable security-review result with independently attributable prompt, schema, policy, tools, and model versions.",
+  "version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "findingVersion", "attribution", "verdict", "findings"],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "findingVersion": {
+      "type": "string",
+      "pattern": "^gilfoyle-security-architect@\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agentName",
+        "agentVersion",
+        "modelDeployment",
+        "modelVersion",
+        "promptVersion",
+        "promptContentHash",
+        "schemaVersion",
+        "schemaContentHash",
+        "policyVersion",
+        "policyContentHash",
+        "toolsVersion",
+        "subscriptionId",
+        "repositoryCommit",
+        "timestamp"
+      ],
+      "properties": {
+        "agentName": {
+          "const": "gilfoyle-security-architect"
+        },
+        "agentVersion": {
+          "$ref": "#/$defs/semanticVersion"
+        },
+        "modelDeployment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modelVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "promptVersion": {
+          "$ref": "#/$defs/semanticVersion"
+        },
+        "promptContentHash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "schemaVersion": {
+          "$ref": "#/$defs/semanticVersion"
+        },
+        "schemaContentHash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "policyVersion": {
+          "$ref": "#/$defs/semanticVersion"
+        },
+        "policyContentHash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "toolsVersion": {
+          "$ref": "#/$defs/semanticVersion"
+        },
+        "subscriptionId": {
+          "const": "11213dbd-39fe-46ba-87db-5f5e8c449aed"
+        },
+        "repositoryCommit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "severity", "blockingFindingsCount", "advisoryFindingsCount", "policyDecisionRationale"],
+      "properties": {
+        "decision": {
+          "enum": ["PASS", "FAIL", "ERROR"]
+        },
+        "severity": {
+          "enum": ["INFO", "ADVISORY", "BLOCKING", "ERROR"]
+        },
+        "blockingFindingsCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "advisoryFindingsCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errorMessage": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyDecisionRationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pullRequestNumber": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pullRequestCommit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "reviewDurationMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tokensUsed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimatedCost": {
+          "type": "number",
+          "minimum": 0
+        },
+        "contextCollectionStatus": {
+          "enum": ["complete", "partial", "error"]
+        },
+        "contextLimitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "semanticVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "startLine", "endLine", "snippet"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "startLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "snippet": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "citations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["productionFiles", "testFiles"],
+      "properties": {
+        "productionFiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/citation"
+          }
+        },
+        "testFiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/citation"
+          }
+        },
+        "issueRequirements": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "properties": {
+            "productionFiles": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "properties": {
+            "testFiles": {
+              "minItems": 1
+            }
+          }
+        }
+      ]
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "category",
+        "securitySeverity",
+        "severity",
+        "confidence",
+        "securityControlBypass",
+        "description",
+        "citations",
+        "exploitOrFailureScenario",
+        "impact",
+        "remediation",
+        "verificationGuidance"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z0-9]+-\\d+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "enum": [
+            "authentication",
+            "authorization",
+            "injection",
+            "secret-exposure",
+            "cryptography",
+            "workflow-permission-escalation",
+            "supply-chain",
+            "dependency-risk",
+            "infrastructure-privilege",
+            "network-exposure",
+            "data-protection",
+            "container-hardening",
+            "unsafe-deserialization",
+            "path-traversal",
+            "race-condition",
+            "resource-cleanup",
+            "configuration",
+            "security-control-bypass",
+            "other"
+          ]
+        },
+        "securitySeverity": {
+          "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+        },
+        "severity": {
+          "enum": ["BLOCKING", "ADVISORY"]
+        },
+        "confidence": {
+          "enum": ["HIGH", "MEDIUM", "LOW"]
+        },
+        "securityControlBypass": {
+          "enum": ["CONFIRMED", "UNCERTAIN", "NONE"]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "citations": {
+          "$ref": "#/$defs/citations"
+        },
+        "exploitOrFailureScenario": {
+          "type": "string",
+          "minLength": 1
+        },
+        "impact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "remediation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verificationGuidance": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidenceLimitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

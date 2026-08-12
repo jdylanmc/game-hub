@@ -23,6 +23,27 @@ const FINDING_CATEGORIES = new Set([
   'determinism-issue',
   'other',
 ]);
+const SECURITY_FINDING_CATEGORIES = new Set([
+  'authentication',
+  'authorization',
+  'injection',
+  'secret-exposure',
+  'cryptography',
+  'workflow-permission-escalation',
+  'supply-chain',
+  'dependency-risk',
+  'infrastructure-privilege',
+  'network-exposure',
+  'data-protection',
+  'container-hardening',
+  'unsafe-deserialization',
+  'path-traversal',
+  'race-condition',
+  'resource-cleanup',
+  'configuration',
+  'security-control-bypass',
+  'other',
+]);
 
 interface ValidationError {
   code: number;
@@ -63,10 +84,10 @@ class AdversarialFindingValidator {
   private readonly registry: JsonObject;
   private readonly agentName: string;
 
-  constructor(repoRoot = '.', agentName = 'unit-test-reviewer') {
+  constructor(repoRoot = '.', agentName = 'unit-test-reviewer', allowDisabledForCalibration = false) {
     this.repoRoot = repoRoot;
     this.agentName = agentName;
-    const registration = loadAgentRegistration(repoRoot, agentName);
+    const registration = loadAgentRegistration(repoRoot, agentName, { allowDisabledForCalibration });
     this.schema = this.loadJson(path.join(repoRoot, registration.schemaFile));
     this.policy = this.loadJson(path.join(repoRoot, registration.policyFile));
     this.registry = this.loadJson(path.join(repoRoot, 'config/adversarial-agents/agents-config.json'));
@@ -167,8 +188,10 @@ class AdversarialFindingValidator {
       }
     });
 
-    const blockingCount = validatedFindings.filter(
-      (finding) => finding.severity === 'BLOCKING' && finding.confidence === 'HIGH',
+    const blockingCount = validatedFindings.filter((finding) =>
+      this.agentName === 'gilfoyle-security-architect'
+        ? finding.severity === 'BLOCKING'
+        : finding.severity === 'BLOCKING' && finding.confidence === 'HIGH',
     ).length;
     const advisoryCount = validatedFindings.length - blockingCount;
     this.validateVerdict(root.verdict, blockingCount, advisoryCount, findings.length, errors);
@@ -188,29 +211,47 @@ class AdversarialFindingValidator {
       'agentName',
       'agentVersion',
       'modelDeployment',
+      'modelVersion',
       'promptVersion',
       'promptContentHash',
+      'schemaVersion',
+      'schemaContentHash',
       'policyVersion',
+      'policyContentHash',
       'toolsVersion',
       'subscriptionId',
       'repositoryCommit',
       'timestamp',
     ];
-    this.rejectUnknownProperties(attribution, fields, 'attribution', errors);
-    this.requireFields(attribution, fields, 'attribution', errors);
+    const allowedFields =
+      this.agentName === 'gilfoyle-security-architect'
+        ? fields
+        : fields.filter(
+            (field) => !['modelVersion', 'schemaVersion', 'schemaContentHash', 'policyContentHash'].includes(field),
+          );
+    this.rejectUnknownProperties(attribution, allowedFields, 'attribution', errors);
+    this.requireFields(attribution, allowedFields, 'attribution', errors);
 
     if (typeof attribution.agentName !== 'string' || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(attribution.agentName)) {
       this.addError(errors, 2, 'attribution.agentName', 'agentName must be kebab-case');
     } else if (attribution.agentName !== this.agentName) {
       this.addError(errors, 3, 'attribution.agentName', 'agentName does not match the selected independent agent');
     }
-    for (const field of ['agentVersion', 'promptVersion', 'policyVersion', 'toolsVersion']) {
+    const versionFields = ['agentVersion', 'promptVersion', 'policyVersion', 'toolsVersion'];
+    if (this.agentName === 'gilfoyle-security-architect') versionFields.push('schemaVersion');
+    for (const field of versionFields) {
       if (typeof attribution[field] !== 'string' || !/^\d+\.\d+\.\d+$/.test(attribution[field])) {
         this.addError(errors, 2, `attribution.${field}`, `${field} must be a semantic version`);
       }
     }
-    if (typeof attribution.promptContentHash !== 'string' || !/^[a-f0-9]{64}$/.test(attribution.promptContentHash)) {
-      this.addError(errors, 2, 'attribution.promptContentHash', 'promptContentHash must be a lowercase SHA-256 value');
+    const hashFields = ['promptContentHash'];
+    if (this.agentName === 'gilfoyle-security-architect') {
+      hashFields.push('schemaContentHash', 'policyContentHash');
+    }
+    for (const field of hashFields) {
+      if (typeof attribution[field] !== 'string' || !/^[a-f0-9]{64}$/.test(attribution[field])) {
+        this.addError(errors, 2, `attribution.${field}`, `${field} must be a lowercase SHA-256 value`);
+      }
     }
     if (attribution.subscriptionId !== '11213dbd-39fe-46ba-87db-5f5e8c449aed') {
       this.addError(errors, 2, 'attribution.subscriptionId', 'Unexpected Azure subscription');
@@ -234,6 +275,14 @@ class AdversarialFindingValidator {
     const expected = {
       agentVersion: agent.version,
       modelDeployment: agent.modelDeployment,
+      ...(this.agentName === 'gilfoyle-security-architect'
+        ? {
+            modelVersion: agent.modelVersion,
+            schemaVersion: this.schema.version,
+            schemaContentHash: agent.schemaContentHash,
+            policyContentHash: agent.policyContentHash,
+          }
+        : {}),
       promptVersion: agent.promptVersion,
       promptContentHash: agent.promptContentHash,
       toolsVersion: agent.toolsVersion,
@@ -256,6 +305,9 @@ class AdversarialFindingValidator {
   }
 
   private validateFinding(value: unknown, index: number, errors: ValidationError[]): JsonObject | undefined {
+    if (this.agentName === 'gilfoyle-security-architect') {
+      return this.validateSecurityFinding(value, index, errors);
+    }
     const field = `findings[${index}]`;
     const finding = this.requireObject(value, field, errors);
     if (!finding) return undefined;
@@ -314,6 +366,83 @@ class AdversarialFindingValidator {
           }
         }
       }
+    }
+    return finding;
+  }
+
+  private validateSecurityFinding(value: unknown, index: number, errors: ValidationError[]): JsonObject | undefined {
+    const field = `findings[${index}]`;
+    const finding = this.requireObject(value, field, errors);
+    if (!finding) return undefined;
+
+    const required = [
+      'id',
+      'title',
+      'category',
+      'securitySeverity',
+      'severity',
+      'confidence',
+      'securityControlBypass',
+      'description',
+      'citations',
+      'exploitOrFailureScenario',
+      'impact',
+      'remediation',
+      'verificationGuidance',
+    ];
+    this.rejectUnknownProperties(finding, [...required, 'evidenceLimitations'], field, errors);
+    this.requireFields(finding, required, field, errors);
+
+    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+-\d+$/.test(finding.id)) {
+      this.addError(errors, 2, `${field}.id`, 'id must match CATEGORY-001');
+    }
+    for (const property of [
+      'title',
+      'description',
+      'exploitOrFailureScenario',
+      'impact',
+      'remediation',
+      'verificationGuidance',
+    ]) {
+      if (!isNonEmptyString(finding[property])) {
+        this.addError(errors, 3, `${field}.${property}`, `${property} must be non-empty`);
+      }
+    }
+    if (typeof finding.category !== 'string' || !SECURITY_FINDING_CATEGORIES.has(finding.category)) {
+      this.addError(errors, 2, `${field}.category`, 'category is not supported');
+    }
+    if (!['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(String(finding.securitySeverity))) {
+      this.addError(errors, 2, `${field}.securitySeverity`, 'securitySeverity is not supported');
+    }
+    if (!['BLOCKING', 'ADVISORY'].includes(String(finding.severity))) {
+      this.addError(errors, 2, `${field}.severity`, 'severity must be BLOCKING or ADVISORY');
+    }
+    if (!['HIGH', 'MEDIUM', 'LOW'].includes(String(finding.confidence))) {
+      this.addError(errors, 2, `${field}.confidence`, 'confidence must be HIGH, MEDIUM, or LOW');
+    }
+    if (!['CONFIRMED', 'UNCERTAIN', 'NONE'].includes(String(finding.securityControlBypass))) {
+      this.addError(errors, 2, `${field}.securityControlBypass`, 'securityControlBypass is not supported');
+    }
+    const expectedSeverity =
+      ['CRITICAL', 'HIGH'].includes(String(finding.securitySeverity)) ||
+      ['CONFIRMED', 'UNCERTAIN'].includes(String(finding.securityControlBypass))
+        ? 'BLOCKING'
+        : 'ADVISORY';
+    if (finding.severity !== expectedSeverity) {
+      this.addError(
+        errors,
+        3,
+        `${field}.severity`,
+        `Security policy derives ${expectedSeverity} from severity and control-bypass assessment`,
+      );
+    }
+    this.validateCitations(finding.citations, field, errors);
+    if (
+      finding.evidenceLimitations !== undefined &&
+      (!Array.isArray(finding.evidenceLimitations) ||
+        finding.evidenceLimitations.some((item) => !isNonEmptyString(item)))
+    ) {
+      this.addError(errors, 3, `${field}.evidenceLimitations`, 'Evidence limitations must be non-empty strings');
     }
     return finding;
   }
@@ -426,7 +555,11 @@ class AdversarialFindingValidator {
     const minimumSchema = isObject(failThresholdProperties.blockingFindingsMinimum)
       ? failThresholdProperties.blockingFindingsMinimum
       : {};
-    const threshold = Number(minimumSchema.const);
+    const decisionRules = isObject(this.policy.decisionRules) ? this.policy.decisionRules : {};
+    const threshold =
+      this.agentName === 'gilfoyle-security-architect'
+        ? Number(decisionRules.minimumBlockingFindings)
+        : Number(minimumSchema.const);
     const expectedDecision = blockingCount >= threshold ? 'FAIL' : 'PASS';
     const expectedSeverity = blockingCount > 0 ? 'BLOCKING' : advisoryCount > 0 ? 'ADVISORY' : 'INFO';
 

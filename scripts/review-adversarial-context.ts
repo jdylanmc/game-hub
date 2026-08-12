@@ -46,6 +46,10 @@ interface AgentConfig {
   promptVersion: string;
   promptContentHash: string;
   modelDeployment: string;
+  modelVersion: string;
+  schemaFile: string;
+  schemaContentHash: string;
+  policyContentHash: string;
   toolsVersion: string;
   executionConfig: {
     maxConcurrentReviews: number;
@@ -210,6 +214,7 @@ function loadJson(filePath: string): JsonObject {
 function loadRuntime(
   repoRoot: string,
   agentName = 'unit-test-reviewer',
+  allowDisabledForCalibration = false,
 ): {
   engineConfig: ReviewerEngineConfig;
   agentConfig: AgentConfig;
@@ -219,16 +224,20 @@ function loadRuntime(
   reviewerPrompt: string;
   systemPolicy: string;
 } {
-  const registration = loadAgentRegistration(repoRoot, agentName);
+  const registration = loadAgentRegistration(repoRoot, agentName, { allowDisabledForCalibration });
   const engineConfig = loadJson(path.join(repoRoot, registration.engineConfigFile)) as unknown as ReviewerEngineConfig;
   const policy = loadJson(path.join(repoRoot, registration.policyFile));
   const responseSchema = loadJson(path.join(repoRoot, registration.schemaFile));
   const policyProperties = isObject(policy.properties) ? policy.properties : {};
   const failThresholds = isObject(policyProperties.failThresholds) ? policyProperties.failThresholds : {};
   const failThresholdProperties = isObject(failThresholds.properties) ? failThresholds.properties : {};
-  const blockingThreshold = isObject(failThresholdProperties.blockingFindingsMinimum)
-    ? Number(failThresholdProperties.blockingFindingsMinimum.const)
-    : Number.NaN;
+  const decisionRules = isObject(policy.decisionRules) ? policy.decisionRules : {};
+  const blockingThreshold =
+    agentName === 'gilfoyle-security-architect'
+      ? Number(decisionRules.minimumBlockingFindings)
+      : isObject(failThresholdProperties.blockingFindingsMinimum)
+        ? Number(failThresholdProperties.blockingFindingsMinimum.const)
+        : Number.NaN;
   const agentConfig = registration as AgentConfig;
   const reviewerPrompt = fs.readFileSync(path.join(repoRoot, agentConfig.promptFile), 'utf8');
   const systemPolicy = fs.readFileSync(path.join(repoRoot, engineConfig.systemPolicyFile), 'utf8');
@@ -279,7 +288,7 @@ function packetIdentity(packet: unknown): {
 }
 
 function runtimeAttribution(agent: AgentConfig, policyVersion: string, headSha: string, timestamp: string): JsonObject {
-  return {
+  const attribution: JsonObject = {
     agentName: agent.name,
     agentVersion: agent.version,
     modelDeployment: agent.modelDeployment,
@@ -291,6 +300,13 @@ function runtimeAttribution(agent: AgentConfig, policyVersion: string, headSha: 
     repositoryCommit: headSha,
     timestamp,
   };
+  if (agent.name === 'gilfoyle-security-architect') {
+    attribution.modelVersion = agent.modelVersion;
+    attribution.schemaVersion = '1.0.0';
+    attribution.schemaContentHash = agent.schemaContentHash;
+    attribution.policyContentHash = agent.policyContentHash;
+  }
+  return attribution;
 }
 
 function errorResult(options: {
@@ -343,9 +359,12 @@ function deduplicateFindings(findings: unknown[]): unknown[] {
     .map(({ finding }) => finding);
 }
 
-function deriveVerdict(findings: unknown[], blockingFindingsMinimum: number): JsonObject {
+function deriveVerdict(findings: unknown[], blockingFindingsMinimum: number, agentName: string): JsonObject {
   const blockingCount = findings.filter(
-    (finding) => isObject(finding) && finding.severity === 'BLOCKING' && finding.confidence === 'HIGH',
+    (finding) =>
+      isObject(finding) &&
+      finding.severity === 'BLOCKING' &&
+      (agentName === 'gilfoyle-security-architect' || finding.confidence === 'HIGH'),
   ).length;
   const advisoryCount = findings.length - blockingCount;
   return {
@@ -482,6 +501,7 @@ class AdversarialReviewerEngine {
     semaphore?: ReviewSemaphore;
     limitsOverride?: Partial<ReviewerEngineConfig['limits']>;
     agentName?: string;
+    calibrationMode?: boolean;
   };
 
   constructor(options: {
@@ -493,11 +513,12 @@ class AdversarialReviewerEngine {
     semaphore?: ReviewSemaphore;
     limitsOverride?: Partial<ReviewerEngineConfig['limits']>;
     agentName?: string;
+    calibrationMode?: boolean;
   }) {
     this.options = options;
     const agentName = options.agentName ?? 'unit-test-reviewer';
-    this.validator = new AdversarialFindingValidator(options.repoRoot, agentName);
-    const runtime = loadRuntime(options.repoRoot, agentName);
+    this.validator = new AdversarialFindingValidator(options.repoRoot, agentName, options.calibrationMode === true);
+    const runtime = loadRuntime(options.repoRoot, agentName, options.calibrationMode === true);
     if (options.limitsOverride) {
       for (const [key, value] of Object.entries(options.limitsOverride)) {
         if (
@@ -522,7 +543,7 @@ class AdversarialReviewerEngine {
   }
 
   private async reviewWithPermit(packet: unknown): Promise<ReviewResult> {
-    const runtime = loadRuntime(this.options.repoRoot, this.options.agentName);
+    const runtime = loadRuntime(this.options.repoRoot, this.options.agentName, this.options.calibrationMode === true);
     runtime.engineConfig.limits = {
       ...runtime.engineConfig.limits,
       ...this.options.limitsOverride,
@@ -703,7 +724,7 @@ class AdversarialReviewerEngine {
       schemaVersion: '1.0.0',
       findingVersion: `${runtime.agentConfig.name}@${timestamp}`,
       attribution: runtimeAttribution(runtime.agentConfig, runtime.policyVersion, identity.headSha, timestamp),
-      verdict: deriveVerdict(findings, runtime.blockingFindingsMinimum),
+      verdict: deriveVerdict(findings, runtime.blockingFindingsMinimum, runtime.agentConfig.name),
       findings,
       summary: {
         pullRequestNumber: identity.pullRequestNumber,
@@ -733,7 +754,8 @@ function createReviewerFromEnvironment(
     throw new Error('API key environment variables are forbidden; use Microsoft Entra ID');
   }
   const agentName = environment.ADVERSARIAL_AGENT_NAME ?? 'unit-test-reviewer';
-  const runtime = loadRuntime(repoRoot, agentName);
+  const calibrationMode = environment.ADVERSARIAL_CALIBRATION_MODE === 'true';
+  const runtime = loadRuntime(repoRoot, agentName, calibrationMode);
   const endpoint = validateEndpoint(
     environment.AZURE_OPENAI_ENDPOINT ?? '',
     environment.AZURE_OPENAI_DEPLOYMENT_ID ?? '',
@@ -745,6 +767,7 @@ function createReviewerFromEnvironment(
     endpoint,
     deploymentId: environment.AZURE_OPENAI_DEPLOYMENT_ID ?? '',
     agentName,
+    calibrationMode,
     transport: new AzureOpenAITransport(credential),
   });
 }

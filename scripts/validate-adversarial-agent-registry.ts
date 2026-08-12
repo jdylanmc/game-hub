@@ -14,6 +14,11 @@ interface AgentRegistration extends JsonObject {
   promptFile: string;
   promptVersion: string;
   promptContentHash: string;
+  toolsConfigFile: string;
+  toolsConfigContentHash: string;
+  contextConfigFile: string;
+  contextConfigVersion: string;
+  contextConfigContentHash: string;
   schemaFile: string;
   schemaContentHash: string;
   policyFile: string;
@@ -45,6 +50,11 @@ const REQUIRED_AGENT_FIELDS = [
   'promptFile',
   'promptVersion',
   'promptContentHash',
+  'toolsConfigFile',
+  'toolsConfigContentHash',
+  'contextConfigFile',
+  'contextConfigVersion',
+  'contextConfigContentHash',
   'schemaFile',
   'schemaContentHash',
   'policyFile',
@@ -140,6 +150,8 @@ function validateAgentRegistry(
       !/^\d+\.\d+\.\d+$/.test(candidate.promptVersion) ||
       typeof candidate.toolsVersion !== 'string' ||
       !/^\d+\.\d+\.\d+$/.test(candidate.toolsVersion) ||
+      typeof candidate.contextConfigVersion !== 'string' ||
+      !/^\d+\.\d+\.\d+$/.test(candidate.contextConfigVersion) ||
       typeof candidate.enabled !== 'boolean' ||
       typeof candidate.checkName !== 'string' ||
       candidate.checkName !== `Adversarial Review / ${candidate.name}` ||
@@ -152,7 +164,7 @@ function validateAgentRegistry(
       !isObject(candidate.verdictRules) ||
       Object.keys(candidate.verdictRules).length !== 2 ||
       candidate.verdictRules.blockingThreshold !== 1 ||
-      candidate.verdictRules.allowHighConfidenceOnly !== true ||
+      typeof candidate.verdictRules.allowHighConfidenceOnly !== 'boolean' ||
       !Array.isArray(candidate.targetScopes) ||
       candidate.targetScopes.length < 1 ||
       candidate.targetScopes.some((scope) => typeof scope !== 'string' || scope.length < 1) ||
@@ -165,6 +177,8 @@ function validateAgentRegistry(
     const registration = candidate as AgentRegistration;
     const filePairs: Array<[string, string]> = [
       ['promptFile', 'promptContentHash'],
+      ['toolsConfigFile', 'toolsConfigContentHash'],
+      ['contextConfigFile', 'contextConfigContentHash'],
       ['schemaFile', 'schemaContentHash'],
       ['policyFile', 'policyContentHash'],
       ['engineConfigFile', 'engineConfigContentHash'],
@@ -198,6 +212,8 @@ function validateAgentRegistry(
   const uniqueFields: Array<keyof AgentRegistration> = [
     'name',
     'promptFile',
+    'toolsConfigFile',
+    'contextConfigFile',
     'schemaFile',
     'policyFile',
     'engineConfigFile',
@@ -216,7 +232,11 @@ function validateAgentRegistry(
   return { valid: errors.length === 0, errors, agents };
 }
 
-function loadAgentRegistration(repoRoot: string, agentName: string): AgentRegistration {
+function loadAgentRegistration(
+  repoRoot: string,
+  agentName: string,
+  options: { allowDisabledForCalibration?: boolean } = {},
+): AgentRegistration {
   const registryPath = path.join(repoRoot, 'config/adversarial-agents/agents-config.json');
   const registry: unknown = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
   const validation = validateAgentRegistry(repoRoot, registry);
@@ -224,7 +244,9 @@ function loadAgentRegistration(repoRoot: string, agentName: string): AgentRegist
     throw new Error(`Adversarial agent registry is invalid: ${validation.errors.join(' ')}`);
   }
   const agent = validation.agents.find((candidate) => candidate.name === agentName);
-  if (!agent || !agent.enabled) throw new Error(`Adversarial agent is not enabled: ${agentName}`);
+  if (!agent || (!agent.enabled && !options.allowDisabledForCalibration)) {
+    throw new Error(`Adversarial agent is not enabled: ${agentName}`);
+  }
   return agent;
 }
 
