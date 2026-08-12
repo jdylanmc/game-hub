@@ -1,0 +1,47 @@
+{
+  "registryVersion": "1.0.0",
+  "agents": [
+    {
+      "name": "unit-test-reviewer",
+      "version": "1.0.0",
+      "enabled": true,
+      "promptFile": ".github/adversarial-agents/unit-test-reviewer/prompt.md",
+      "promptVersion": "1.0.3",
+      "promptContentHash": "9d5667c8233da813b06adc93eba7daf832339653b44c617a006df51b21697c68",
+      "schemaFile": "config/adversarial-agents/schema.json",
+      "schemaContentHash": "91b2df9d34fbbd50def12736639cb374a1b68d93da9120198eaf754ac1d9f726",
+      "policyFile": "config/adversarial-agents/policy.json",
+      "policyContentHash": "ab35f1a23629f67a8f40008dbef3dcb8922062313e2ebd9a307bc1bcbb9f20ff",
+      "engineConfigFile": "config/adversarial-agents/reviewer-engine.json",
+      "engineConfigContentHash": "e3eb9f8dc97cc24ac1990de9526a1cb6f72a0d1a8c285a590a99b7aeb3bd5059",
+      "benchmarkCorpusFile": "config/adversarial-agents/benchmarks.json",
+      "benchmarkCorpusContentHash": "f065d4fb3f684815955fd522f34e5317305a0789c62c51f4da33b917a0c88531",
+      "promotionPolicyFile": "config/adversarial-agents/promotion-policy.json",
+      "promotionPolicyContentHash": "d834db90a3c08b065ee578b84cb3dd1bd40c20bafce2237b51e6c9a3dcfda2a5",
+      "activeCalibrationReportFile": "config/adversarial-agents/active-calibration-unit-test-reviewer.json",
+      "checkName": "Adversarial Review / unit-test-reviewer",
+      "stateNamespace": "adversarial/unit-test-reviewer",
+      "modelDeployment": "gpt-4.1-mini@2025-04-14/eastus/GlobalStandard",
+      "modelVersion": "2025-04-14",
+      "toolsVersion": "1.0.1",
+      "description": "Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns.",
+      "targetScopes": ["tests"],
+      "contactEmail": "dylan@microsoft.com",
+      "verdictRules": {
+        "blockingThreshold": 1,
+        "allowHighConfidenceOnly": true
+      },
+      "executionConfig": {
+        "maxConcurrentReviews": 3
+      }
+    }
+  ],
+  "subscriptionId": "11213dbd-39fe-46ba-87db-5f5e8c449aed",
+  "requirementsMet": {
+    "versionedJsonSchema": true,
+    "dedicatedPromptFiles": true,
+    "independentVersioning": true,
+    "validationRequired": true,
+    "agentRegistration": true
+  }
+}

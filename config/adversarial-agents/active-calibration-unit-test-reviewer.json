@@ -1,0 +1,733 @@
+{
+  "calibrationFingerprint": {
+    "components": {
+      "architectureContentHash": "fc915102b61870d7d9fec6bf50cefa1723b387962f77b61da3c8511a9662b230",
+      "benchmarkCorpusContentHash": "f065d4fb3f684815955fd522f34e5317305a0789c62c51f4da33b917a0c88531",
+      "benchmarkCorpusVersion": "1.0.4",
+      "modelDeployment": "gpt-4.1-mini@2025-04-14/eastus/GlobalStandard",
+      "modelVersion": "2025-04-14",
+      "policyContentHash": "ab35f1a23629f67a8f40008dbef3dcb8922062313e2ebd9a307bc1bcbb9f20ff",
+      "policyVersion": "1.0.0",
+      "promptContentHash": "9d5667c8233da813b06adc93eba7daf832339653b44c617a006df51b21697c68",
+      "promptVersion": "1.0.3",
+      "reviewerEngineConfigContentHash": "e3eb9f8dc97cc24ac1990de9526a1cb6f72a0d1a8c285a590a99b7aeb3bd5059",
+      "reviewerEngineConfigVersion": "1.0.1",
+      "schemaContentHash": "91b2df9d34fbbd50def12736639cb374a1b68d93da9120198eaf754ac1d9f726",
+      "schemaVersion": "1.0.0",
+      "systemPolicyContentHash": "01ec5d3c5ea7fac5afe35d87a61051b3ebc25d7d7a880b6aeee236adb26c5386",
+      "systemPolicyVersion": "1.0.0",
+      "testFramework": "vitest@4.1.10",
+      "toolsVersion": "1.0.1"
+    },
+    "sha256": "e9b25914d8ebfe2f78453cc80f05044d6057a4a8fa10ccd03fc011a189afa247"
+  },
+  "caseResults": [
+    {
+      "id": "archive-traversal-strong",
+      "runs": [
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002244,
+          "latencyMs": 7608,
+          "repetition": 0,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4368
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002199,
+          "latencyMs": 5014,
+          "repetition": 1,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4340
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002244,
+          "latencyMs": 4684,
+          "repetition": 2,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4368
+        }
+      ]
+    },
+    {
+      "id": "archive-traversal-weak",
+      "runs": [
+        {
+          "blockingCategories": ["missing-edge-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002728,
+          "latencyMs": 6972,
+          "repetition": 0,
+          "resultFingerprint": "be1ec2971089c97b54625b3e579cf2f52b8202c6d825cae276f3d5ddd49a7d9c",
+          "severity": "BLOCKING",
+          "tokensUsed": 4613
+        },
+        {
+          "blockingCategories": ["missing-edge-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002796,
+          "latencyMs": 6286,
+          "repetition": 1,
+          "resultFingerprint": "be1ec2971089c97b54625b3e579cf2f52b8202c6d825cae276f3d5ddd49a7d9c",
+          "severity": "BLOCKING",
+          "tokensUsed": 4655
+        },
+        {
+          "blockingCategories": ["missing-edge-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002839,
+          "latencyMs": 6961,
+          "repetition": 2,
+          "resultFingerprint": "be1ec2971089c97b54625b3e579cf2f52b8202c6d825cae276f3d5ddd49a7d9c",
+          "severity": "BLOCKING",
+          "tokensUsed": 4682
+        }
+      ]
+    },
+    {
+      "id": "authorization-strong",
+      "runs": [
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002262,
+          "latencyMs": 4066,
+          "repetition": 0,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4377
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002233,
+          "latencyMs": 5926,
+          "repetition": 1,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4359
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002227,
+          "latencyMs": 4934,
+          "repetition": 2,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4355
+        }
+      ]
+    },
+    {
+      "id": "authorization-weak",
+      "runs": [
+        {
+          "blockingCategories": ["missing-error-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002704,
+          "latencyMs": 7423,
+          "repetition": 0,
+          "resultFingerprint": "f917c88da7695f8f34f275c2f62a3c1ffeb4d1b61b6372d21edcdc51a344c616",
+          "severity": "BLOCKING",
+          "tokensUsed": 4590
+        },
+        {
+          "blockingCategories": ["missing-error-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002712,
+          "latencyMs": 6779,
+          "repetition": 1,
+          "resultFingerprint": "f917c88da7695f8f34f275c2f62a3c1ffeb4d1b61b6372d21edcdc51a344c616",
+          "severity": "BLOCKING",
+          "tokensUsed": 4595
+        },
+        {
+          "blockingCategories": ["missing-error-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002716,
+          "latencyMs": 6363,
+          "repetition": 2,
+          "resultFingerprint": "f917c88da7695f8f34f275c2f62a3c1ffeb4d1b61b6372d21edcdc51a344c616",
+          "severity": "BLOCKING",
+          "tokensUsed": 4598
+        }
+      ]
+    },
+    {
+      "id": "cleanup-leak-strong",
+      "runs": [
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002225,
+          "latencyMs": 4186,
+          "repetition": 0,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4342
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002214,
+          "latencyMs": 4093,
+          "repetition": 1,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4335
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002203,
+          "latencyMs": 4022,
+          "repetition": 2,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4328
+        }
+      ]
+    },
+    {
+      "id": "cleanup-leak-weak",
+      "runs": [
+        {
+          "blockingCategories": ["cleanup-leak"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002817,
+          "latencyMs": 6790,
+          "repetition": 0,
+          "resultFingerprint": "f9be14237bd54baa031dd97b3a9d696a48731bd23fd8e68a9dbbf4bc89afe1fa",
+          "severity": "BLOCKING",
+          "tokensUsed": 4663
+        },
+        {
+          "blockingCategories": ["cleanup-leak"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002886,
+          "latencyMs": 8256,
+          "repetition": 1,
+          "resultFingerprint": "f9be14237bd54baa031dd97b3a9d696a48731bd23fd8e68a9dbbf4bc89afe1fa",
+          "severity": "BLOCKING",
+          "tokensUsed": 4706
+        },
+        {
+          "blockingCategories": ["cleanup-leak"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002814,
+          "latencyMs": 7262,
+          "repetition": 2,
+          "resultFingerprint": "f9be14237bd54baa031dd97b3a9d696a48731bd23fd8e68a9dbbf4bc89afe1fa",
+          "severity": "BLOCKING",
+          "tokensUsed": 4661
+        }
+      ]
+    },
+    {
+      "id": "collision-boundary-strong",
+      "runs": [
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002232,
+          "latencyMs": 5007,
+          "repetition": 0,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4385
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002227,
+          "latencyMs": 3843,
+          "repetition": 1,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4382
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002232,
+          "latencyMs": 4225,
+          "repetition": 2,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4385
+        }
+      ]
+    },
+    {
+      "id": "collision-boundary-weak",
+      "runs": [
+        {
+          "blockingCategories": ["missing-edge-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002948,
+          "latencyMs": 6389,
+          "repetition": 0,
+          "resultFingerprint": "be1ec2971089c97b54625b3e579cf2f52b8202c6d825cae276f3d5ddd49a7d9c",
+          "severity": "BLOCKING",
+          "tokensUsed": 4741
+        },
+        {
+          "blockingCategories": ["missing-edge-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002986,
+          "latencyMs": 8500,
+          "repetition": 1,
+          "resultFingerprint": "be1ec2971089c97b54625b3e579cf2f52b8202c6d825cae276f3d5ddd49a7d9c",
+          "severity": "BLOCKING",
+          "tokensUsed": 4765
+        },
+        {
+          "blockingCategories": ["missing-edge-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002988,
+          "latencyMs": 7757,
+          "repetition": 2,
+          "resultFingerprint": "be1ec2971089c97b54625b3e579cf2f52b8202c6d825cae276f3d5ddd49a7d9c",
+          "severity": "BLOCKING",
+          "tokensUsed": 4766
+        }
+      ]
+    },
+    {
+      "id": "duplicate-score-strong",
+      "runs": [
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002225,
+          "latencyMs": 5129,
+          "repetition": 0,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4365
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002239,
+          "latencyMs": 4515,
+          "repetition": 1,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4374
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002218,
+          "latencyMs": 4787,
+          "repetition": 2,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4361
+        }
+      ]
+    },
+    {
+      "id": "duplicate-score-weak",
+      "runs": [
+        {
+          "blockingCategories": ["weak-assertion"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002793,
+          "latencyMs": 7219,
+          "repetition": 0,
+          "resultFingerprint": "10011f92300893d8329ad5ab7eb4a65fd631a8626c85f040422b9d6cd46bff3f",
+          "severity": "BLOCKING",
+          "tokensUsed": 4643
+        },
+        {
+          "blockingCategories": ["weak-assertion"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002835,
+          "latencyMs": 6205,
+          "repetition": 1,
+          "resultFingerprint": "10011f92300893d8329ad5ab7eb4a65fd631a8626c85f040422b9d6cd46bff3f",
+          "severity": "BLOCKING",
+          "tokensUsed": 4669
+        },
+        {
+          "blockingCategories": ["weak-assertion"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002873,
+          "latencyMs": 6615,
+          "repetition": 2,
+          "resultFingerprint": "10011f92300893d8329ad5ab7eb4a65fd631a8626c85f040422b9d6cd46bff3f",
+          "severity": "BLOCKING",
+          "tokensUsed": 4693
+        }
+      ]
+    },
+    {
+      "id": "missing-error-strong",
+      "runs": [
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002208,
+          "latencyMs": 3594,
+          "repetition": 0,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4334
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002232,
+          "latencyMs": 5175,
+          "repetition": 1,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4349
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002248,
+          "latencyMs": 4616,
+          "repetition": 2,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4359
+        }
+      ]
+    },
+    {
+      "id": "missing-error-weak",
+      "runs": [
+        {
+          "blockingCategories": ["missing-error-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002821,
+          "latencyMs": 7216,
+          "repetition": 0,
+          "resultFingerprint": "f917c88da7695f8f34f275c2f62a3c1ffeb4d1b61b6372d21edcdc51a344c616",
+          "severity": "BLOCKING",
+          "tokensUsed": 4671
+        },
+        {
+          "blockingCategories": ["missing-error-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.0028,
+          "latencyMs": 7156,
+          "repetition": 1,
+          "resultFingerprint": "f917c88da7695f8f34f275c2f62a3c1ffeb4d1b61b6372d21edcdc51a344c616",
+          "severity": "BLOCKING",
+          "tokensUsed": 4658
+        },
+        {
+          "blockingCategories": ["missing-error-case"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002824,
+          "latencyMs": 6493,
+          "repetition": 2,
+          "resultFingerprint": "f917c88da7695f8f34f275c2f62a3c1ffeb4d1b61b6372d21edcdc51a344c616",
+          "severity": "BLOCKING",
+          "tokensUsed": 4673
+        }
+      ]
+    },
+    {
+      "id": "mocked-away-strong",
+      "runs": [
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002182,
+          "latencyMs": 3460,
+          "repetition": 0,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4281
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002151,
+          "latencyMs": 3639,
+          "repetition": 1,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4262
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.00214,
+          "latencyMs": 3762,
+          "repetition": 2,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4255
+        }
+      ]
+    },
+    {
+      "id": "mocked-away-weak",
+      "runs": [
+        {
+          "blockingCategories": ["mock-evasion"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002824,
+          "latencyMs": 7066,
+          "repetition": 0,
+          "resultFingerprint": "469852ff1556809c677ef0133fad684913370023007f7be53e4d3d23922441ef",
+          "severity": "BLOCKING",
+          "tokensUsed": 4688
+        },
+        {
+          "blockingCategories": ["mock-evasion"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002856,
+          "latencyMs": 7788,
+          "repetition": 1,
+          "resultFingerprint": "469852ff1556809c677ef0133fad684913370023007f7be53e4d3d23922441ef",
+          "severity": "BLOCKING",
+          "tokensUsed": 4708
+        },
+        {
+          "blockingCategories": ["mock-evasion"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002919,
+          "latencyMs": 8280,
+          "repetition": 2,
+          "resultFingerprint": "469852ff1556809c677ef0133fad684913370023007f7be53e4d3d23922441ef",
+          "severity": "BLOCKING",
+          "tokensUsed": 4747
+        }
+      ]
+    },
+    {
+      "id": "race-strong",
+      "runs": [
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002187,
+          "latencyMs": 5408,
+          "repetition": 0,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4318
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002211,
+          "latencyMs": 4362,
+          "repetition": 1,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4333
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002201,
+          "latencyMs": 4665,
+          "repetition": 2,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4327
+        }
+      ]
+    },
+    {
+      "id": "race-weak",
+      "runs": [
+        {
+          "blockingCategories": ["race-condition"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002681,
+          "latencyMs": 5656,
+          "repetition": 0,
+          "resultFingerprint": "ddb2497d2ab0b3895dbe66332d2fb1c0a4460307ff74ce5725b9cbd4d8cf200e",
+          "severity": "BLOCKING",
+          "tokensUsed": 4567
+        },
+        {
+          "blockingCategories": ["race-condition"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002728,
+          "latencyMs": 6724,
+          "repetition": 1,
+          "resultFingerprint": "ddb2497d2ab0b3895dbe66332d2fb1c0a4460307ff74ce5725b9cbd4d8cf200e",
+          "severity": "BLOCKING",
+          "tokensUsed": 4596
+        },
+        {
+          "blockingCategories": ["race-condition"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002718,
+          "latencyMs": 10293,
+          "repetition": 2,
+          "resultFingerprint": "ddb2497d2ab0b3895dbe66332d2fb1c0a4460307ff74ce5725b9cbd4d8cf200e",
+          "severity": "BLOCKING",
+          "tokensUsed": 4590
+        }
+      ]
+    },
+    {
+      "id": "tautology-strong",
+      "runs": [
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002138,
+          "latencyMs": 5032,
+          "repetition": 0,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4268
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002152,
+          "latencyMs": 10417,
+          "repetition": 1,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4277
+        },
+        {
+          "blockingCategories": [],
+          "decision": "PASS",
+          "error": false,
+          "estimatedCostUsd": 0.002165,
+          "latencyMs": 5266,
+          "repetition": 2,
+          "resultFingerprint": "d5a4d0387918568f5cfe2fc534c160903df37f158a0eb0e71cf361949d1e3c89",
+          "severity": "INFO",
+          "tokensUsed": 4285
+        }
+      ]
+    },
+    {
+      "id": "tautology-weak",
+      "runs": [
+        {
+          "blockingCategories": ["tautology"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002696,
+          "latencyMs": 7827,
+          "repetition": 0,
+          "resultFingerprint": "7a235ca988745a393254abefb19b765c5eeefb6d5d6d3faed6236fa182ed2c5d",
+          "severity": "BLOCKING",
+          "tokensUsed": 4582
+        },
+        {
+          "blockingCategories": ["tautology"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002692,
+          "latencyMs": 5853,
+          "repetition": 1,
+          "resultFingerprint": "7a235ca988745a393254abefb19b765c5eeefb6d5d6d3faed6236fa182ed2c5d",
+          "severity": "BLOCKING",
+          "tokensUsed": 4580
+        },
+        {
+          "blockingCategories": ["tautology"],
+          "decision": "FAIL",
+          "error": false,
+          "estimatedCostUsd": 0.002659,
+          "latencyMs": 5554,
+          "repetition": 2,
+          "resultFingerprint": "7a235ca988745a393254abefb19b765c5eeefb6d5d6d3faed6236fa182ed2c5d",
+          "severity": "BLOCKING",
+          "tokensUsed": 4559
+        }
+      ]
+    }
+  ],
+  "complete": true,
+  "corpusVersion": "1.0.4",
+  "generatedAt": "2026-08-12T01:46:54.044Z",
+  "metrics": {
+    "averageCostUsd": 0.002505,
+    "blockingPatternDetectionRate": 1,
+    "errorRate": 0,
+    "falsePositiveCount": 0,
+    "missedCriticalScenarios": [],
+    "p95LatencyMs": 8500,
+    "reviewerAgreementRate": 1,
+    "strongCaseCount": 9,
+    "strongFalsePositiveRate": 0,
+    "totalTokens": 242731,
+    "truePositiveCount": 9,
+    "weakCaseCount": 9
+  },
+  "promotionPolicyVersion": "1.0.0",
+  "repetitionsPerCase": 3,
+  "reportSha256": "f95f63ed1058fed5e7a9f8f7f303665a7a8b523ac806367980246f182c602b5e",
+  "reportVersion": "1.0.0",
+  "runMode": "azure",
+  "schemaVersion": "1.0.0"
+}

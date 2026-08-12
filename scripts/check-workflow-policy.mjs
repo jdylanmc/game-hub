@@ -7,6 +7,21 @@ const workflowPath = path.join(rootDirectory, '.github', 'workflows', 'continuou
 const codeownersPath = path.join(rootDirectory, '.github', 'CODEOWNERS');
 const workflow = await fs.readFile(workflowPath, 'utf8');
 const codeowners = await fs.readFile(codeownersPath, 'utf8');
+const ralphRequiredChecks = JSON.parse(
+  await fs.readFile(path.join(rootDirectory, 'config', 'ralph-required-checks.json'), 'utf8'),
+);
+const ralphShellRunner = await fs.readFile(
+  path.join(rootDirectory, '.github', 'skills', 'ralph-loop', 'scripts', 'run-ralph-loop.sh'),
+  'utf8',
+);
+const ralphRunner = await fs.readFile(
+  path.join(rootDirectory, '.github', 'skills', 'ralph-loop', 'scripts', 'run-ralph-loop.mjs'),
+  'utf8',
+);
+const ralphStatus = await fs.readFile(
+  path.join(rootDirectory, '.github', 'skills', 'ralph-loop', 'scripts', 'ralph-status.mjs'),
+  'utf8',
+);
 const violations = [];
 
 const requiredFragments = [
@@ -48,19 +63,28 @@ const requiredCommands = [
   'yarn format:check 2>&1 | tee continuous-integration-evidence/format.log',
   'yarn lint 2>&1 | tee continuous-integration-evidence/lint.log',
   'yarn policy:check 2>&1 | tee continuous-integration-evidence/policy.log',
-  'yarn test:ci-fail-closed 2>&1 | tee continuous-integration-evidence/fail-closed.log',
-  'yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log',
-  'yarn test:coverage 2>&1 | tee continuous-integration-evidence/test.log',
   'yarn generate:check 2>&1 | tee continuous-integration-evidence/generation.log',
   'yarn typecheck 2>&1 | tee continuous-integration-evidence/typecheck.log',
+  'yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log',
+  'yarn test:coverage 2>&1 | tee continuous-integration-evidence/test.log',
   'yarn build 2>&1 | tee continuous-integration-evidence/build.log',
   'yarn bundle:check 2>&1 | tee continuous-integration-evidence/bundle.log',
   'yarn build-storybook 2>&1 | tee continuous-integration-evidence/storybook.log',
+  'yarn test:ci-fail-closed 2>&1 | tee continuous-integration-evidence/fail-closed.log',
 ];
 
 for (const command of requiredCommands) {
   if (!workflow.includes(`run: ${command}`)) {
     violations.push(`Missing mandatory command: ${command}`);
+  }
+
+  const commandPositions = requiredCommands.map((command) => workflow.indexOf(`run: ${command}`));
+  for (let index = 1; index < commandPositions.length; index += 1) {
+    if (commandPositions[index] <= commandPositions[index - 1]) {
+      violations.push(
+        `Mandatory deterministic commands are not ordered cheapest-to-most-expensive near: ${requiredCommands[index]}`,
+      );
+    }
   }
 }
 
@@ -75,6 +99,41 @@ const requiredCodeOwnerRules = ['/.github/CODEOWNERS @jdylanmc', '/.github/workf
 for (const rule of requiredCodeOwnerRules) {
   if (!codeowners.split('\n').includes(rule)) {
     violations.push(`Missing mandatory Code Owner rule: ${rule}`);
+  }
+}
+
+if (
+  ralphRequiredChecks.version !== '1.0.0' ||
+  JSON.stringify(ralphRequiredChecks.requiredChecks) !==
+    JSON.stringify(['Continuous integration', 'Adversarial Review / unit-test-reviewer'])
+) {
+  violations.push('Ralph required-check configuration is missing or weakened.');
+}
+
+for (const [source, fragments] of [
+  [ralphShellRunner, ['exec node "$SCRIPT_DIR/run-ralph-loop.mjs" "$@"']],
+  [
+    ralphRunner,
+    [
+      'snapshot.localCommit === snapshot.remoteCommit',
+      'snapshot.pullRequestHeadSha === snapshot.localCommit',
+      "snapshot.ciState === 'success'",
+      "['not-required', 'success'].includes(snapshot.adversarialState)",
+    ],
+  ],
+  [
+    ralphStatus,
+    [
+      "'number,url,state,isDraft,headRefOid,statusCheckRollup'",
+      'requiredStatusChecksFromPlan(plan)',
+      'duplicates.length || failure.length',
+    ],
+  ],
+]) {
+  for (const fragment of fragments) {
+    if (!source.includes(fragment)) {
+      violations.push(`Ralph completion does not fail closed on required checks: ${fragment}`);
+    }
   }
 }
 

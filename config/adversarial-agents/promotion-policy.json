@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0",
+  "requiredRunMode": "azure",
+  "minimumCases": 18,
+  "minimumRepetitionsPerCase": 2,
+  "thresholds": {
+    "minimumBlockingPatternDetectionRate": 1,
+    "maximumStrongFalsePositiveRate": 0.05,
+    "maximumMissedCriticalScenarios": 0,
+    "minimumReviewerAgreementRate": 0.95,
+    "maximumAverageCostUsd": 0.1,
+    "maximumP95LatencyMs": 60000,
+    "maximumErrorRate": 0
+  },
+  "invalidationInputs": [
+    "modelDeployment",
+    "modelVersion",
+    "promptVersion",
+    "promptContentHash",
+    "toolsVersion",
+    "testFramework",
+    "schemaVersion",
+    "schemaContentHash",
+    "policyVersion",
+    "policyContentHash",
+    "architectureContentHash",
+    "systemPolicyVersion",
+    "systemPolicyContentHash",
+    "reviewerEngineConfigVersion",
+    "reviewerEngineConfigContentHash",
+    "benchmarkCorpusVersion",
+    "benchmarkCorpusContentHash"
+  ]
+}
