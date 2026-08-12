@@ -207,3 +207,17 @@
   --coverage.enabled=false`; follow-up reviewer, registry, policy, lint, and
   type checks are recorded with this commit.
 - The third failed real report was discarded and is not active evidence.
+
+## Passing real Azure calibration
+
+- The owner completed a real Azure unit-test-reviewer calibration for the
+  current fingerprint. The committed report is promotable: weak detection
+  **1.0**, strong false-positive **0**, missed critical scenarios **0**,
+  agreement **1.0**, platform error rate **0**, p95 latency **10,945 ms**, and
+  average cost **$0.001787**.
+- `yarn calibration:check --report
+  config/adversarial-agents/active-calibration-unit-test-reviewer.json` and
+  the complete `yarn policy:check` now pass without threshold changes.
+- **Final local evidence:** `yarn format:check`, `yarn lint`, `yarn
+  typecheck`, `yarn policy:check`, and the targeted adversarial suite (117
+  tests) pass.

@@ -114,7 +114,7 @@
         "The issue's required format, lint, policy, type, and targeted adversarial tests pass."
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Non-behavioral integration story; deterministic policy commands and documentation review provide the verification seam."
     }
   ]
