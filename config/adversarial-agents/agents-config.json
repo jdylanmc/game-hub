@@ -59,7 +59,7 @@
       "policyFile": "config/adversarial-agents/gilfoyle-security-architect/policy.json",
       "policyContentHash": "5f7579a4886f90015469e5c6862b2e9ae1151aa2fb3b4a4ca8e1ba75a266c39a",
       "engineConfigFile": "config/adversarial-agents/gilfoyle-security-architect/reviewer-engine.json",
-      "engineConfigContentHash": "f2a5287e68c8486e4fd3cb4c35140775af0fcc89cbf35539d16223f9b64e0be2",
+      "engineConfigContentHash": "2dc978cff3406ffa9051416e03968ac45337c7423c9d4786ef8435d3bd815d88",
       "benchmarkCorpusFile": "config/adversarial-agents/gilfoyle-security-architect/benchmarks.json",
       "benchmarkCorpusContentHash": "c435c030ff51fb0b87481e7b0716d2461a7c8b49f66d34a9e75397c340d1a395",
       "promotionPolicyFile": "config/adversarial-agents/gilfoyle-security-architect/promotion-policy.json",

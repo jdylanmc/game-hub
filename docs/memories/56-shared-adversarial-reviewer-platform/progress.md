@@ -140,3 +140,27 @@
 - Local Azure calibration prerequisites are unavailable in this worktree
   (`AZURE_OPENAI_ENDPOINT`, deployment, client ID, and tenant ID are unset),
   so the required real calibration cannot be produced or attested here.
+
+## Calibration migration repair
+
+- **Confirmed seam:** `evaluateBenchmarks` and the real
+  `review-adversarial-context` packet boundary.
+- **Red:** `yarn vitest run scripts/evaluate-adversarial-reviewer.test.mjs
+  --coverage.enabled=false` reproduced the v2 mismatch: calibration packets
+  lacked workflow identity, and v2 platform FAIL evidence was rejected as
+  malformed.
+- **Green:** Benchmark packets now include the v2 workflow identity; fixture
+  transports execute the reviewer and critic path; calibration evidence
+  records POLICY, PLATFORM, and COMPUTE kinds plus retained diagnostic code and
+  message. Platform failures count toward the unchanged error-rate threshold
+  instead of being silently discarded.
+- **Broader checks:** `yarn vitest run
+  scripts/evaluate-adversarial-reviewer.test.mjs
+  scripts/review-adversarial-context.test.mjs
+  scripts/validate-adversarial-finding.test.mjs
+  --coverage.enabled=false`; `yarn lint`; `yarn typecheck`;
+  `yarn policy:adversarial`; `yarn agents:validate`.
+- The invalid locally generated active report was discarded. The committed
+  active report remains the prior attested report until the owner reruns real
+  Azure calibration with this fix and replaces it through the protected
+  attestation path.

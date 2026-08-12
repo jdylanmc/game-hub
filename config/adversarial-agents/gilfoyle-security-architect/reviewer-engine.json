@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
+  "version": "2.0.0",
   "apiVersion": "2025-04-01-preview",
   "credentialScope": "https://cognitiveservices.azure.com/.default",
   "expectedDeploymentId": "game-hub-gilfoyle-security-architect",
@@ -19,6 +19,13 @@
     "maxEstimatedCostUsd": 0.02,
     "inputUsdPerMillionTokens": 0.4,
     "outputUsdPerMillionTokens": 1.6
+  },
+  "critic": {
+    "maxConcurrentReviews": 3,
+    "inconclusiveBlocksAtConfidence": "HIGH"
+  },
+  "persona": {
+    "fallbackTitle": "Adversarial review result"
   },
   "allowedTools": [],
   "allowedNetworkDestinations": ["https://*.openai.azure.com"]

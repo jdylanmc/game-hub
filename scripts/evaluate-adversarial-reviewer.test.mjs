@@ -1,9 +1,10 @@
-import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   calibrationFingerprint,
+  benchmarkPacket,
+  calibrationRunFingerprint,
   computeMetrics,
   createFixtureReviewer,
   evaluateBenchmarks,
@@ -12,7 +13,6 @@ import {
   reportHash,
   validatePromotionReport,
 } from './evaluate-adversarial-reviewer.ts';
-import { stableStringify } from './collect-adversarial-context.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const policy = loadPromotionPolicy(repoRoot);
@@ -66,19 +66,63 @@ function refreshMetricsAndHash(report) {
 }
 
 function refreshRunFingerprint(run) {
-  run.resultFingerprint = crypto
-    .createHash('sha256')
-    .update(
-      stableStringify({
-        decision: run.decision,
-        severity: run.severity,
-        blockingCategories: run.blockingCategories,
-      }),
-    )
-    .digest('hex');
+  run.resultFingerprint = calibrationRunFingerprint(run);
 }
 
 describe('adversarial benchmark corpus', () => {
+  it('supplies the engine with a v2 context identity so calibration invokes the reviewer', async () => {
+    const benchmark = loadCorpus(repoRoot).cases[0];
+    const packet = benchmarkPacket(benchmark, 0);
+    const reviewer = createFixtureReviewer(repoRoot, benchmark);
+    const result = await reviewer.review(packet);
+
+    expect(packet.attribution).toMatchObject({
+      workflowRunId: 1,
+      workflowRunAttempt: 1,
+    });
+    expect(result.verdict).not.toMatchObject({
+      kind: 'PLATFORM',
+      platformError: { code: 'CONTEXT_IDENTITY_INVALID' },
+    });
+  });
+
+  it('normalizes v2 platform diagnostics without discarding them as malformed calibration evidence', async () => {
+    const platformFailure = {
+      verdict: {
+        decision: 'FAIL',
+        kind: 'PLATFORM',
+        severity: 'ERROR',
+        platformError: { code: 'MODEL_RESPONSE_INVALID', message: 'The response was malformed.' },
+      },
+      findings: [],
+      summary: {
+        tokensUsed: 0,
+        estimatedCost: 0,
+      },
+    };
+    const report = await evaluateBenchmarks({
+      repoRoot,
+      runMode: 'azure',
+      repetitionsPerCase: 2,
+      reviewerFactory: () => ({ review: async () => platformFailure }),
+      now: () => 0,
+      generatedAt: '2026-08-12T20:00:00.000Z',
+    });
+
+    const firstRun = report.caseResults[0].runs[0];
+    expect(firstRun).toMatchObject({
+      decision: 'FAIL',
+      kind: 'PLATFORM',
+      severity: 'ERROR',
+      error: true,
+      diagnostic: { code: 'MODEL_RESPONSE_INVALID' },
+    });
+    expect(validatePromotionReport(repoRoot, report).reasons).toEqual(
+      expect.arrayContaining(['Reviewer error-rate threshold failed.']),
+    );
+    expect(validatePromotionReport(repoRoot, report).reasons).not.toContain('Report case evidence is malformed.');
+  });
+
   it('contains paired weak and strong coverage for every required scenario', () => {
     const corpus = loadCorpus(repoRoot);
     const scenarios = [
@@ -123,6 +167,9 @@ describe('adversarial benchmark corpus', () => {
       averageCostUsd: 0.0012,
       p95LatencyMs: 10,
       errorRate: 0,
+      platformFailureCount: 0,
+      computeInconclusiveCount: 0,
+      diagnosticCodes: [],
     });
     expect(first.reportSha256).toBe(reportHash(first));
   });
@@ -199,6 +246,9 @@ describe('calibration promotion gate', () => {
         averageCostUsd: 0.0012,
         p95LatencyMs: 10,
         errorRate: 0,
+        platformFailureCount: 0,
+        computeInconclusiveCount: 0,
+        diagnosticCodes: [],
         advisoryCaseCount: 2,
         advisoryEscalationCount: 0,
         advisoryEscalationRate: 0,
@@ -337,9 +387,14 @@ describe('calibration promotion gate', () => {
     for (const result of report.caseResults.slice(0, 2)) {
       const run = result.runs[1];
       run.error = true;
-      run.decision = 'ERROR';
+      run.decision = 'FAIL';
+      run.kind = 'PLATFORM';
       run.severity = 'ERROR';
       run.blockingCategories = [];
+      run.diagnostic = {
+        code: 'CALIBRATION_PLATFORM_FAILURE',
+        message: 'The platform failed while evaluating the benchmark.',
+      };
       refreshRunFingerprint(run);
     }
     for (const result of report.caseResults) {
@@ -384,10 +439,10 @@ describe('calibration promotion gate', () => {
       promptVersion: '1.0.3',
       toolsVersion: '1.0.1',
       testFramework: 'vitest@4.1.10',
-      schemaVersion: '1.0.0',
-      policyVersion: '1.0.0',
+      schemaVersion: '2.0.0',
+      policyVersion: '2.0.0',
       systemPolicyVersion: '1.0.0',
-      reviewerEngineConfigVersion: '1.0.1',
+      reviewerEngineConfigVersion: '2.0.0',
       benchmarkCorpusVersion: '1.0.4',
     });
     expect(fingerprint.components.systemPolicyContentHash).toMatch(/^[0-9a-f]{64}$/);
