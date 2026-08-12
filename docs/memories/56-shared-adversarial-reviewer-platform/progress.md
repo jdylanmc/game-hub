@@ -124,3 +124,9 @@
   fingerprinted schema/policy/engine migration. Replacing it requires a
   complete real-Azure calibration and protected-run attestation; a fixture or
   rewritten report would violate the fail-closed calibration policy.
+
+## Publication
+
+- Draft pull request: #57.
+- The draft deliberately remains not-ready until a real Azure calibration
+  refreshes the active report and the complete policy gate passes.
