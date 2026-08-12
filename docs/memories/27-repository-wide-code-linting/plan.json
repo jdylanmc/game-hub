@@ -86,8 +86,8 @@
         "The exclusion list is narrow, versioned, and verified against unexpected lint:fix modifications"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "The current eslint dot-glob covers existing authored JS/TS files and excludes Mamba snapshots and standard outputs, but no current proof establishes future workspace coverage or safe fix boundaries.",
+      "passes": true,
+      "notes": "The canonical lint and lint:fix commands now run a versioned scope gate that creates representative game and package workspaces and requires their TypeScript violations to be reported. Narrow recursive exclusions cover dependencies, coverage, test results, distribution and Storybook builds, generated game metadata, generated Mamba data and stories, and imported Mamba source. The gate verifies host, workspace, Storybook, test, generator, and handwritten Mamba wrapper paths remain linted and proves fixable sentinel content under every output boundary remains unchanged.",
       "dependencies": ["US-002", "US-003"]
     },
     {

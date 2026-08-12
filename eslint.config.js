@@ -17,11 +17,16 @@ export default tseslint.config(
   {
     ignores: [
       '.yarn/',
-      'coverage/',
-      'dist/',
-      'storybook-static/',
+      '**/node_modules/',
+      '**/coverage/',
+      '**/dist/',
+      '**/storybook-static/',
+      '**/test-results/',
+      'public/generated/',
+      'src/generated/',
       'src/storybook/mamba/generated/',
       'src/storybook/mamba/source/',
+      'src/stories/catalog/mamba/',
     ],
   },
   {

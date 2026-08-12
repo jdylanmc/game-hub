@@ -26,6 +26,14 @@
 - Browser globals apply to host and game source plus Storybook preview code;
   Node.js globals apply to configuration files; tests add Vitest globals;
   shared package source remains environment-neutral.
+- `yarn lint` and `yarn lint:fix` run the versioned `lint:scope` gate first.
+  The gate creates representative game and package workspace probes, verifies
+  authored generators and wrappers remain in scope, and exercises fixable
+  sentinels under every excluded output boundary without leaving files behind.
+- Output exclusions use recursive workspace-safe patterns for dependencies,
+  coverage, distribution, Storybook, and test-result directories. Generated
+  game metadata and generated or imported Mamba paths are listed explicitly;
+  handwritten Mamba wrappers and generators stay linted.
 
 ## 2026-08-11 - Planning
 
@@ -169,3 +177,31 @@ Current inspection found these issue #27 gaps:
 - US-004 is next. It should prove automatic future workspace coverage and
   deliberate generated, imported, and output exclusions without broadening
   this story's rule configuration.
+
+## 2026-08-11 - US-004
+
+- Added `scripts/check-lint-scope.mjs` and made both canonical lint commands run
+  it before ESLint. The gate creates complete representative game and package
+  workspace probes, including package metadata and `AGENTS.md`, and requires
+  their TypeScript unused-code violations to be reported without parser or
+  setup failures.
+- Narrowed and completed the versioned exclusion boundary: dependencies,
+  coverage, distribution, Storybook, and test-result outputs are ignored
+  recursively; generated game metadata, generated Mamba data and stories, and
+  imported Mamba source are ignored by exact repository path.
+- The scope gate verifies representative host, Storybook, test, current game,
+  shared package, configuration, generator, and handwritten Mamba wrapper files
+  are not ignored. It writes fixable sentinels beneath every generated,
+  imported, coverage, and build-output boundary, runs ESLint fixing against
+  them, and requires byte-identical content before cleaning every probe.
+- A separate canonical-command probe created both a new game and package
+  workspace and confirmed `yarn lint` failed on both paths for
+  `@typescript-eslint/no-unused-vars`.
+- Verified `yarn lint:fix` preserved the authored diff plus representative
+  generated game, generated Mamba, imported Mamba, and generated story files.
+- Passed the complete `yarn validate` gate: immutable install, formatting,
+  lint and scope policy, suppression and workflow policy, fail-closed proofs,
+  dependency audit, tests and coverage, generated-state verification,
+  typecheck, production build, bundle budgets, and Storybook build.
+- US-005 is next. It should require narrow inline suppressions with exact rules
+  and durable reasons, plus accepted and rejected policy cases.
