@@ -51,6 +51,11 @@
   `unit-test-evidence-<run-id>-<attempt>` artifact for 14 days. It runs
   immediately after an executed `yarn test:ci` step with `always()` semantics
   and requires the test log, JUnit XML, and complete coverage directory.
+- `docs/unit-testing.md` is the canonical test-writing and verification-layer
+  contract. It distinguishes current unit/component evidence from future
+  browser, integration, visual-regression, and performance gates and binds
+  retries, flakes, timeouts, deterministic helpers, cleanup, coverage, and
+  retained evidence to the implemented repository policy.
 
 ## 2026-08-11 - Planning
 
@@ -482,3 +487,39 @@
 - Targeted checks passed: Prettier, 31 workflow-policy mutation tests,
   `yarn policy:workflow`, and all 23 isolated fail-closed proofs.
 - The complete `yarn validate` contract passed on the first and only attempt.
+
+## 2026-08-12 - US-015: Document the unit-test contract
+
+- Added `docs/unit-testing.md` as the canonical repository unit-test contract.
+  It documents root watch, deterministic, integrity, coverage, fail-closed, and
+  full-validation commands without introducing a second implementation.
+- Distinguished unit, component, browser, integration, visual-regression, and
+  performance responsibilities. The contract explicitly avoids treating JSDOM
+  as a browser, Storybook builds as visual regression, or bundle budgets as
+  runtime performance evidence.
+- Documented deterministic simulation clocks, seeded random sources, explicit
+  stepping, one-time score submission, browser doubles, renderer construction
+  doubles, Node versus JSDOM selection, behavior-focused assertions, and
+  generator fixture isolation.
+- Documented deny-by-default network behavior plus cleanup of renders, timers,
+  modules, mocks, environment and global stubs, unexpected globals, storage,
+  and document state. Tests remain responsible for application listeners,
+  callbacks, controllers, transports, and renderer disposal.
+- Recorded separate 10-second test, hook, and teardown bounds, `retry: 0`, and
+  a strict rule against automatic retries, retry loops, warning fallbacks,
+  skips, todos, or quarantine. An unchanged fail-then-pass result is flaky
+  evidence and remains blocking until its uncontrolled input is repaired.
+- Reconciled the exact global and surface coverage thresholds, manual upward
+  ratchet, one-job unsharded execution, immutable fresh-runner installation,
+  30-minute job timeout, and both 14-day continuous-integration evidence
+  artifacts.
+- Added one-to-one implementation and proof evidence for all seven issue #28
+  acceptance criteria. Updated the README command/document index and replaced
+  stale generic threshold text in the continuous-integration contract.
+- Files changed: `docs/unit-testing.md`, `docs/continuous-integration.md`,
+  `README.md`, and this issue memory.
+- The complete `yarn validate` contract passed on the first and only attempt,
+  including all 23 fail-closed proofs.
+- All fifteen stories are complete. Publication remains gated on the final
+  exact-head `Continuous integration` and
+  `Adversarial Review / unit-test-reviewer` results.

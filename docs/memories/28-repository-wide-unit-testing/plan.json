@@ -234,8 +234,8 @@
         "Every issue acceptance criterion is reconciled to passing repository and continuous-integration evidence"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added the repository unit-test contract covering canonical watch, deterministic, coverage, fail-closed, and full-validation commands; the distinct unit, component, browser, integration, visual-regression, and performance responsibilities; deterministic clocks, random sources, simulation stepping, browser and renderer doubles; deny-by-default network isolation and complete cleanup; 10-second bounds and strict zero-retry policy; flaky-test detection and repair; exact coverage thresholds and upward ratcheting; unsharded fresh-runner continuous integration; 14-day diagnostic, JUnit, and coverage artifacts; workspace onboarding; and a one-to-one evidence map for all seven issue acceptance criteria. Reconciled stale continuous-integration threshold text and linked the contract from the README. Full yarn validate passed on the first attempt.",
       "dependencies": ["US-014"]
     }
   ]

@@ -54,10 +54,13 @@ acceptance evidence are documented in
   declarations, also requires deterministic suites under `src/` and `scripts/`,
   rejects focused, skipped, todo, and quarantined tests, and disallows empty
   suites.
-- Vitest shuffles tests with seed `29005` and enforces 85% line, function, and
-  statement coverage plus 75% branch coverage over the configured host surface.
-  Tests, hooks, and teardown each have a 10-second timeout and retries are
-  disabled.
+- Vitest shuffles tests with seed `29005`, disables retries, and gives tests,
+  hooks, and teardown separate 10-second timeouts. The reviewed global
+  thresholds are 94.84% statements, 85.06% branches, 94.36% functions, and
+  95.27% lines, with additional host, game, pure-simulation, shared-contract,
+  and generator thresholds. The complete layer, retry, flake, and coverage
+  contract is documented in [Unit-Test Contract](unit-testing.md) and
+  [Unit-Test Coverage Baseline](unit-test-coverage.md).
 - `config/lint-suppressions.json` is the reviewed allowlist for exceptional
   ESLint suppressions. New unapproved directives fail `yarn policy:check`.
 - `config/bundle-budgets.json` defines reviewed raw-byte limits. Missing build
