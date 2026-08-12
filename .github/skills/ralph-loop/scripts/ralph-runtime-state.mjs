@@ -133,7 +133,7 @@ export function evaluateLeaseState(
   const isStopped = Boolean(lease.stop?.at || lease.stop?.outcome || lease.phase === 'stop');
 
   let state = 'stopped';
-  if (!isStopped && ((sameHost && runnerAlive === true) || (!sameHost && fresh))) {
+  if (!isStopped && ((sameHost && (runnerAlive === true || childAlive === true)) || (!sameHost && fresh))) {
     state = 'active';
   } else if (!isStopped && runnerAlive === false) {
     state = 'dead';

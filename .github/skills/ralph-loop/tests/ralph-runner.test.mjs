@@ -235,6 +235,50 @@ test('active leases are refused without takeover', async () => {
   assert.match(result.stderr, /owns issue/);
 });
 
+test('a live detached child prevents takeover after its runner dies', async () => {
+  const fixture = createRalphFixture('live-child-owner');
+  const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+    stdio: 'ignore',
+  });
+
+  try {
+    mkdirSync(path.dirname(fixture.leasePath), { recursive: true });
+    writeFileSync(
+      fixture.leasePath,
+      `${JSON.stringify(
+        {
+          version: 1,
+          repoNameWithOwner: 'jdylanmc/game-hub',
+          issueNumber: fixture.issueNumber,
+          memoryDir: fixture.memoryDir,
+          branchName: fixture.branchName,
+          worktreePath: fixture.worktreePath,
+          runId: 'child-owned-run',
+          pid: 999999,
+          host: os.hostname(),
+          iteration: 1,
+          phase: 'agent-execution',
+          startedAt: '2026-08-11T00:00:00.000Z',
+          lastHeartbeatAt: '2026-08-11T00:00:00.000Z',
+          lastKnownHead: 'current',
+          childPid: child.pid,
+          stop: null,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const runner = spawnRunner(fixture, ['--dry-run'], { RALPH_HEARTBEAT_SECONDS: '1' });
+    const result = await collectOutput(runner);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /owns issue/);
+    assert.equal(processAlive(child.pid), true);
+  } finally {
+    child.kill('SIGKILL');
+  }
+});
+
 test('lock release refuses to delete a successor owner', () => {
   const fixture = createRalphFixture('release-owner');
   const leasePath = path.join(fixture.commonDir, 'lease.json');
