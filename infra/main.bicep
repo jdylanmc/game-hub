@@ -237,6 +237,19 @@ module assetContentDelivery './modules/asset-content-delivery.bicep' = {
   }
 }
 
+module authenticationReadiness './modules/authentication-readiness.bicep' = {
+  name: '${applicationName}-${environmentName}-authentication-readiness'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    apiResourceId: containerAppApi.outputs.appId
+    apiRuntimePrincipalId: containerAppApi.outputs.runtimePrincipalId
+    backendRegion: location
+    staticWebAppHostName: staticWebApp.outputs.defaultHostname
+    staticWebAppName: staticWebApp.outputs.name
+    staticWebAppPrincipalId: staticWebApp.outputs.managedIdentityPrincipalId
+  }
+}
+
 @description('Explicit Azure subscription selected for this environment.')
 output subscriptionId string = targetSubscriptionId
 
@@ -273,6 +286,18 @@ output frontendDeployment object = union(staticWebApp.outputs.deploymentConfigur
   staticWebAppName: staticWebApp.outputs.name
   subscriptionId: targetSubscriptionId
 })
+
+@description('System-assigned frontend managed identity principal identifier.')
+output frontendManagedIdentityPrincipalId string = staticWebApp.outputs.managedIdentityPrincipalId
+
+@description('Static Web Apps linked API backend resource identifier.')
+output apiLinkedBackendId string = authenticationReadiness.outputs.linkedBackendId
+
+@description('Stable same-origin API endpoint protected by Static Web Apps authentication.')
+output authenticatedApiEndpoint string = authenticationReadiness.outputs.authenticatedApiEndpoint
+
+@description('Non-secret frontend and API authentication configuration contract.')
+output authenticationConfiguration object = authenticationReadiness.outputs.configuration
 
 @description('Azure Container Registry resource identifier.')
 output registryResourceId string = containerRegistry.outputs.id

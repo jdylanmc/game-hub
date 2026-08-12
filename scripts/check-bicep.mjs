@@ -2,6 +2,10 @@ import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  loadAuthenticationInfrastructure,
+  validateAuthenticationInfrastructure,
+} from './check-authentication-infrastructure.mjs';
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const infraDirectory = path.join(rootDirectory, 'infra');
@@ -30,6 +34,11 @@ runAzureBicep(['build', '--file', path.join(infraDirectory, 'main.bicep'), '--st
 
 for (const parameterPath of parameters) {
   runAzureBicep(['build-params', '--file', parameterPath, '--stdout']);
+}
+
+const authenticationViolations = validateAuthenticationInfrastructure(loadAuthenticationInfrastructure(rootDirectory));
+if (authenticationViolations.length > 0) {
+  throw new Error(`Authentication infrastructure policy failed:\n- ${authenticationViolations.join('\n- ')}`);
 }
 
 console.log(

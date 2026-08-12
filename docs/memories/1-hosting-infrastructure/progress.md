@@ -42,6 +42,18 @@
   with a Private Link origin. Keep the blob endpoint network reachable while
   anonymous and Shared Key access remain disabled unless Azure adds a supported
   identity-plus-Private-Link path.
+- Authentication readiness is declared in
+  `infra/modules/authentication-readiness.bicep`. Azure Static Web Apps owns
+  the keyless Microsoft Entra OpenID Connect flow, `/api/*` requires the
+  `authenticated` role, and the linked Container App is the only trusted
+  browser API path.
+- The Static Web App and Container App have separate system-assigned managed
+  identities. Keep those runtime identities separate from the registry
+  pull-only and asset publication identities.
+- `scripts/check-authentication-infrastructure.mjs` is part of
+  `yarn infra:check` and fails closed if the managed identity, keyless provider,
+  linked backend, route roles, trust boundary, outputs, or credential
+  prohibition regress.
 - Format Bicep and Bicep parameter files with the pinned
   `az bicep format --file <path>` command; repository Prettier does not parse
   those file types.
@@ -226,3 +238,42 @@
 - Added `Adversarial Review / unit-test-reviewer` to the issue publication
   contract now supplied by the protected main-branch workflow.
 - No Azure infrastructure or application deployment was performed.
+
+## 2026-08-12 — US-006 Make the topology authentication-ready
+
+- Enabled the system-assigned managed identity on the existing Azure Static Web
+  App without changing its hosting service or public artifact contract.
+- Added `infra/modules/authentication-readiness.bicep`. It declaratively links
+  the existing Container App as the production Static Web Apps backend and
+  emits a non-secret Microsoft Entra ID/OpenID Connect contract for the
+  frontend and API.
+- Configured friendly Microsoft Entra login and platform logout routes, blocked
+  the unused GitHub provider, and required the built-in `authenticated` role
+  for `/api/*`.
+- Fixed the browser API boundary at the Static Web Apps same-origin `/api`
+  proxy. The Container App's direct hostname remains diagnostic-only, and API
+  code receives principal context only from the platform-generated
+  `x-ms-client-principal` header inside the linked-backend boundary.
+- Exposed the frontend managed identity principal, linked-backend resource,
+  authenticated API endpoint, provider paths, role, principal header, API
+  runtime identity, and trust-boundary metadata without accepting or emitting
+  credentials.
+- Added explicit non-secret API environment placeholders for the provider,
+  platform principal header, and required role in both committed environment
+  parameter files.
+- Added `scripts/check-authentication-infrastructure.mjs` to
+  `yarn infra:check` plus eight tests covering identity, backend type,
+  keyless configuration, API ingress, forbidden credential fields, and
+  authenticated route enforcement.
+- Updated `AGENTS.md`, `docs/hosting-infrastructure.md`, and `infra/README.md`
+  with the durable keyless authentication and authorization boundary.
+- Validation: `yarn infra:install`, `yarn infra:check`, targeted authentication
+  policy tests, compiled-template contract inspection, credential-pattern
+  scanning, `yarn format:check`, `yarn lint`, `yarn policy:check`,
+  `yarn test:coverage` (170 tests), `yarn generate:check`, `yarn typecheck`,
+  `yarn build`, `yarn bundle:check`, `yarn build-storybook`, and
+  `git diff --check`.
+- No Azure infrastructure deployment, application deployment, user sign-in,
+  linked-backend reachability test, or live authentication-flow verification
+  was performed or claimed. US-007 is the next eligible story and was not
+  advanced.

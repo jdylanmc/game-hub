@@ -105,8 +105,8 @@
         "Enabling authentication does not require replacing the selected frontend, API, asset, or public ingress boundaries"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Enabled a keyless Azure-managed Microsoft Entra ID/OpenID Connect surface on the existing Azure Static Web App, added its system-assigned managed identity, protected /api/* with the authenticated role, blocked the unused GitHub provider, and declaratively linked the existing Container App as the production backend. Non-secret environment placeholders and outputs expose the provider, role, principal header, login/logout/current-user paths, same-origin authenticated API endpoint, managed identity principals, linked-backend ID, and stable trust boundaries. Added fail-closed infrastructure policy tests. Local Bicep, compiled-contract, credential-pattern, formatting, lint, policy, coverage, generated-state, type, build, bundle, and Storybook validation passed. No Azure infrastructure deployment or live authentication-flow verification was performed or claimed.",
       "dependencies": ["US-003", "US-004"]
     },
     {

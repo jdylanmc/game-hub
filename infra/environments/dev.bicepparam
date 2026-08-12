@@ -23,6 +23,18 @@ param apiEnvironmentVariables = [
     name: 'GAME_HUB_ENVIRONMENT'
     value: 'dev'
   }
+  {
+    name: 'GAME_HUB_AUTH_PROVIDER'
+    value: 'azureActiveDirectory'
+  }
+  {
+    name: 'GAME_HUB_AUTH_PRINCIPAL_HEADER'
+    value: 'x-ms-client-principal'
+  }
+  {
+    name: 'GAME_HUB_AUTH_REQUIRED_ROLE'
+    value: 'authenticated'
+  }
 ]
 param assetStorageSkuName = 'Standard_LRS'
 param assetDeleteRetentionDays = 7

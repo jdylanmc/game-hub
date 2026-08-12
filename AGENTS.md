@@ -49,6 +49,11 @@ Infrastructure changes must use the Bicep version in
 `infra/.bicep-version`. Run `yarn infra:install` to install that version through
 Azure CLI before `yarn infra:check`.
 
+Website authentication uses the keyless Azure-managed Microsoft Entra ID
+provider in Azure Static Web Apps. Keep `/api/*` behind the `authenticated`
+role and the declarative Static Web Apps linked Container Apps backend; do not
+introduce a browser-facing direct API origin or provider credential.
+
 Run `yarn generate:check` after changing game workspace metadata or discovery
 logic. It fails when generation changes Git state or the committed catalog
 outputs are dirty.

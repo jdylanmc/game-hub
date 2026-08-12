@@ -26,6 +26,7 @@ complete secure runtime references and observability.
 | `modules/static-web-app.bicep` | Azure Static Web Apps Standard frontend and Vite artifact publication contract |
 | `modules/container-registry.bicep` | Azure Container Registry Basic, pull-only managed identity, and scoped `AcrPull` assignment |
 | `modules/container-app-api.bicep` | Azure Container Apps environment, API revision, ingress, scaling, settings, and runtime identity |
+| `modules/authentication-readiness.bicep` | Keyless Microsoft Entra authentication contract and Static Web Apps linked API boundary |
 | `modules/asset-storage.bicep` | Private Blob Storage containers, recovery policy, and OpenID Connect-federated asset publisher identity |
 | `modules/asset-content-delivery.bicep` | Azure Front Door Premium profile, managed origin authentication, category routes, and explicit edge caching |
 | `environments/dev.bicepparam` | On-demand development values |
@@ -134,6 +135,63 @@ These outputs do not prove that the resource or content exists. They are
 available only after an actual Azure deployment, which this repository change
 does not perform.
 
+## Authentication and API trust boundary
+
+The frontend uses the Azure-managed Microsoft Entra ID provider built into
+Azure Static Web Apps. Its OpenID Connect flow is available at
+`/.auth/login/aad`, the friendly `/login` route redirects there, `/logout`
+redirects to the platform sign-out endpoint, and the unused preconfigured
+GitHub provider is blocked. This selection is keyless: the repository,
+parameter files, and deployment outputs contain no provider registration
+credential.
+
+`public/staticwebapp.config.json` requires the built-in `authenticated` role
+for `/api/*`. The authentication module declaratively links the existing Azure
+Container App as the Static Web Apps production backend. Azure then configures
+the `Azure Static Web Apps (Linked)` provider on the Container App, so the API
+accepts requests proxied by the static web app rather than treating its direct
+diagnostic hostname as a browser origin.
+
+The resulting trust boundaries are stable:
+
+1. Azure Static Web Apps terminates the browser's Microsoft Entra OpenID
+   Connect flow and owns `/.auth/*`.
+2. Browser API calls use the same-origin `/api` path and must have the
+   `authenticated` role.
+3. The linked backend is the only trusted browser-to-API path. API code reads
+   the platform-generated `x-ms-client-principal` context and never trusts a
+   client-supplied copy received outside that boundary.
+4. The frontend and API retain separate system-assigned managed identities for
+   future least-privilege service access. The registry pull identity remains a
+   third, pull-only identity.
+
+The preconfigured Microsoft Entra provider permits Microsoft accounts accepted
+by the managed provider. Tenant-, group-, and operation-level authorization
+remain explicit application policy; they must not be simulated by accepting a
+provider credential in Bicep. If a future requirement mandates a tenant-scoped
+custom registration, it needs a separate reviewed design because Static Web
+Apps custom registrations require a credential. That refinement does not
+replace the Static Web App, linked Container App, Blob Storage, or Azure Front
+Door boundaries.
+
+The deployment returns only non-secret authentication metadata:
+
+| Output | Use |
+| --- | --- |
+| `frontendManagedIdentityPrincipalId` | Future least-privilege role assignments for the frontend |
+| `apiLinkedBackendId` | Audit the production Static Web Apps-to-Container Apps link |
+| `authenticatedApiEndpoint` | Same-origin API endpoint under the generated frontend hostname |
+| `authenticationConfiguration` | Provider, protocol, login/logout/current-user paths, role, principal-header, managed-identity, and trust-boundary contract |
+
+The development and production parameter files also supply the API with the
+non-secret `GAME_HUB_AUTH_PROVIDER`, `GAME_HUB_AUTH_PRINCIPAL_HEADER`, and
+`GAME_HUB_AUTH_REQUIRED_ROLE` placeholders. Their values are validated against
+the deployment output contract.
+
+These contracts do not prove that a user signed in or that the linked endpoint
+is reachable. This story performs no live infrastructure deployment or
+authentication-flow test.
+
 ### Vite artifact contract
 
 The frontend publisher consumes the repository's existing production build:
@@ -216,9 +274,10 @@ The subscription deployment returns these non-secret API and registry outputs:
 | `apiDeployment` | Non-secret image, ingress, scaling, registry, identity, resource group, and subscription contract |
 
 The direct Container App endpoint is diagnostic. Azure Front Door and the
-Static Web Apps linked-backend story will establish the canonical browser API
-base URL. These outputs do not prove that the registry, environment, app,
-image, or endpoint exists. They are available only after an actual Azure
+later protected-ingress story will establish the canonical browser hostname;
+the browser API path is already fixed at `/api` through the Static Web Apps
+linked backend. These outputs do not prove that the registry, environment,
+app, image, or endpoint exists. They are available only after an actual Azure
 deployment, which this repository change does not perform.
 
 ## Blob assets and content delivery

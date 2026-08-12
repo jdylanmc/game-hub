@@ -22,6 +22,9 @@ resource staticWebApp 'Microsoft.Web/staticSites@2025-03-01' = {
   name: name
   location: location
   tags: tags
+  identity: {
+    type: 'SystemAssigned'
+  }
   sku: {
     name: 'Standard'
     tier: 'Standard'
@@ -50,6 +53,9 @@ output defaultHostname string = staticWebApp.properties.defaultHostname
 
 @description('Public HTTPS endpoint for direct frontend diagnostics.')
 output endpoint string = 'https://${staticWebApp.properties.defaultHostname}'
+
+@description('System-assigned frontend managed identity principal identifier.')
+output managedIdentityPrincipalId string = staticWebApp.identity.principalId
 
 @description('Non-secret contract for publishing the existing Vite output.')
 output deploymentConfiguration object = {
