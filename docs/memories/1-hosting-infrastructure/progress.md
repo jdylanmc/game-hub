@@ -88,6 +88,8 @@
   `repo:jdylanmc@6954990/game-hub@1330993568:environment:<environment>`.
 - Keep `infra/main.bicep` outputs grouped when possible; Azure Resource Manager
   limits a template to 64 outputs.
+- Required pull-request checks must be unique and bound to the final head commit;
+  never reuse a successful result from a predecessor.
 - The detached fresh-worktree bootstrap proof must use the same immutable Yarn
   metadata semantics as Continuous Integration. Do not force a platform-specific
   hardened metadata normalization that produces a lockfile rejected by the
