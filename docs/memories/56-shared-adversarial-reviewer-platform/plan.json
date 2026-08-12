@@ -1,0 +1,125 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 56,
+  "issueTitle": "Build the shared adversarial reviewer orchestration platform",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/56",
+  "branchName": "ralph/issue-56-shared-adversarial-reviewer-platform",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 1,
+    "dependencies": [],
+    "changeScopes": [
+      ".github/workflows/adversarial-review.yml",
+      "config/adversarial-agents",
+      "config/ralph-required-checks.json",
+      "scripts",
+      "docs/adversarial-calibration.md",
+      "docs/adversarial-publication.md",
+      "docs/adversarial-reviewer-engine.md",
+      "docs/adversarial-workflow.md",
+      "docs/branch-protection.md",
+      "docs/architecture.md",
+      "AGENTS.md",
+      "package.json"
+    ]
+  },
+  "publication": {
+    "requiredStatusChecks": [
+      "Continuous integration"
+    ],
+    "adversarialStatusChecks": [
+      "Adversarial Review / unit-test-reviewer"
+    ]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Migrate the authoritative reviewer result contract",
+      "description": "Version the shared PASS, FAIL, and compute-only INCONCLUSIVE schema and validator, including complete blocker, critic, remediation, provenance, and digest evidence.",
+      "acceptanceCriteria": [
+        "The public validate-adversarial-finding command accepts each approved verdict shape and rejects ERROR, malformed verdicts, incomplete blocker evidence, invalid critic evidence, and attribution or digest mismatches.",
+        "Targeted validator tests prove critic REJECT downgrades a proposed blocker and critic INCONCLUSIVE follows the configured calibrated-confidence threshold."
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Public test seam: scripts/validate-adversarial-finding.ts command and exported validator behavior."
+    },
+    {
+      "id": "US-002",
+      "title": "Add bounded compute outage, critic, and persona execution",
+      "description": "Update the protected reviewer engine to retry unavailable compute three times, invoke critics only for proposed blockers, and keep persona rendering non-authoritative with a neutral fallback.",
+      "acceptanceCriteria": [
+        "The public review-adversarial-context command produces INCONCLUSIVE only after three bounded retry attempts for an unavailable-compute transport result; all other engine failures produce platform FAIL.",
+        "Targeted engine tests prove critic capacity is consumed only for proposed blockers and applies CONFIRM, REJECT, and INCONCLUSIVE semantics.",
+        "Targeted engine tests prove persona rendering cannot alter the authoritative verdict and a failed persona render publishes the validated neutral presentation."
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Public test seam: scripts/review-adversarial-context.ts command with injected transports and clocks."
+    },
+    {
+      "id": "US-003",
+      "title": "Introduce enabled and promoted reviewer orchestration",
+      "description": "Add versioned enabled-versus-promoted state and convert the protected-base workflow to a registry-driven reviewer matrix without executing pull-request code.",
+      "acceptanceCriteria": [
+        "The registry validation command rejects missing, duplicated, inconsistent, or weakened enabled and promoted reviewer state.",
+        "Workflow policy tests prove the primary matrix is registry-driven, runs only after successful exact-head Continuous Integration, preserves protected-main checkout and least privilege, and retains the existing unit-test reviewer check."
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Public test seams: registry validation CLI and adversarial workflow policy CLI. Workflow YAML is non-executable configuration covered by deterministic policy tests."
+    },
+    {
+      "id": "US-004",
+      "title": "Publish independent checks and deterministic fan-in",
+      "description": "Map shared verdicts to independent GitHub check conclusions and add exact-head structural fan-in without obscuring individual reviewer evidence.",
+      "acceptanceCriteria": [
+        "Publisher tests prove PASS maps to success, confirmed or platform FAIL maps to failure, and compute-only INCONCLUSIVE maps to neutral.",
+        "The public fan-in command rejects missing, duplicate, stale, malformed, mismatched, failed, or provenance-invalid evidence and reports structurally valid INCONCLUSIVE evidence as neutral.",
+        "Workflow policy tests prove publication and fan-in are deterministic protected-base jobs and every enabled reviewer remains independently attributable."
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Public test seams: publish-adversarial-evidence CLI/library and a new fan-in CLI with fake GitHub/evidence transports."
+    },
+    {
+      "id": "US-005",
+      "title": "Validate exact-head outage waivers",
+      "description": "Add deterministic validation for authorized machine-readable pull-request waiver comments without allowing waivers to override blockers or promotion proof.",
+      "acceptanceCriteria": [
+        "The public waiver validator accepts only an authorized owner comment bound to one repository, pull request, reviewer, exact head SHA, outage evidence, rationale, authorizer, and expiry no later than 24 hours.",
+        "Targeted tests reject unauthorized authors, edited mismatches, changed heads, wrong reviewers, missing outage evidence, excessive or expired lifetimes, FAIL results, platform failures, and promotion use."
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Public test seam: a new waiver-validation CLI/library over supplied pull-request comment metadata."
+    },
+    {
+      "id": "US-006",
+      "title": "Add monotonic branch-protection promotion",
+      "description": "Implement the audited process-local compare-and-swap command for additive reviewer promotion and drift detection.",
+      "acceptanceCriteria": [
+        "The public promotion command verifies expected old branch protection and committed promotion state, exact-head PASS proof, and the candidate planned new state before making one additive update.",
+        "Targeted transport tests reject stale or INCONCLUSIVE proof, removals, renames, weakening, duplicated checks, unexpected live state, manifest drift, and non-owner authentication.",
+        "The command emits a bounded non-secret evidence record and never rolls protection back after a partial failure."
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Public test seam: a new branch-protection promotion CLI/library with a fake GitHub transport."
+    },
+    {
+      "id": "US-007",
+      "title": "Integrate fail-closed policy and documentation",
+      "description": "Wire the shared platform commands into repository policy, package scripts, architecture, and operational documentation.",
+      "acceptanceCriteria": [
+        "Policy checks reject weakened workflow, schema, registry, fan-in, waiver, promotion, or required-check invariants.",
+        "Documentation explains enabled versus promoted reviewers, check conclusions, critic capacity, fan-in authority, waivers, bootstrap sequencing, and forward-fix behavior.",
+        "The issue's required format, lint, policy, type, and targeted adversarial tests pass."
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Non-behavioral integration story; deterministic policy commands and documentation review provide the verification seam."
+    }
+  ]
+}
