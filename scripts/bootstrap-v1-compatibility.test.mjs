@@ -42,7 +42,7 @@ afterEach(async () => {
 });
 
 describe('v1 bootstrap compatibility', () => {
-  it('keeps the existing reviewer and exact-head unit-test check operational while v2 files are inert evidence', async () => {
+  it('keeps the existing reviewer and exact-head unit-test check operational during the follow-up activation boundary', async () => {
     const workflow = await fs.readFile(path.join(repoRoot, '.github/workflows/adversarial-review.yml'), 'utf8');
     expect(workflow).toContain('yarn review:adversarial');
     expect(workflow).toContain('yarn publish:adversarial');
@@ -97,7 +97,7 @@ describe('v1 bootstrap compatibility', () => {
       },
       changes: { production: [], tests: [], other: [] },
       repositoryContext: {
-        dormantSharedV2Files: ['scripts/shared-v2/review-adversarial-context.ts'],
+        compatibilityBoundary: 'Follow-up issue 58 owns the explicit v2 activation.',
       },
     });
 

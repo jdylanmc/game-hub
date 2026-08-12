@@ -234,10 +234,14 @@
   unit-test reviewer registration, workflow, prompt, schema, policy, engine,
   calibration report, and architecture fingerprint are therefore restored to
   their v1-compatible protected-main values.
-- Shared v2 contract, runtime, registry, and publisher code remain dormant
-  under `config/adversarial-agents/shared-v2/` and `scripts/shared-v2/`.
-  Fan-in explicitly labels accepted legacy v1 evidence and fails closed on
-  duplicate/mixed reviewer evidence.
+- The first compatibility attempt still exposed v2-shaped prompt/test evidence
+  to the old model, which imitated an unsupported extra structured field.
+  Bootstrap now carries no v2 execution or structured-contract payload in its
+  final tree; the reviewed v2 implementation remains recoverable from this
+  branch history for the activation work.
+- The active publisher now emits a truthful platform-ERROR failure even when
+  a legacy error result has no summary, rather than misreporting a head
+  mismatch.
 - The passing real v2 calibration metrics remain review evidence only; they
   cannot be active while the active fingerprint stays v1-compatible.
 - Follow-up issue #58 owns explicit activation of this boundary, a fresh v2
