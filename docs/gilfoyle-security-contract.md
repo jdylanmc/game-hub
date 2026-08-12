@@ -16,12 +16,36 @@ version and hash, tools version, repository commit, and timestamp.
 Gilfoyle also owns the independently versioned and content-hashed bounded
 context profile at
 `config/adversarial-agents/gilfoyle-security-architect/context.json`. Run
-`yarn context:collect --agent gilfoyle-security-architect` to collect explicit
-security surfaces, trust boundaries, privileged identities, data sources,
-sinks, and changed control domains. Pull-request content remains inert evidence
-and cannot select the agent or replace the active prompt, tools, policy, schema,
-workflow, identity, or collector behavior. Missing mandatory security context
+`yarn context:collect --agent gilfoyle-security-architect
+--deterministic-evidence <manifest>` to collect explicit security surfaces,
+trust boundaries, privileged identities, data sources, sinks, changed control
+domains, and deterministic scanner evidence. Pull-request content remains inert
+evidence and cannot select the agent or replace the active prompt, tools,
+policy, schema, workflow, identity, collector, or deterministic evidence
+configuration. Missing mandatory security context or deterministic evidence
 returns a blocking packet.
+
+## Deterministic evidence
+
+`deterministic-evidence.json` versions and bounds the required checks:
+
+- CodeQL security-extended analysis and GitHub dependency review use immutable
+  action commits;
+- dependency audit, redacted added-secret detection, workflow policy, and
+  pinned Bicep compilation fail independently;
+- the current absent container surface is recorded as `NOT_APPLICABLE`; adding
+  a container definition fails as `UNSUPPORTED` until a reviewed scanner is
+  configured; and
+- the manifest binds every result and evidence-file hash to the exact
+  repository, base SHA, head SHA, workflow run, attempt, tool version, and
+  content-hashed configuration.
+
+The required `Continuous integration` check aggregates deterministic validation
+and security jobs. Gilfoyle runs downstream only after the workflow succeeds,
+and manifest validation independently rejects failed, stale, missing,
+downgraded, duplicated, reordered, or oversized evidence. The model receives
+bounded summaries as untrusted data and has no mechanism to change the
+authoritative deterministic conclusion.
 
 The model is Azure-hosted GPT-4.1 mini. The registered engine permits no model
 tools, pull-request code execution, write capability, or network destination
@@ -59,4 +83,6 @@ Validate the protected contract locally:
 ```bash
 yarn agents:validate
 yarn policy:gilfoyle
+yarn security:bicep
+yarn security:containers
 ```

@@ -126,6 +126,40 @@ try {
   });
 
   await proveFailure({
+    expected: /Missing deterministic security workflow invariant/,
+    label: 'missing deterministic secret detection',
+    prepare: () =>
+      replaceFile('.github/workflows/continuous-integration.yml', (content) =>
+        content.replace('          yarn security:secrets \\\n', '          echo security-scan-removed \\\n'),
+      ),
+    run: () => runSandbox(yarnExecutable, ['policy:workflow']),
+  });
+
+  await proveFailure({
+    expected: /does not aggregate every deterministic gate|Missing deterministic security workflow invariant/,
+    label: 'masked deterministic security result',
+    prepare: () =>
+      replaceFile('.github/workflows/continuous-integration.yml', (content) =>
+        content.replace('test "$SECURITY_RESULT" = success', 'echo "$SECURITY_RESULT"'),
+      ),
+    run: () => runSandbox(yarnExecutable, ['policy:workflow']),
+  });
+
+  await proveFailure({
+    expected: /no reviewed deterministic image scanner is configured/i,
+    label: 'unsupported container surface',
+    prepare: async () => {
+      const restoreFile = await createProbeFile('Dockerfile', 'FROM scratch\n');
+      runRequired('stage container proof', 'git', ['add', 'Dockerfile']);
+      return async () => {
+        runRequired('unstage container proof', 'git', ['reset', '--', 'Dockerfile']);
+        await restoreFile();
+      };
+    },
+    run: () => runSandbox(yarnExecutable, ['security:containers']),
+  });
+
+  await proveFailure({
     expected: /Both protected-base jobs must bootstrap with direct yarn install --immutable/,
     label: 'script-based adversarial bootstrap',
     prepare: () =>
@@ -158,7 +192,7 @@ try {
     run: () => runSandbox(yarnExecutable, ['build-storybook']),
   });
 
-  console.log('Continuous integration fail-closed proof passed for 14 representative failures.');
+  console.log('Continuous integration fail-closed proof passed for 17 representative failures.');
 } catch (error) {
   runError = error;
 } finally {
@@ -211,9 +245,19 @@ async function syncCurrentPolicySources() {
   for (const relativePath of [
     '.github/workflows/adversarial-review.yml',
     '.github/workflows/continuous-integration.yml',
+    'config/adversarial-agents/agents-config.json',
+    'config/adversarial-agents/gilfoyle-security-architect/context.json',
+    'config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json',
     'package.json',
+    'scripts/build-deterministic-security-evidence.ts',
     'scripts/check-adversarial-workflow-policy.mjs',
+    'scripts/check-adversarial-policy.mjs',
+    'scripts/check-bicep-security.ts',
+    'scripts/check-container-security-surface.ts',
+    'scripts/check-secret-exposure.ts',
     'scripts/check-workflow-policy.mjs',
+    'scripts/collect-adversarial-context.ts',
+    'scripts/validate-gilfoyle-security-contract.ts',
     'yarn.lock',
   ]) {
     await fs.copyFile(path.join(rootDirectory, relativePath), sandboxPath(relativePath));

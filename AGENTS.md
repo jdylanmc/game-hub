@@ -51,10 +51,12 @@ outputs are dirty.
 ## Continuous Integration
 
 `.github/workflows/continuous-integration.yml` runs the same root validation
-commands as local development. Keep action references pinned to full commit
-SHAs, preserve least-privilege permissions and fork safety, and retain the
-workflow's logs, test results, coverage, production build, and Storybook
-evidence. Fresh `node-modules` runners must bootstrap with direct
+commands as local development, then runs an independent read-only deterministic
+security job. The required `Continuous integration` check is a final
+fail-closed aggregate of both jobs. Keep action references pinned to full
+commit SHAs, preserve least-privilege permissions and fork safety, and retain
+the workflow's logs, test results, coverage, production build, Storybook, and
+security evidence. Fresh `node-modules` runners must bootstrap with direct
 `yarn install --immutable` before invoking package scripts. Every command piped
 to an evidence log must run with Bash `pipefail` semantics.
 
@@ -73,7 +75,18 @@ test, or execute pull-request content.
 Use `yarn context:collect --agent gilfoyle-security-architect` for the
 independently hashed security profile. Preserve its explicit security-surface
 inventory, trust boundaries, privileged identities, source/sink flows,
-control-change mapping, and fail-closed mandatory-context behavior.
+control-change mapping, and fail-closed mandatory-context behavior. Gilfoyle
+also requires the bounded exact-head manifest through
+`--deterministic-evidence`; missing, failed, stale, downgraded, oversized, or
+misattributed deterministic evidence blocks before model access.
+
+The deterministic security job runs pinned CodeQL and dependency-review
+actions plus dependency audit, redacted added-secret detection, workflow
+policy, pinned Bicep compilation, and an explicit container-surface guard. A
+container definition fails closed as unsupported until a reviewed scanner is
+configured; an absent container surface is recorded as `NOT_APPLICABLE`.
+Gilfoyle can consume the resulting hashes and summaries but can never override
+the authoritative workflow conclusion.
 
 Adversarial source-issue resolution accepts canonical Ralph markers, matching
 `issue-<number>` branch identity, and explicit close/fix/resolve/track/address

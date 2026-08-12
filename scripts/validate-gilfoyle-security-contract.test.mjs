@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   validateGilfoyleFindingSchema,
+  validateGilfoyleDeterministicEvidenceConfig,
   validateGilfoyleSecurityContract,
   validateGilfoyleSecurityContext,
   validateGilfoyleSecurityPolicy,
@@ -16,6 +17,7 @@ const schema = JSON.parse(fs.readFileSync(path.join(configRoot, 'schema.json'), 
 const policy = JSON.parse(fs.readFileSync(path.join(configRoot, 'policy.json'), 'utf8'));
 const tools = JSON.parse(fs.readFileSync(path.join(configRoot, 'tools.json'), 'utf8'));
 const securityContext = JSON.parse(fs.readFileSync(path.join(configRoot, 'context.json'), 'utf8'));
+const deterministicEvidence = JSON.parse(fs.readFileSync(path.join(configRoot, 'deterministic-evidence.json'), 'utf8'));
 
 describe('Gilfoyle security contract', () => {
   it('validates the independently registered contract and content hashes', () => {
@@ -60,5 +62,13 @@ describe('Gilfoyle security contract', () => {
     changed.trustModel.trustBoundaries = [];
     changed.trustModel.privilegedIdentities[0].pullRequestAccessible = true;
     expect(validateGilfoyleSecurityContext(changed)).toMatchObject({ valid: false });
+  });
+
+  it('rejects mutable actions, weakened bounds, or silently unsupported containers', () => {
+    const changed = structuredClone(deterministicEvidence);
+    changed.limits.maxManifestBytes += 1;
+    changed.checks.codeql.tool.commitSha = 'v3';
+    changed.checks['container-scan'].blockingPolicy.unsupportedBlocks = false;
+    expect(validateGilfoyleDeterministicEvidenceConfig(changed)).toMatchObject({ valid: false });
   });
 });

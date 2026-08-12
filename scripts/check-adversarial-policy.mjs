@@ -16,6 +16,12 @@ const collectorConfig = JSON.parse(
 const securityContextConfig = JSON.parse(
   await fs.readFile(path.join(root, 'config/adversarial-agents/gilfoyle-security-architect/context.json'), 'utf8'),
 );
+const deterministicEvidenceConfig = JSON.parse(
+  await fs.readFile(
+    path.join(root, 'config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json'),
+    'utf8',
+  ),
+);
 const collector = await fs.readFile(path.join(root, 'scripts/collect-adversarial-context.ts'), 'utf8');
 const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
 const reviewerConfig = JSON.parse(
@@ -150,12 +156,34 @@ const requiredSecuritySurfaces = [
   'manifests',
 ];
 if (
-  securityContextConfig.version !== '1.0.0' ||
+  securityContextConfig.version !== '1.1.0' ||
   securityContextConfig.agentName !== 'gilfoyle-security-architect' ||
   JSON.stringify(securityContextConfig.requiredSurfaces) !== JSON.stringify(requiredSecuritySurfaces) ||
   securityContextConfig.maxFilesPerSurface !== 500
 ) {
   violations.push('Gilfoyle security context identity, surfaces, or file bound was weakened.');
+}
+if (
+  deterministicEvidenceConfig.version !== '1.0.0' ||
+  deterministicEvidenceConfig.schemaVersion !== '1.0.0' ||
+  deterministicEvidenceConfig.agentName !== 'gilfoyle-security-architect' ||
+  JSON.stringify(deterministicEvidenceConfig.requiredChecks) !==
+    JSON.stringify([
+      'codeql',
+      'dependency-review',
+      'dependency-audit',
+      'secret-detection',
+      'workflow-policy',
+      'bicep-analysis',
+      'container-scan',
+    ]) ||
+  deterministicEvidenceConfig.limits?.maxManifestBytes !== 131072 ||
+  deterministicEvidenceConfig.checks?.codeql?.tool?.commitSha !== 'c4dd10e44af883a891fe31ced449bcb4a6728b9b' ||
+  deterministicEvidenceConfig.checks?.['dependency-review']?.tool?.commitSha !==
+    '2031cfc080254a8a887f58cffee85186f0e49e48' ||
+  deterministicEvidenceConfig.checks?.['container-scan']?.blockingPolicy?.unsupportedBlocks !== true
+) {
+  violations.push('Gilfoyle deterministic evidence checks, bounds, or immutable tools were weakened.');
 }
 for (const surface of requiredSecuritySurfaces) {
   const configuredSurface = securityContextConfig.surfaces?.[surface];
@@ -202,7 +230,12 @@ const requiredCollectorFragments = [
   "'MANDATORY_SECURITY_CONTEXT_MISSING'",
   "'MANDATORY_SECURITY_BINARY_DIFF'",
   "'MANDATORY_SECURITY_DIFF_TRUNCATED'",
+  "'MANDATORY_DETERMINISTIC_EVIDENCE_MISSING'",
+  "'MANDATORY_DETERMINISTIC_EVIDENCE_INVALID'",
+  "classification: 'ATTRIBUTABLE_UNTRUSTED_RESULT_SUMMARY'",
+  'deterministicFailuresOverridableByAgent: false',
   "'--agent'",
+  "'--deterministic-evidence'",
 ];
 for (const fragment of requiredCollectorFragments) {
   if (!collector.includes(fragment)) {
@@ -223,6 +256,14 @@ if (spawnedCommands.length === 0 || spawnedCommands.some((command) => command !=
 }
 if (packageJson.scripts?.['context:collect'] !== 'node scripts/collect-adversarial-context.ts') {
   violations.push('Missing canonical local context collection command.');
+}
+if (
+  packageJson.scripts?.['security:secrets'] !== 'node scripts/check-secret-exposure.ts' ||
+  packageJson.scripts?.['security:bicep'] !== 'node scripts/check-bicep-security.ts' ||
+  packageJson.scripts?.['security:containers'] !== 'node scripts/check-container-security-surface.ts' ||
+  packageJson.scripts?.['security:evidence'] !== 'node scripts/build-deterministic-security-evidence.ts'
+) {
+  violations.push('Missing canonical deterministic security evidence commands.');
 }
 
 if (

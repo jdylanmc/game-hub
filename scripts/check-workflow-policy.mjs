@@ -10,6 +10,18 @@ const codeowners = await fs.readFile(codeownersPath, 'utf8');
 const ralphRequiredChecks = JSON.parse(
   await fs.readFile(path.join(rootDirectory, 'config', 'ralph-required-checks.json'), 'utf8'),
 );
+const deterministicEvidenceConfig = JSON.parse(
+  await fs.readFile(
+    path.join(
+      rootDirectory,
+      'config',
+      'adversarial-agents',
+      'gilfoyle-security-architect',
+      'deterministic-evidence.json',
+    ),
+    'utf8',
+  ),
+);
 const ralphShellRunner = await fs.readFile(
   path.join(rootDirectory, '.github', 'skills', 'ralph-loop', 'scripts', 'run-ralph-loop.sh'),
   'utf8',
@@ -35,6 +47,8 @@ const requiredFragments = [
   ],
   ['concurrency cancellation', /^\s{2}cancel-in-progress: true\s*$/m],
   ['required check name', /^\s{4}name: Continuous integration\s*$/m],
+  ['deterministic validation job', /^\s{4}name: Deterministic validation\s*$/m],
+  ['deterministic security job', /^\s{4}name: Deterministic security evidence\s*$/m],
   ['pinned runner', /^\s{4}runs-on: ubuntu-24\.04\s*$/m],
   ['job timeout', /^\s{4}timeout-minutes: 30\s*$/m],
   ['fail-closed run shell', /^ {4}defaults:\s*\n {6}run:\s*\n {8}shell: bash -eo pipefail \{0\}\s*$/m],
@@ -43,6 +57,8 @@ const requiredFragments = [
   ['unconditional evidence upload', /^\s{8}if: always\(\)\s*$/m],
   ['fail-closed artifact collection', /^\s{10}if-no-files-found: error\s*$/m],
   ['artifact retention', /^\s{10}retention-days: 14\s*$/m],
+  ['final fail-closed aggregation', /^\s{4}if: always\(\)\s*$/m],
+  ['empty final permissions', /^\s{4}permissions: \{\}\s*$/m],
 ];
 
 const requiredArtifactPaths = [
@@ -90,6 +106,7 @@ for (let index = 1; index < commandPositions.length; index += 1) {
 }
 
 violations.push(...validateContinuousIntegrationBootstrapPolicy(workflow));
+violations.push(...validateDeterministicSecurityWorkflowPolicy(workflow, deterministicEvidenceConfig));
 
 for (const artifactPath of requiredArtifactPaths) {
   if (!workflow.includes(`            ${artifactPath}`)) {
@@ -187,3 +204,77 @@ function validateContinuousIntegrationBootstrapPolicy(workflowSource) {
 }
 
 export { validateContinuousIntegrationBootstrapPolicy };
+
+function validateDeterministicSecurityWorkflowPolicy(workflowSource, evidenceConfig) {
+  const securityViolations = [];
+  const requiredFragments = [
+    'needs:\n      - validate',
+    'SECURITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}',
+    'SECURITY_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}',
+    'ref: ${{ env.SECURITY_HEAD_SHA }}',
+    'fetch-depth: 0',
+    'persist-credentials: false',
+    'uses: github/codeql-action/init@c4dd10e44af883a891fe31ced449bcb4a6728b9b',
+    'languages: javascript-typescript',
+    'build-mode: none',
+    'queries: security-extended',
+    'uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48',
+    "if: github.event_name == 'pull_request'",
+    'fail-on-severity: high',
+    'warn-only: false',
+    'comment-summary-in-pr: never',
+    'yarn security:audit',
+    'yarn security:secrets',
+    'az bicep install --version v0.42.1',
+    'yarn security:bicep',
+    'yarn security:containers',
+    'uses: github/codeql-action/analyze@c4dd10e44af883a891fe31ced449bcb4a6728b9b',
+    'upload: never',
+    'upload-database: false',
+    'yarn security:evidence',
+    '--workflow "Continuous integration"',
+    'name: deterministic-security-evidence-${{ github.run_id }}-${{ github.run_attempt }}',
+    'test "$VALIDATION_RESULT" = success',
+    'test "$SECURITY_RESULT" = success',
+  ];
+  for (const fragment of requiredFragments) {
+    if (!workflowSource.includes(fragment)) {
+      securityViolations.push(`Missing deterministic security workflow invariant: ${fragment}`);
+    }
+  }
+  const securityJob = workflowSource.match(
+    /^ {2}deterministic-security:\n(?<body>[\s\S]*?)^ {2}continuous-integration:/m,
+  )?.groups?.body;
+  if (
+    !securityJob ||
+    !/^ {4}permissions:\n {6}contents: read\s*$/m.test(securityJob) ||
+    /^\s{6}[\w-]+: write\s*$/m.test(securityJob) ||
+    securityJob.includes('secrets.') ||
+    securityJob.includes('continue-on-error: true')
+  ) {
+    securityViolations.push('Deterministic security job permissions or fork safety were weakened.');
+  }
+  const finalJob = workflowSource.match(/^ {2}continuous-integration:\n(?<body>[\s\S]*)$/m)?.groups?.body;
+  if (
+    !finalJob ||
+    !/^ {4}if: always\(\)\s*$/m.test(finalJob) ||
+    !finalJob.includes('      - validate') ||
+    !finalJob.includes('      - deterministic-security') ||
+    !finalJob.includes('test "$VALIDATION_RESULT" = success') ||
+    !finalJob.includes('test "$SECURITY_RESULT" = success')
+  ) {
+    securityViolations.push('Required Continuous integration check does not aggregate every deterministic gate.');
+  }
+  if (
+    evidenceConfig.version !== '1.0.0' ||
+    evidenceConfig.agentName !== 'gilfoyle-security-architect' ||
+    evidenceConfig.checks?.codeql?.tool?.commitSha !== 'c4dd10e44af883a891fe31ced449bcb4a6728b9b' ||
+    evidenceConfig.checks?.['dependency-review']?.tool?.commitSha !== '2031cfc080254a8a887f58cffee85186f0e49e48' ||
+    evidenceConfig.checks?.['container-scan']?.blockingPolicy?.unsupportedBlocks !== true
+  ) {
+    securityViolations.push('Deterministic security evidence configuration was weakened.');
+  }
+  return securityViolations;
+}
+
+export { validateDeterministicSecurityWorkflowPolicy };

@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const COLLECTOR_VERSION = '1.0.1';
 const PACKET_SCHEMA_VERSION = '1.0.0';
-const SECURITY_COLLECTOR_VERSION = '1.1.0';
-const SECURITY_PACKET_SCHEMA_VERSION = '1.1.0';
+const SECURITY_COLLECTOR_VERSION = '1.2.0';
+const SECURITY_PACKET_SCHEMA_VERSION = '1.2.0';
 const DEFAULT_AGENT_NAME = 'unit-test-reviewer';
 const SECURITY_AGENT_NAME = 'gilfoyle-security-architect';
 const REQUIRED_SECURITY_SURFACES = [
@@ -22,6 +22,15 @@ const REQUIRED_SECURITY_SURFACES = [
   'configuration',
   'contracts',
   'manifests',
+] as const;
+const REQUIRED_DETERMINISTIC_CHECKS = [
+  'codeql',
+  'dependency-review',
+  'dependency-audit',
+  'secret-detection',
+  'workflow-policy',
+  'bicep-analysis',
+  'container-scan',
 ] as const;
 
 type JsonObject = Record<string, unknown>;
@@ -82,6 +91,13 @@ interface SecurityContextConfig {
   version: string;
   agentName?: string;
   maxFilesPerSurface: number;
+  deterministicEvidence: {
+    configFile: string;
+    configVersion: string;
+    configContentHash: string;
+    requiredWorkflow: string;
+    failureOverridableByAgent: boolean;
+  };
   requiredSurfaces: string[];
   surfaces: Record<string, SecuritySurfaceConfig>;
   trustModel: {
@@ -105,6 +121,30 @@ interface SecurityContextConfig {
     JsonObject & {
       id: string;
       patterns: string[];
+    }
+  >;
+}
+
+interface DeterministicEvidenceConfig {
+  version: string;
+  schemaVersion: string;
+  agentName: string;
+  producerVersion: string;
+  limits: {
+    maxManifestBytes: number;
+    maxFindingsPerCheck: number;
+    maxEvidenceFilesPerCheck: number;
+    maxEvidenceFileBytes: number;
+  };
+  requiredChecks: string[];
+  checks: Record<
+    string,
+    {
+      surfaces: string[];
+      applicability: 'always' | 'pull-request' | 'surface-present';
+      enforcement: 'BLOCKING';
+      tool: JsonObject & { name: string; version: string };
+      blockingPolicy: JsonObject;
     }
   >;
 }
@@ -347,10 +387,22 @@ function isNonEmptyStringArray(value: unknown): value is string[] {
 function validateSecurityConfig(value: unknown): string[] {
   const errors: string[] = [];
   if (!isObject(value)) return ['Security context configuration is missing'];
-  if (value.version !== '1.0.0') errors.push('Security context configuration version must be 1.0.0');
+  if (value.version !== '1.1.0') errors.push('Security context configuration version must be 1.1.0');
   if (value.agentName !== SECURITY_AGENT_NAME) errors.push('Security context configuration must belong to Gilfoyle');
   if (!Number.isInteger(value.maxFilesPerSurface) || Number(value.maxFilesPerSurface) < 1) {
     errors.push('Security context file limit must be a positive integer');
+  }
+  if (
+    !isObject(value.deterministicEvidence) ||
+    value.deterministicEvidence.configFile !==
+      'config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json' ||
+    value.deterministicEvidence.configVersion !== '1.0.0' ||
+    typeof value.deterministicEvidence.configContentHash !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(value.deterministicEvidence.configContentHash) ||
+    value.deterministicEvidence.requiredWorkflow !== 'Continuous integration' ||
+    value.deterministicEvidence.failureOverridableByAgent !== false
+  ) {
+    errors.push('Deterministic security evidence reference is incomplete or overridable');
   }
   if (
     !Array.isArray(value.requiredSurfaces) ||
@@ -418,6 +470,220 @@ function validateSecurityConfig(value: unknown): string[] {
     errors.push('Security control domains are missing or incomplete');
   }
   return errors;
+}
+
+function validateDeterministicEvidenceConfig(
+  value: unknown,
+  securityConfigValue: unknown,
+): { config: DeterministicEvidenceConfig | undefined; errors: string[] } {
+  const errors: string[] = [];
+  if (!isObject(value)) return { config: undefined, errors: ['Deterministic evidence configuration is missing'] };
+  if (
+    value.version !== '1.0.0' ||
+    value.schemaVersion !== '1.0.0' ||
+    value.agentName !== SECURITY_AGENT_NAME ||
+    value.producerVersion !== '1.0.0'
+  ) {
+    errors.push('Deterministic evidence configuration identity is invalid');
+  }
+  if (
+    !isObject(value.limits) ||
+    !Number.isInteger(value.limits.maxManifestBytes) ||
+    !Number.isInteger(value.limits.maxFindingsPerCheck) ||
+    !Number.isInteger(value.limits.maxEvidenceFilesPerCheck) ||
+    !Number.isInteger(value.limits.maxEvidenceFileBytes)
+  ) {
+    errors.push('Deterministic evidence bounds are invalid');
+  }
+  if (stableStringify(value.requiredChecks) !== stableStringify(REQUIRED_DETERMINISTIC_CHECKS)) {
+    errors.push('Deterministic evidence must require every reviewed security check');
+  }
+  if (!isObject(value.checks)) {
+    errors.push('Deterministic evidence check registry is missing');
+  } else {
+    for (const checkId of REQUIRED_DETERMINISTIC_CHECKS) {
+      const check = value.checks[checkId];
+      if (
+        !isObject(check) ||
+        !isNonEmptyStringArray(check.surfaces) ||
+        !['always', 'pull-request', 'surface-present'].includes(String(check.applicability)) ||
+        check.enforcement !== 'BLOCKING' ||
+        !isObject(check.tool) ||
+        typeof check.tool.name !== 'string' ||
+        typeof check.tool.version !== 'string' ||
+        !isObject(check.blockingPolicy)
+      ) {
+        errors.push(`Deterministic evidence check is incomplete: ${checkId}`);
+      }
+    }
+  }
+  const securityConfig = isObject(securityConfigValue) ? securityConfigValue : {};
+  const reference = isObject(securityConfig.deterministicEvidence) ? securityConfig.deterministicEvidence : {};
+  if (
+    reference.configVersion !== value.version ||
+    reference.configContentHash !== sha256(stableStringify(value)) ||
+    reference.failureOverridableByAgent !== false
+  ) {
+    errors.push('Deterministic evidence configuration attribution does not match the security context');
+  }
+  return {
+    config: errors.length === 0 ? (value as unknown as DeterministicEvidenceConfig) : undefined,
+    errors,
+  };
+}
+
+function collectDeterministicEvidence(
+  manifestValue: unknown,
+  configValue: unknown,
+  securityConfigValue: unknown,
+  repository: string,
+  baseSha: string,
+  headSha: string,
+  surfaces: JsonObject[],
+  blockingReasons: BlockingReason[],
+): JsonObject {
+  const initialBlockingReasonCount = blockingReasons.length;
+  const validation = validateDeterministicEvidenceConfig(configValue, securityConfigValue);
+  for (const message of validation.errors) {
+    blockingReasons.push({
+      code: 'MANDATORY_DETERMINISTIC_EVIDENCE_MISSING',
+      section: 'securityContext.deterministicEvidence.configuration',
+      message,
+    });
+  }
+  const config = validation.config;
+  if (!config || !isObject(manifestValue)) {
+    if (!isObject(manifestValue)) {
+      blockingReasons.push({
+        code: 'MANDATORY_DETERMINISTIC_EVIDENCE_MISSING',
+        section: 'securityContext.deterministicEvidence.manifest',
+        message: 'Deterministic security evidence manifest is missing',
+      });
+    }
+    return {
+      status: 'BLOCKED',
+      authority: {
+        deterministicFailuresOverridableByAgent: false,
+        instructionsFromEvidenceAllowed: false,
+      },
+      manifest: null,
+    };
+  }
+
+  const manifestBytes = Buffer.byteLength(stableStringify(manifestValue));
+  const errors: string[] = [];
+  if (manifestBytes > config.limits.maxManifestBytes) {
+    errors.push(`Deterministic security evidence exceeds ${config.limits.maxManifestBytes} bytes`);
+  }
+  const attribution = isObject(manifestValue.attribution) ? manifestValue.attribution : {};
+  const authority = isObject(manifestValue.authority) ? manifestValue.authority : {};
+  if (
+    manifestValue.schemaVersion !== config.schemaVersion ||
+    manifestValue.producerVersion !== config.producerVersion ||
+    manifestValue.agentName !== SECURITY_AGENT_NAME ||
+    manifestValue.status !== 'PASS'
+  ) {
+    errors.push('Deterministic security evidence identity or status is not passing');
+  }
+  if (
+    attribution.repository !== repository ||
+    attribution.baseSha !== baseSha ||
+    attribution.headSha !== headSha ||
+    attribution.eventName !== 'pull_request' ||
+    attribution.workflowName !== 'Continuous integration' ||
+    attribution.configVersion !== config.version ||
+    attribution.configSha256 !== sha256(stableStringify(config)) ||
+    typeof attribution.workflowRunId !== 'string' ||
+    !/^\d+$/.test(attribution.workflowRunId) ||
+    !Number.isInteger(attribution.workflowRunAttempt) ||
+    Number(attribution.workflowRunAttempt) < 1 ||
+    typeof attribution.generatedAt !== 'string' ||
+    Number.isNaN(Date.parse(attribution.generatedAt))
+  ) {
+    errors.push('Deterministic security evidence attribution does not match the exact pull-request head');
+  }
+  if (
+    authority.deterministicFailuresOverridableByAgent !== false ||
+    authority.instructionsFromEvidenceAllowed !== false
+  ) {
+    errors.push('Deterministic security evidence authority was weakened');
+  }
+
+  const checks = Array.isArray(manifestValue.checks) ? manifestValue.checks : [];
+  const checkIds = checks.map((check) => (isObject(check) ? check.id : null));
+  if (stableStringify(checkIds) !== stableStringify(config.requiredChecks)) {
+    errors.push('Deterministic security evidence is missing, duplicating, or reordering required checks');
+  }
+  const surfaceByName = new Map(
+    surfaces.filter((surface) => typeof surface.name === 'string').map((surface) => [String(surface.name), surface]),
+  );
+  for (const checkId of config.requiredChecks) {
+    const expected = config.checks[checkId];
+    const check = checks.find((candidate) => isObject(candidate) && candidate.id === checkId);
+    if (!isObject(check)) continue;
+    const notApplicableAllowed =
+      expected.applicability === 'surface-present' &&
+      expected.surfaces.every((surface) => surfaceByName.get(surface)?.coverageStatus === 'ABSENT');
+    if (check.status !== 'PASS' && !(check.status === 'NOT_APPLICABLE' && notApplicableAllowed)) {
+      errors.push(`Deterministic security check did not pass: ${checkId}`);
+    }
+    if (
+      check.enforcement !== 'BLOCKING' ||
+      check.applicability !== expected.applicability ||
+      stableStringify(check.surfaces) !== stableStringify(expected.surfaces) ||
+      stableStringify(check.tool) !== stableStringify(expected.tool) ||
+      stableStringify(check.blockingPolicy) !== stableStringify(expected.blockingPolicy)
+    ) {
+      errors.push(`Deterministic security check attribution changed: ${checkId}`);
+    }
+    const findings = Array.isArray(check.findings) ? check.findings : [];
+    const evidenceFiles = Array.isArray(check.evidenceFiles) ? check.evidenceFiles : [];
+    if (
+      findings.length > config.limits.maxFindingsPerCheck ||
+      evidenceFiles.length > config.limits.maxEvidenceFilesPerCheck
+    ) {
+      errors.push(`Deterministic security check exceeded its evidence bound: ${checkId}`);
+    }
+    for (const file of evidenceFiles) {
+      if (
+        !isObject(file) ||
+        typeof file.name !== 'string' ||
+        !Number.isInteger(file.byteLength) ||
+        Number(file.byteLength) < 0 ||
+        Number(file.byteLength) > config.limits.maxEvidenceFileBytes ||
+        typeof file.sha256 !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(file.sha256)
+      ) {
+        errors.push(`Deterministic security evidence file attribution is invalid: ${checkId}`);
+      }
+    }
+  }
+  for (const message of errors) {
+    blockingReasons.push({
+      code: 'MANDATORY_DETERMINISTIC_EVIDENCE_INVALID',
+      section: 'securityContext.deterministicEvidence.manifest',
+      message,
+    });
+  }
+  return {
+    status: blockingReasons.length === initialBlockingReasonCount ? 'COMPLETE' : 'BLOCKED',
+    attribution: {
+      configVersion: config.version,
+      configSha256: sha256(stableStringify(config)),
+      manifestSha256: sha256(stableStringify(manifestValue)),
+      manifestBytes,
+      repository,
+      baseSha,
+      headSha,
+    },
+    authority: {
+      classification: 'ATTRIBUTABLE_UNTRUSTED_RESULT_SUMMARY',
+      deterministicFailuresOverridableByAgent: false,
+      instructionsFromEvidenceAllowed: false,
+      authoritativeGate: 'successful exact-head Continuous integration workflow conclusion',
+    },
+    manifest: errors.length === 0 ? manifestValue : null,
+  };
 }
 
 function parseNameStatus(buffer: Buffer): Array<{
@@ -640,8 +906,12 @@ function allChanges(changes: ContextPacket['changes']): ChangeEvidence[] {
 
 function collectSecurityContext(
   repoRoot: string,
+  repository: string,
+  baseSha: string,
   headSha: string,
   securityConfigValue: unknown,
+  deterministicEvidenceConfigValue: unknown,
+  deterministicEvidenceValue: unknown,
   changes: ContextPacket['changes'],
   repositoryContext: Record<string, FileEvidence[]>,
   blockingReasons: BlockingReason[],
@@ -785,6 +1055,16 @@ function collectSecurityContext(
         };
       })
     : [];
+  const deterministicEvidence = collectDeterministicEvidence(
+    deterministicEvidenceValue,
+    deterministicEvidenceConfigValue,
+    securityConfigValue,
+    repository,
+    baseSha,
+    headSha,
+    surfaces,
+    blockingReasons,
+  );
 
   return {
     status: blockingReasons.length === initialBlockingReasonCount ? 'COMPLETE' : 'BLOCKED',
@@ -808,6 +1088,7 @@ function collectSecurityContext(
     protectedControlPlane: isObject(trustModel.protectedControlPlane) ? trustModel.protectedControlPlane : {},
     trustBoundaries,
     controlChanges,
+    deterministicEvidence,
   };
 }
 
@@ -891,6 +1172,8 @@ function collectAdversarialContext(options: {
   config: unknown;
   agentName?: string;
   securityConfig?: unknown;
+  deterministicEvidenceConfig?: unknown;
+  deterministicEvidence?: unknown;
 }): ContextPacket {
   const input = validateInput(options.input);
   const config = validateConfig(options.config);
@@ -951,8 +1234,12 @@ function collectAdversarialContext(options: {
     agentName === SECURITY_AGENT_NAME
       ? collectSecurityContext(
           options.repoRoot,
+          input.pullRequest.repository,
+          input.pullRequest.baseSha,
           input.pullRequest.headSha,
           options.securityConfig,
+          options.deterministicEvidenceConfig,
+          options.deterministicEvidence,
           changes,
           repositoryContext,
           blockingReasons,
@@ -978,6 +1265,12 @@ function collectAdversarialContext(options: {
             securityConfigVersion: isObject(options.securityConfig) ? options.securityConfig.version : null,
             securityConfigSha256: isObject(options.securityConfig)
               ? sha256(stableStringify(options.securityConfig))
+              : null,
+            deterministicEvidenceConfigVersion: isObject(options.deterministicEvidenceConfig)
+              ? options.deterministicEvidenceConfig.version
+              : null,
+            deterministicEvidenceConfigSha256: isObject(options.deterministicEvidenceConfig)
+              ? sha256(stableStringify(options.deterministicEvidenceConfig))
               : null,
           }
         : {}),
@@ -1025,6 +1318,18 @@ function collectAdversarialContext(options: {
         protectedControlPlane: {},
         trustBoundaries: [],
         controlChanges: [],
+        deterministicEvidence: isObject(packet.securityContext.deterministicEvidence)
+          ? {
+              status: 'BLOCKED',
+              attribution: isObject(packet.securityContext.deterministicEvidence.attribution)
+                ? packet.securityContext.deterministicEvidence.attribution
+                : {},
+              authority: isObject(packet.securityContext.deterministicEvidence.authority)
+                ? packet.securityContext.deterministicEvidence.authority
+                : {},
+              manifest: null,
+            }
+          : {},
       };
     }
     packet.limits.packetBytesBeforeReduction = packetBytes;
@@ -1042,22 +1347,38 @@ function parseArguments(args: string[]): {
   configPath: string;
   agentName: string;
   securityConfigPath: string;
+  deterministicEvidenceConfigPath: string;
+  deterministicEvidencePath?: string;
 } {
   let inputPath = '';
   let outputPath: string | undefined;
   let configPath = 'config/adversarial-agents/context-collector.json';
   let agentName = DEFAULT_AGENT_NAME;
   let securityConfigPath = 'config/adversarial-agents/gilfoyle-security-architect/context.json';
+  let deterministicEvidenceConfigPath =
+    'config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json';
+  let deterministicEvidencePath: string | undefined;
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === '--input') inputPath = args[++index] ?? '';
     else if (args[index] === '--output') outputPath = args[++index];
     else if (args[index] === '--config') configPath = args[++index] ?? '';
     else if (args[index] === '--agent') agentName = args[++index] ?? '';
     else if (args[index] === '--security-config') securityConfigPath = args[++index] ?? '';
+    else if (args[index] === '--deterministic-evidence-config') {
+      deterministicEvidenceConfigPath = args[++index] ?? '';
+    } else if (args[index] === '--deterministic-evidence') deterministicEvidencePath = args[++index];
     else throw new Error(`Unknown argument: ${args[index]}`);
   }
   if (!inputPath) throw new Error('--input is required');
-  return { inputPath, outputPath, configPath, agentName, securityConfigPath };
+  return {
+    inputPath,
+    outputPath,
+    configPath,
+    agentName,
+    securityConfigPath,
+    deterministicEvidenceConfigPath,
+    deterministicEvidencePath,
+  };
 }
 
 function main(): void {
@@ -1070,12 +1391,28 @@ function main(): void {
     args.agentName === SECURITY_AGENT_NAME && fs.existsSync(securityConfigAbsolutePath)
       ? JSON.parse(fs.readFileSync(securityConfigAbsolutePath, 'utf8'))
       : undefined;
+  const deterministicEvidenceConfigAbsolutePath = path.resolve(repoRoot, args.deterministicEvidenceConfigPath);
+  const deterministicEvidenceConfig: unknown =
+    args.agentName === SECURITY_AGENT_NAME && fs.existsSync(deterministicEvidenceConfigAbsolutePath)
+      ? JSON.parse(fs.readFileSync(deterministicEvidenceConfigAbsolutePath, 'utf8'))
+      : undefined;
+  const deterministicEvidenceAbsolutePath = args.deterministicEvidencePath
+    ? path.resolve(repoRoot, args.deterministicEvidencePath)
+    : undefined;
+  const deterministicEvidence: unknown =
+    args.agentName === SECURITY_AGENT_NAME &&
+    deterministicEvidenceAbsolutePath &&
+    fs.existsSync(deterministicEvidenceAbsolutePath)
+      ? JSON.parse(fs.readFileSync(deterministicEvidenceAbsolutePath, 'utf8'))
+      : undefined;
   const packet = collectAdversarialContext({
     repoRoot,
     input,
     config,
     agentName: args.agentName,
     securityConfig,
+    deterministicEvidenceConfig,
+    deterministicEvidence,
   });
   const serialized = `${stableStringify(packet, 2)}\n`;
   if (args.outputPath) {
@@ -1099,4 +1436,4 @@ if (isCli) {
 }
 
 export { collectAdversarialContext, stableStringify };
-export type { CollectorConfig, CollectorInput, ContextPacket, SecurityContextConfig };
+export type { CollectorConfig, CollectorInput, ContextPacket, DeterministicEvidenceConfig, SecurityContextConfig };

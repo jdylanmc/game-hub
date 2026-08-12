@@ -18,6 +18,12 @@
 - Required security surfaces record bounded Git-object inventories, explicit
   trust boundaries, privileged identities, data sources and sinks, and changed
   control domains. Missing or incomplete mandatory security context blocks.
+- The required `Continuous integration` check is a final fail-closed aggregate:
+  deterministic validation and deterministic security must both succeed.
+- Deterministic security evidence is independently versioned, content-hashed,
+  exact-head attributable, count/byte bounded, and treated as inert input.
+- An absent container surface is explicit `NOT_APPLICABLE`; introducing a
+  container definition blocks as `UNSUPPORTED` until a reviewed scanner exists.
 
 ## 2026-08-11 - Planning
 
@@ -95,3 +101,40 @@
   production build, bundle budgets, and Storybook.
 - Gilfoyle remains disabled and uncalibrated by design. US-003 is the next
   eligible story and owns deterministic security evidence integration.
+
+## 2026-08-12 - US-003 Integrate deterministic security evidence
+
+- Safely merged `origin/main` through resolver fix
+  `53aa66a68bfd9554153112510a284d16d267baf8` without rebasing or rewriting
+  history, preserving both main's source-issue guidance and Gilfoyle guidance.
+- Split the canonical workflow into deterministic validation, a downstream
+  read-only deterministic-security job, and the final required
+  `Continuous integration` aggregate. Missing, skipped, canceled, or failed
+  security work prevents the required check from succeeding.
+- Added immutable CodeQL `3.37.6` and dependency-review `4.9.0` action commits,
+  with CodeQL upload disabled, dependency comments disabled, read-only contents
+  permission, no secrets, and exact untrusted-head checkout without persisted
+  credentials.
+- Added high-severity dependency audit, redacted added-line secret detection,
+  workflow/security policy enforcement, pinned Bicep `0.42.1` compilation, and
+  a container guard that fails closed when an unsupported container surface
+  appears.
+- Added a versioned bounded manifest containing exact repository, base/head SHA,
+  workflow run/attempt, tool and configuration attribution, redacted findings,
+  and evidence-file hashes. Blocking CodeQL findings produce a failed manifest
+  and failed job.
+- Extended Gilfoyle context collection to require that exact-head manifest and
+  reject missing, failed, stale, downgraded, reordered, duplicated, oversized,
+  or misattributed evidence. The manifest is inert evidence; the upstream
+  workflow conclusion remains authoritative and cannot be overridden by model
+  output.
+- Updated fail-closed proofs for removed security scans, masked aggregate
+  results, and newly unsupported container definitions. Refreshed hardened Yarn
+  lock metadata required for a genuine fresh-worktree immutable install.
+- Targeted checks passed: 45 security/context/policy tests,
+  `yarn policy:workflow`, `yarn policy:adversarial`,
+  `yarn policy:gilfoyle`, `yarn agents:validate`, full issue-diff secret scan,
+  Bicep compilation, container-surface validation, type checking, and 17
+  fail-closed simulations.
+- US-004 is next and owns Gilfoyle implementation and real calibration. Gilfoyle
+  remains disabled in this story.

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +11,20 @@ type JsonObject = Record<string, unknown>;
 interface ContractValidation {
   valid: boolean;
   errors: string[];
+}
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (!isObject(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort((left, right) => Buffer.from(left).compare(Buffer.from(right)))
+      .map((key) => [key, stableValue(value[key])]),
+  );
+}
+
+function stableStringify(value: unknown): string {
+  return JSON.stringify(stableValue(value));
 }
 
 const AGENT_NAME = 'gilfoyle-security-architect';
@@ -23,6 +38,15 @@ const REQUIRED_SECURITY_SURFACES = [
   'configuration',
   'contracts',
   'manifests',
+] as const;
+const REQUIRED_DETERMINISTIC_CHECKS = [
+  'codeql',
+  'dependency-review',
+  'dependency-audit',
+  'secret-detection',
+  'workflow-policy',
+  'bicep-analysis',
+  'container-scan',
 ] as const;
 const SECURITY_CATEGORIES = [
   'authentication',
@@ -160,6 +184,59 @@ function validateGilfoyleFindingSchema(value: unknown): ContractValidation {
   return { valid: errors.length === 0, errors };
 }
 
+function validateGilfoyleDeterministicEvidenceConfig(value: unknown): ContractValidation {
+  const errors: string[] = [];
+  if (!isObject(value)) return { valid: false, errors: ['Deterministic evidence configuration must be an object.'] };
+  if (
+    value.version !== '1.0.0' ||
+    value.schemaVersion !== '1.0.0' ||
+    value.agentName !== AGENT_NAME ||
+    value.producerVersion !== '1.0.0' ||
+    !sameValues(value.requiredChecks, REQUIRED_DETERMINISTIC_CHECKS)
+  ) {
+    errors.push('Deterministic evidence identity or required check set is invalid.');
+  }
+  const limits = objectProperty(value, 'limits');
+  if (
+    limits?.maxManifestBytes !== 131072 ||
+    limits.maxFindingsPerCheck !== 100 ||
+    limits.maxEvidenceFilesPerCheck !== 20 ||
+    limits.maxEvidenceFileBytes !== 10485760
+  ) {
+    errors.push('Deterministic evidence bounds were weakened.');
+  }
+  const checks = objectProperty(value, 'checks');
+  for (const checkId of REQUIRED_DETERMINISTIC_CHECKS) {
+    const check = objectProperty(checks, checkId);
+    if (
+      check?.enforcement !== 'BLOCKING' ||
+      !Array.isArray(check.surfaces) ||
+      check.surfaces.length === 0 ||
+      !['always', 'pull-request', 'surface-present'].includes(String(check.applicability)) ||
+      !isObject(check.tool) ||
+      typeof check.tool.name !== 'string' ||
+      typeof check.tool.version !== 'string' ||
+      !isObject(check.blockingPolicy)
+    ) {
+      errors.push(`Deterministic evidence check is incomplete: ${checkId}.`);
+    }
+  }
+  const codeql = objectProperty(checks, 'codeql');
+  const codeqlTool = objectProperty(codeql, 'tool');
+  const dependencyReview = objectProperty(checks, 'dependency-review');
+  const dependencyReviewTool = objectProperty(dependencyReview, 'tool');
+  const containerPolicy = objectProperty(objectProperty(checks, 'container-scan'), 'blockingPolicy');
+  if (
+    codeqlTool?.commitSha !== 'c4dd10e44af883a891fe31ced449bcb4a6728b9b' ||
+    dependencyReviewTool?.commitSha !== '2031cfc080254a8a887f58cffee85186f0e49e48' ||
+    containerPolicy?.presentWithoutScannerStatus !== 'UNSUPPORTED' ||
+    containerPolicy.unsupportedBlocks !== true
+  ) {
+    errors.push('Immutable action attribution or unsupported-container policy was weakened.');
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 function validateGilfoyleSecurityPolicy(value: unknown): ContractValidation {
   const errors: string[] = [];
   if (!isObject(value)) return { valid: false, errors: ['Security policy must be an object.'] };
@@ -229,12 +306,24 @@ function validateGilfoyleSecurityContext(value: unknown): ContractValidation {
   const errors: string[] = [];
   if (!isObject(value)) return { valid: false, errors: ['Security context profile must be an object.'] };
   if (
-    value.version !== '1.0.0' ||
+    value.version !== '1.1.0' ||
     value.agentName !== AGENT_NAME ||
     value.maxFilesPerSurface !== 500 ||
     !sameValues(value.requiredSurfaces, REQUIRED_SECURITY_SURFACES)
   ) {
     errors.push('Security context identity, required surfaces, or file bound is invalid.');
+  }
+  const deterministicEvidence = objectProperty(value, 'deterministicEvidence');
+  if (
+    deterministicEvidence?.configFile !==
+      'config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json' ||
+    deterministicEvidence.configVersion !== '1.0.0' ||
+    typeof deterministicEvidence.configContentHash !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(deterministicEvidence.configContentHash) ||
+    deterministicEvidence.requiredWorkflow !== 'Continuous integration' ||
+    deterministicEvidence.failureOverridableByAgent !== false
+  ) {
+    errors.push('Security context deterministic evidence reference is missing or overridable.');
   }
   const surfaces = objectProperty(value, 'surfaces');
   for (const surfaceName of REQUIRED_SECURITY_SURFACES) {
@@ -287,7 +376,7 @@ function validateGilfoyleSecurityContract(repoRoot: string): ContractValidation 
     agent.version !== '1.0.0' ||
     agent.promptVersion !== '1.0.0' ||
     agent.toolsVersion !== '1.0.0' ||
-    agent.contextConfigVersion !== '1.0.0' ||
+    agent.contextConfigVersion !== '1.1.0' ||
     agent.contextConfigFile !== 'config/adversarial-agents/gilfoyle-security-architect/context.json' ||
     agent.modelDeployment !== 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard' ||
     agent.modelVersion !== '2025-04-14' ||
@@ -316,10 +405,24 @@ function validateGilfoyleSecurityContract(repoRoot: string): ContractValidation 
   const policy: unknown = JSON.parse(fs.readFileSync(path.join(repoRoot, agent.policyFile), 'utf8'));
   const tools: unknown = JSON.parse(fs.readFileSync(path.join(repoRoot, agent.toolsConfigFile), 'utf8'));
   const securityContext: unknown = JSON.parse(fs.readFileSync(path.join(repoRoot, agent.contextConfigFile), 'utf8'));
+  const deterministicEvidencePath = 'config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json';
+  const deterministicEvidence: unknown = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, deterministicEvidencePath), 'utf8'),
+  );
   errors.push(...validateGilfoyleFindingSchema(schema).errors);
   errors.push(...validateGilfoyleSecurityPolicy(policy).errors);
   errors.push(...validateGilfoyleToolsContract(tools).errors);
   errors.push(...validateGilfoyleSecurityContext(securityContext).errors);
+  errors.push(...validateGilfoyleDeterministicEvidenceConfig(deterministicEvidence).errors);
+  const deterministicReference = objectProperty(securityContext, 'deterministicEvidence');
+  if (
+    deterministicReference?.configFile !== deterministicEvidencePath ||
+    deterministicReference.configVersion !== (isObject(deterministicEvidence) ? deterministicEvidence.version : null) ||
+    deterministicReference.configContentHash !==
+      crypto.createHash('sha256').update(stableStringify(deterministicEvidence)).digest('hex')
+  ) {
+    errors.push('Gilfoyle deterministic evidence content hash or version is not attributable.');
+  }
 
   const engine: unknown = JSON.parse(fs.readFileSync(path.join(repoRoot, agent.engineConfigFile), 'utf8'));
   if (
@@ -353,6 +456,7 @@ if (isCli) {
 
 export {
   validateGilfoyleFindingSchema,
+  validateGilfoyleDeterministicEvidenceConfig,
   validateGilfoyleSecurityContract,
   validateGilfoyleSecurityContext,
   validateGilfoyleSecurityPolicy,

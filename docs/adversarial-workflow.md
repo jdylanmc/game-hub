@@ -29,6 +29,21 @@ Model work is eligible only when:
 Failed, missing, canceled, ambiguous, stale, or irrelevant inputs cannot reach
 Azure authentication or model invocation.
 
+The upstream workflow succeeds only when its independent validation and
+deterministic-security jobs both pass. Its final required
+`Continuous integration` check explicitly aggregates both results. A model
+review therefore cannot run after or conceal a CodeQL, dependency review or
+audit, secret detection, workflow policy, Bicep, or container-support failure.
+The security job uses only read-only contents permission, immutable action
+commits, no secrets, and no CodeQL result upload permission.
+
+The deterministic job retains a bounded exact-head manifest and hashed evidence
+for 14 days. Gilfoyle's collector requires that manifest to match the
+repository, base and head SHAs, workflow run and attempt, content-hashed
+configuration, immutable tools, required check order, and byte/count bounds.
+The absent container surface is explicit; introducing container definitions
+fails closed until a reviewed scanner replaces the unsupported guard.
+
 ## Untrusted pull-request evidence
 
 The workflow never checks out the pull-request branch or runs its scripts,

@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Continuous integration
+    name: Deterministic validation
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
@@ -88,3 +88,154 @@ jobs:
             storybook-static/
           if-no-files-found: error
           retention-days: 14
+
+  deterministic-security:
+    name: Deterministic security evidence
+    needs:
+      - validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      SECURITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+      SECURITY_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Check out exact untrusted head without credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.SECURITY_HEAD_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.13.0
+
+      - name: Initialize immutable CodeQL analysis
+        uses: github/codeql-action/init@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3.37.6
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+
+      - name: Enable pinned Yarn
+        run: corepack enable
+
+      - name: Create deterministic security evidence directory
+        run: mkdir -p deterministic-security-evidence
+
+      - name: Verify immutable installation
+        run: |
+          set -euo pipefail
+          yarn install --immutable 2>&1 | tee deterministic-security-evidence/install.log
+
+      - name: Review pull-request dependency changes
+        if: github.event_name == 'pull_request'
+        id: dependency-review
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+          vulnerability-check: true
+          license-check: false
+          warn-only: false
+          comment-summary-in-pr: never
+
+      - name: Audit complete dependency graph
+        run: |
+          set -euo pipefail
+          yarn security:audit 2>&1 | tee deterministic-security-evidence/dependency-audit.log
+
+      - name: Detect added secrets without disclosing values
+        run: |
+          set -euo pipefail
+          yarn security:secrets \
+            --base "$SECURITY_BASE_SHA" \
+            --head "$SECURITY_HEAD_SHA" \
+            --output deterministic-security-evidence/secret-detection.json \
+            2>&1 | tee deterministic-security-evidence/secret-detection.log
+
+      - name: Verify workflow and security policy
+        run: |
+          set -euo pipefail
+          yarn policy:check 2>&1 | tee deterministic-security-evidence/workflow-policy.log
+
+      - name: Install pinned Bicep CLI
+        run: az bicep install --version v0.42.1
+
+      - name: Compile every Bicep definition and parameter file
+        run: |
+          set -euo pipefail
+          yarn security:bicep \
+            --output deterministic-security-evidence/bicep-analysis.json \
+            2>&1 | tee deterministic-security-evidence/bicep-analysis.log
+
+      - name: Enforce explicit container scanning support
+        run: |
+          set -euo pipefail
+          yarn security:containers \
+            --output deterministic-security-evidence/container-scan.json \
+            2>&1 | tee deterministic-security-evidence/container-scan.log
+
+      - name: Analyze JavaScript and TypeScript with CodeQL
+        id: codeql
+        uses: github/codeql-action/analyze@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3.37.6
+        with:
+          output: deterministic-security-evidence/codeql
+          upload: never
+          upload-database: false
+
+      - name: Build bounded exact-head security manifest
+        env:
+          DEPENDENCY_CHANGES_JSON: ${{ steps.dependency-review.outputs.dependency-changes || '[]' }}
+          DEPENDENCY_VULNERABLE_CHANGES_JSON: ${{ steps.dependency-review.outputs.vulnerable-changes || '[]' }}
+          DEPENDENCY_INVALID_LICENSE_CHANGES_JSON: ${{ steps.dependency-review.outputs.invalid-license-changes || '[]' }}
+          DEPENDENCY_DENIED_CHANGES_JSON: ${{ steps.dependency-review.outputs.denied-changes || '[]' }}
+        run: |
+          set -euo pipefail
+          yarn security:evidence \
+            --repository "$GITHUB_REPOSITORY" \
+            --event "$GITHUB_EVENT_NAME" \
+            --base "$SECURITY_BASE_SHA" \
+            --head "$SECURITY_HEAD_SHA" \
+            --workflow "Continuous integration" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --codeql "${{ steps.codeql.outputs.sarif-output }}" \
+            --secrets deterministic-security-evidence/secret-detection.json \
+            --bicep deterministic-security-evidence/bicep-analysis.json \
+            --containers deterministic-security-evidence/container-scan.json \
+            --audit-log deterministic-security-evidence/dependency-audit.log \
+            --policy-log deterministic-security-evidence/workflow-policy.log \
+            --output deterministic-security-evidence/manifest.json
+
+      - name: Retain deterministic security evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: deterministic-security-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: deterministic-security-evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+  continuous-integration:
+    name: Continuous integration
+    if: always()
+    needs:
+      - validate
+      - deterministic-security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+
+    steps:
+      - name: Require every deterministic gate
+        env:
+          SECURITY_RESULT: ${{ needs.deterministic-security.result }}
+          VALIDATION_RESULT: ${{ needs.validate.result }}
+        run: |
+          set -euo pipefail
+          test "$VALIDATION_RESULT" = success
+          test "$SECURITY_RESULT" = success

@@ -53,8 +53,8 @@
         "Evidence inputs remain attributable and bounded"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a final fail-closed Continuous integration aggregate over independent validation and read-only deterministic security jobs. Pinned CodeQL and dependency review, dependency audit, redacted secret detection, workflow policy, pinned Bicep compilation, and explicit unsupported-container handling produce a bounded exact-head manifest that Gilfoyle must validate and cannot override. Focused checks, fail-closed simulations, and complete yarn validate passed.",
       "dependencies": ["US-002"]
     },
     {

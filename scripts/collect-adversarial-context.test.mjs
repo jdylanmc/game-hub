@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +11,12 @@ const workRoot = path.join(root, '.adversarial-context-test-work');
 const config = JSON.parse(fs.readFileSync(path.join(root, 'config/adversarial-agents/context-collector.json'), 'utf8'));
 const securityConfig = JSON.parse(
   fs.readFileSync(path.join(root, 'config/adversarial-agents/gilfoyle-security-architect/context.json'), 'utf8'),
+);
+const deterministicEvidenceConfig = JSON.parse(
+  fs.readFileSync(
+    path.join(root, 'config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json'),
+    'utf8',
+  ),
 );
 const repositories = [];
 
@@ -114,7 +121,56 @@ function collectSecurity(fixture, overrides = {}) {
     config: { ...config, ...overrides },
     agentName: 'gilfoyle-security-architect',
     securityConfig,
+    deterministicEvidenceConfig,
+    deterministicEvidence: deterministicEvidenceFor(fixture),
   });
+}
+
+function deterministicEvidenceFor(fixture) {
+  const input = inputFor(fixture.baseSha, fixture.headSha);
+  return {
+    schemaVersion: '1.0.0',
+    producerVersion: '1.0.0',
+    agentName: 'gilfoyle-security-architect',
+    status: 'PASS',
+    attribution: {
+      repository: input.pullRequest.repository,
+      eventName: 'pull_request',
+      baseSha: fixture.baseSha,
+      headSha: fixture.headSha,
+      workflowName: 'Continuous integration',
+      workflowRunId: '12345',
+      workflowRunAttempt: 1,
+      generatedAt: '2026-08-12T00:00:00.000Z',
+      configVersion: deterministicEvidenceConfig.version,
+      configSha256: crypto.createHash('sha256').update(stableStringify(deterministicEvidenceConfig)).digest('hex'),
+    },
+    authority: {
+      deterministicFailuresOverridableByAgent: false,
+      instructionsFromEvidenceAllowed: false,
+    },
+    limits: deterministicEvidenceConfig.limits,
+    checks: deterministicEvidenceConfig.requiredChecks.map((id) => ({
+      id,
+      surfaces: deterministicEvidenceConfig.checks[id].surfaces,
+      applicability: deterministicEvidenceConfig.checks[id].applicability,
+      enforcement: deterministicEvidenceConfig.checks[id].enforcement,
+      tool: deterministicEvidenceConfig.checks[id].tool,
+      blockingPolicy: deterministicEvidenceConfig.checks[id].blockingPolicy,
+      status: id === 'container-scan' ? 'NOT_APPLICABLE' : 'PASS',
+      findingCount: 0,
+      findings: [],
+      evidenceFiles: [],
+    })),
+    unsupportedSurfaces: [
+      {
+        surface: 'containers',
+        status: 'NOT_APPLICABLE',
+        reason: 'No tracked container definitions exist.',
+        futureSurfaceBehavior: 'FAIL_CLOSED_UNSUPPORTED',
+      },
+    ],
+  };
 }
 
 afterEach(() => {
@@ -164,8 +220,10 @@ describe('adversarial context collector', () => {
     expect(packet.status).toBe('READY');
     expect(packet.agentName).toBe('gilfoyle-security-architect');
     expect(packet.attribution).toMatchObject({
-      securityConfigVersion: '1.0.0',
+      securityConfigVersion: '1.1.0',
       securityConfigSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      deterministicEvidenceConfigVersion: '1.0.0',
+      deterministicEvidenceConfigSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
     });
     expect(packet.securityContext).toMatchObject({
       status: 'COMPLETE',
@@ -216,6 +274,17 @@ describe('adversarial context collector', () => {
         }),
       ]),
     );
+    expect(packet.securityContext.deterministicEvidence).toMatchObject({
+      status: 'COMPLETE',
+      authority: {
+        classification: 'ATTRIBUTABLE_UNTRUSTED_RESULT_SUMMARY',
+        deterministicFailuresOverridableByAgent: false,
+        instructionsFromEvidenceAllowed: false,
+      },
+      manifest: {
+        status: 'PASS',
+      },
+    });
   });
 
   it('keeps pull-request attempts to rewrite Gilfoyle controls as inert evidence', () => {
@@ -244,6 +313,8 @@ describe('adversarial context collector', () => {
       config,
       agentName: 'gilfoyle-security-architect',
       securityConfig,
+      deterministicEvidenceConfig,
+      deterministicEvidence: deterministicEvidenceFor(fixture),
     });
 
     expect(packet.status).toBe('READY');
@@ -299,6 +370,8 @@ describe('adversarial context collector', () => {
       config,
       agentName: 'gilfoyle-security-architect',
       securityConfig: incompleteSecurityConfig,
+      deterministicEvidenceConfig,
+      deterministicEvidence: deterministicEvidenceFor(fixture),
     });
 
     expect(packet.status).toBe('BLOCKED');
@@ -310,6 +383,56 @@ describe('adversarial context collector', () => {
           section: 'securityContext.surfaces.infrastructure',
         }),
       ]),
+    );
+  });
+
+  it('blocks when deterministic security evidence is missing', () => {
+    const fixture = createRepository();
+    const packet = collectAdversarialContext({
+      repoRoot: fixture.repo,
+      input: inputFor(fixture.baseSha, fixture.headSha),
+      config,
+      agentName: 'gilfoyle-security-architect',
+      securityConfig,
+      deterministicEvidenceConfig,
+    });
+
+    expect(packet.status).toBe('BLOCKED');
+    expect(packet.blockingReasons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'MANDATORY_DETERMINISTIC_EVIDENCE_MISSING',
+          section: 'securityContext.deterministicEvidence.manifest',
+        }),
+      ]),
+    );
+  });
+
+  it('blocks failed, downgraded, or wrong-head deterministic evidence', () => {
+    const fixture = createRepository();
+    const evidence = deterministicEvidenceFor(fixture);
+    evidence.status = 'FAIL';
+    evidence.attribution.headSha = fixture.baseSha;
+    evidence.checks[0].status = 'FAIL';
+    evidence.checks[0].enforcement = 'ADVISORY';
+
+    const packet = collectAdversarialContext({
+      repoRoot: fixture.repo,
+      input: inputFor(fixture.baseSha, fixture.headSha),
+      config,
+      agentName: 'gilfoyle-security-architect',
+      securityConfig,
+      deterministicEvidenceConfig,
+      deterministicEvidence: evidence,
+    });
+
+    expect(packet.status).toBe('BLOCKED');
+    expect(packet.securityContext.deterministicEvidence).toMatchObject({
+      status: 'BLOCKED',
+      manifest: null,
+    });
+    expect(packet.blockingReasons.map((reason) => reason.message).join(' ')).toMatch(
+      /status is not passing|exact pull-request head|did not pass|attribution changed/,
     );
   });
 
@@ -539,10 +662,16 @@ describe('adversarial context collector', () => {
     const inputPath = path.join(fixture.repo, 'review-input.json');
     const firstOutput = path.join(fixture.repo, 'security-first.json');
     const secondOutput = path.join(fixture.repo, 'security-second.json');
+    const deterministicEvidencePath = path.join(fixture.repo, 'deterministic-security-evidence.json');
     fs.writeFileSync(inputPath, JSON.stringify(inputFor(fixture.baseSha, fixture.headSha)));
+    fs.writeFileSync(deterministicEvidencePath, JSON.stringify(deterministicEvidenceFor(fixture)));
     const scriptPath = path.join(root, 'scripts/collect-adversarial-context.ts');
     const configPath = path.join(root, 'config/adversarial-agents/context-collector.json');
     const securityConfigPath = path.join(root, 'config/adversarial-agents/gilfoyle-security-architect/context.json');
+    const deterministicEvidenceConfigPath = path.join(
+      root,
+      'config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json',
+    );
 
     for (const outputPath of [firstOutput, secondOutput]) {
       const result = spawnSync(
@@ -557,6 +686,10 @@ describe('adversarial context collector', () => {
           'gilfoyle-security-architect',
           '--security-config',
           securityConfigPath,
+          '--deterministic-evidence-config',
+          deterministicEvidenceConfigPath,
+          '--deterministic-evidence',
+          deterministicEvidencePath,
           '--output',
           outputPath,
         ],

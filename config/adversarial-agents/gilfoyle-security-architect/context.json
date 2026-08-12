@@ -1,7 +1,14 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "agentName": "gilfoyle-security-architect",
   "maxFilesPerSurface": 500,
+  "deterministicEvidence": {
+    "configFile": "config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json",
+    "configVersion": "1.0.0",
+    "configContentHash": "0e2b4d8caa9531ef46acc8483b4c088e09a398904111f49b2870401838e43373",
+    "requiredWorkflow": "Continuous integration",
+    "failureOverridableByAgent": false
+  },
   "requiredSurfaces": [
     "application",
     "games",
@@ -144,6 +151,11 @@
         "id": "protected-collector-configuration",
         "trust": "trusted",
         "access": "versioned configuration from protected workflow code"
+      },
+      {
+        "id": "successful-deterministic-security-workflow-evidence",
+        "trust": "constrained-untrusted-evidence",
+        "access": "bounded exact-head manifest consumed only after the authoritative workflow succeeds"
       }
     ],
     "dataSinks": [
@@ -199,7 +211,7 @@
       },
       {
         "id": "security-evidence-to-reviewer-control-plane",
-        "source": "bounded packet labeled as untrusted evidence",
+        "source": "bounded repository context and deterministic security manifest labeled as untrusted evidence",
         "sink": "Gilfoyle system policy, prompt, tools, schema, and blocking policy",
         "dataFlow": "hash-delimited user evidence remains below trusted system and developer messages",
         "authentication": "protected workflow OpenID Connect identity only",
