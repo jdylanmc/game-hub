@@ -7,8 +7,8 @@ Reusing the same entry point and parameter file converges on the same resource
 names; no timestamp, random name, imperative resource creation command, or
 Azure portal step is part of the deployment path.
 
-This foundation currently creates only the environment resource group and its
-stable naming contract. Later issue #1 stories add the frontend, application
+The current stack creates the environment resource group and an Azure Static
+Web Apps Standard frontend. Later issue #1 stories add the application
 programming interface (API), assets, ingress, identity, and observability
 resources behind the existing module boundary.
 
@@ -19,6 +19,7 @@ resources behind the existing module boundary.
 | `main.bicep` | Subscription orchestration, required tags, module composition, and non-secret outputs |
 | `modules/resource-group.bicep` | Resource group lifecycle at subscription scope |
 | `modules/foundation.bicep` | Resource-group-scoped deterministic service names and output contract |
+| `modules/static-web-app.bicep` | Azure Static Web Apps Standard frontend and Vite artifact publication contract |
 | `environments/dev.bicepparam` | On-demand development values |
 | `environments/prod.bicepparam` | Persistent production-ready values |
 | `.bicep-version` | Exact Bicep command-line interface (CLI) version used locally and by future automation |
@@ -96,6 +97,55 @@ same fixed subscription deployment name and location because Azure keeps a
 deployment name's location immutable.
 
 The outputs contain only the selected subscription and region, resource group
-identity, required tags, and deterministic future resource names. They must
-never contain storage keys, registry credentials, deployment tokens, provider
-secrets, or connection strings.
+identity, required tags, deterministic future resource names, and the frontend
+deployment contract. They must never contain storage keys, registry
+credentials, deployment credentials, provider secrets, or connection strings.
+
+## Frontend hosting
+
+`modules/static-web-app.bicep` declares Azure Static Web Apps Standard without a
+repository token or generated workflow. The deterministic resource name comes
+from the foundation module. Both environments accept application configuration
+updates from the committed `staticwebapp.config.json`; development enables
+preview staging environments, while production disables them until a reviewed
+release process needs them. The separate Azure Front Door and web application
+firewall story will later establish the canonical protected public endpoint.
+
+The subscription deployment returns these non-secret frontend outputs:
+
+| Output | Use |
+| --- | --- |
+| `frontendResourceId` | Role assignments and later service links |
+| `frontendResourceName` | Content publication target |
+| `frontendDefaultHostname` | Generated hostname without a scheme |
+| `frontendEndpoint` | Direct HTTPS diagnostic endpoint |
+| `frontendDeployment` | Subscription, resource group, app name, build command, artifact path, configuration path, and production environment |
+
+These outputs do not prove that the resource or content exists. They are
+available only after an actual Azure deployment, which this repository change
+does not perform.
+
+### Vite artifact contract
+
+The frontend publisher consumes the repository's existing production build:
+
+```bash
+yarn build
+test -f dist/index.html
+test -f dist/staticwebapp.config.json
+```
+
+Vite writes the application to `dist/` and copies
+`public/staticwebapp.config.json` to `dist/staticwebapp.config.json`. Publish
+that complete directory to the `production` environment of the static web app
+identified by `frontendDeployment`; do not rebuild it with a service-specific
+build command.
+
+Infrastructure automation authenticates to Azure with Microsoft Entra ID and
+OpenID Connect, then explicitly selects subscription
+`11213dbd-39fe-46ba-87db-5f5e8c449aed`. Content publication must use an
+approved secret reference for any service-issued deployment credential and
+keep the resolved value masked and process-local. Never place that value in
+Bicep parameters, deployment outputs, repository files, logs, artifacts, or
+pull request content. The deployment workflow and exact publisher invocation
+are intentionally deferred to US-009.

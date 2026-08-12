@@ -14,6 +14,8 @@
   committed environment values live in `infra/environments/*.bicepparam`.
 - Bicep validation uses the exact version in `infra/.bicep-version` through
   `yarn infra:install` and `yarn infra:check`.
+- Azure Static Web Apps is declared in `infra/modules/static-web-app.bicep`;
+  `frontendDeployment` is the non-secret Vite `dist/` publication contract.
 - Issue #30 is an orchestration dependency because it currently owns
   overlapping `infra`, `.github`, and policy surfaces.
 
@@ -80,3 +82,28 @@
   `yarn policy:check`, `yarn infra:check`, and `git diff --check`.
 - No Azure sign-in, validation deployment, `what-if`, resource deployment, or
   live endpoint verification was performed or claimed.
+
+## 2026-08-11 — US-003 Provision Azure Static Web Apps frontend hosting
+
+- Added an idempotent Azure Static Web Apps Standard module using the
+  environment's deterministic foundation name, tags, and regional location.
+- Kept source integration credential-free: Bicep does not accept a repository
+  credential and suppresses generated GitHub workflow creation.
+- Made preview staging policy explicit per environment: enabled for development
+  and disabled for production.
+- Added non-secret subscription outputs for the frontend resource identifier,
+  name, generated hostname, direct HTTPS endpoint, and Vite publication
+  contract.
+- Documented that `yarn build` produces the complete `dist/` artifact and copies
+  `public/staticwebapp.config.json` into that directory for publication.
+- Documented Microsoft Entra ID and OpenID Connect infrastructure
+  authentication, explicit subscription selection, and approved secret
+  references for any service-issued content publication credential. No
+  credential value is stored or emitted.
+- Validation: `yarn infra:install`, `yarn infra:check`, `yarn format:check`,
+  `yarn lint`, `yarn policy:check`, `yarn build`, checks for
+  `dist/index.html` and `dist/staticwebapp.config.json`, compiled-template
+  inspection, and `git diff --check`.
+- No Azure sign-in, validation deployment, `what-if`, resource deployment,
+  content publication, endpoint reachability check, or live deployment evidence
+  was performed or claimed.

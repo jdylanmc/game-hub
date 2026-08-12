@@ -63,8 +63,8 @@
         "Documentation explains how the existing dist output is deployed without asserting that a live endpoint was created"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added an idempotent Azure Static Web Apps Standard module using the deterministic environment name, explicit development and production staging policies, configuration-file updates, and no repository credential or generated workflow. Subscription outputs expose the resource identity, generated hostname, direct HTTPS endpoint, and a non-secret Vite dist publication contract. Infrastructure documentation covers the dist artifact handoff, Microsoft Entra ID/OpenID Connect automation boundary, approved secret references for service-issued publication credentials, and the absence of live deployment evidence. Local Bicep, formatting, lint, policy, Vite build, artifact, and diff validation passed; no Azure deployment was performed or claimed.",
       "dependencies": ["US-002"]
     },
     {

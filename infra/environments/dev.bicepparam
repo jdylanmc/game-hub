@@ -7,6 +7,7 @@ param location = 'eastus2'
 param locationCode = 'eus2'
 param workloadOwner = 'game-hub'
 param costCenter = 'game-hub'
+param frontendStagingEnvironmentPolicy = 'Enabled'
 param additionalTags = {
   lifecycle: 'on-demand'
 }

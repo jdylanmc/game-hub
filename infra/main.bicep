@@ -37,6 +37,13 @@ param costCenter string
 @description('Additional non-secret environment tags.')
 param additionalTags object = {}
 
+@description('Whether Azure Static Web Apps preview staging environments are available.')
+@allowed([
+  'Disabled'
+  'Enabled'
+])
+param frontendStagingEnvironmentPolicy string
+
 var resourceGroupName = 'rg-${applicationName}-${environmentName}-${locationCode}'
 var requiredTags = {
   application: applicationName
@@ -74,6 +81,17 @@ module foundation './modules/foundation.bicep' = {
   ]
 }
 
+module staticWebApp './modules/static-web-app.bicep' = {
+  name: '${applicationName}-${environmentName}-static-web-app'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    location: location
+    name: foundation.outputs.resourceNames.staticWebApp
+    stagingEnvironmentPolicy: frontendStagingEnvironmentPolicy
+    tags: tags
+  }
+}
+
 @description('Explicit Azure subscription selected for this environment.')
 output subscriptionId string = targetSubscriptionId
 
@@ -91,3 +109,22 @@ output resourceNames object = foundation.outputs.resourceNames
 
 @description('Required environment tags applied by service modules.')
 output tags object = foundation.outputs.tags
+
+@description('Azure Static Web Apps resource identifier.')
+output frontendResourceId string = staticWebApp.outputs.id
+
+@description('Azure Static Web Apps resource name.')
+output frontendResourceName string = staticWebApp.outputs.name
+
+@description('Generated Azure Static Web Apps hostname.')
+output frontendDefaultHostname string = staticWebApp.outputs.defaultHostname
+
+@description('Public HTTPS endpoint for direct frontend diagnostics.')
+output frontendEndpoint string = staticWebApp.outputs.endpoint
+
+@description('Non-secret frontend artifact publication contract.')
+output frontendDeployment object = union(staticWebApp.outputs.deploymentConfiguration, {
+  resourceGroupName: resourceGroupModule.outputs.name
+  staticWebAppName: staticWebApp.outputs.name
+  subscriptionId: targetSubscriptionId
+})
