@@ -16,6 +16,6 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src"],
+  "include": ["src", "games", "packages", ".storybook/preview.ts"],
   "exclude": ["src/storybook/mamba/source/**/*.component.ts"]
 }

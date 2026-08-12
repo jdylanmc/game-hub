@@ -1,6 +1,38 @@
 import forms from '@tailwindcss/forms';
 import typography from '@tailwindcss/typography';
-import type { Config } from 'tailwindcss';
+import type { Config, PluginCreator } from 'tailwindcss/types/config';
+
+const requireThemeString = (value: unknown, path: string) => {
+  if (typeof value !== 'string') {
+    throw new TypeError(`Expected Tailwind theme value "${path}" to be a string.`);
+  }
+
+  return value;
+};
+
+const containerPlugin: PluginCreator = (api) => {
+  api.addComponents({
+    '.container': {
+      margin: 'auto',
+      maxWidth: requireThemeString(api.theme('maxWidth.full'), 'maxWidth.full'),
+      '@screen sm': {
+        maxWidth: requireThemeString(api.theme('maxWidth.2xl'), 'maxWidth.2xl'),
+      },
+      '@screen md': {
+        maxWidth: requireThemeString(api.theme('maxWidth.3xl'), 'maxWidth.3xl'),
+      },
+      '@screen lg': {
+        maxWidth: requireThemeString(api.theme('maxWidth.5xl'), 'maxWidth.5xl'),
+      },
+      '@screen xl': {
+        maxWidth: requireThemeString(api.theme('maxWidth.6xl'), 'maxWidth.6xl'),
+      },
+      '@screen 2xl': {
+        maxWidth: requireThemeString(api.theme('maxWidth.6xl'), 'maxWidth.6xl'),
+      },
+    },
+  });
+};
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx,html}', './.storybook/**/*.{ts,tsx}'],
@@ -33,31 +65,5 @@ export default {
       },
     },
   },
-  plugins: [
-    forms,
-    typography,
-    ({ addComponents, theme }) => {
-      addComponents({
-        '.container': {
-          margin: 'auto',
-          maxWidth: theme('maxWidth.full'),
-          '@screen sm': {
-            maxWidth: theme('maxWidth.2xl'),
-          },
-          '@screen md': {
-            maxWidth: theme('maxWidth.3xl'),
-          },
-          '@screen lg': {
-            maxWidth: theme('maxWidth.5xl'),
-          },
-          '@screen xl': {
-            maxWidth: theme('maxWidth.6xl'),
-          },
-          '@screen 2xl': {
-            maxWidth: theme('maxWidth.6xl'),
-          },
-        },
-      });
-    },
-  ],
+  plugins: [forms, typography, containerPlugin],
 } satisfies Config;
