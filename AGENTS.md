@@ -54,7 +54,9 @@ outputs are dirty.
 commands as local development. Keep action references pinned to full commit
 SHAs, preserve least-privilege permissions and fork safety, and retain the
 workflow's logs, test results, coverage, production build, and Storybook
-evidence.
+evidence. Fresh `node-modules` runners must bootstrap with direct
+`yarn install --immutable` before invoking package scripts. Every command piped
+to an evidence log must run with Bash `pipefail` semantics.
 
 Order deterministic gates from cheapest to most expensive so formatting,
 linting, policy, generation, type, and test failures stop work before builds,
@@ -95,6 +97,12 @@ continuous integration. Never check out or execute pull-request code in that
 workflow. Preserve its three deterministic capacity lanes, two exact-head
 revalidations, least-privilege job permissions, promoted-calibration gate, and
 90-day evidence retention.
+
+Microsoft Entra ID federated credentials for repository workflows must use
+GitHub's immutable subject format with both owner and repository numeric IDs.
+Keep the exact protected-environment mappings in
+`infra/federated-identity-*.bicepparam` and deploy them through the pinned,
+subscription-guarded Bicep path; never restore name-only repository subjects.
 
 `yarn policy:check` rejects unapproved lint suppressions and weakened workflow
 invariants. Record an exceptional suppression with a specific rationale in

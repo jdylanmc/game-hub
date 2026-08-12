@@ -106,3 +106,41 @@ agent's versioned quality policy.
   schema, tools, and blocking policy.
 - Design agent registration and infrastructure for horizontal expansion to
   multiple independent adversarial review pipelines.
+
+## Reopened Remediation Scope
+
+Post-merge verification reopened the issue after protected-main adversarial run
+`31556974503` failed before pull-request resolution. With the repository's
+`node-modules` Yarn linker, invoking the `install:check` package script on a
+fresh runner requires the missing `node_modules/.yarn-state.yml`; the workflow
+must instead bootstrap with direct `yarn install --immutable`.
+
+The same verification found that Continuous Integration evidence commands pipe
+through `tee` without `pipefail`, allowing a failed Yarn command to be reported
+as successful. Remediation must:
+
+- use direct immutable installation in Continuous Integration and both
+  protected-base adversarial jobs;
+- make every piped evidence command fail on the originating command;
+- policy-test and failure-probe both invariants; and
+- keep issue #30 open until the remediation is merged and protected-main
+  post-merge verification succeeds.
+
+## Second Reopened Remediation Scope
+
+After PR #40 merged, protected-main run
+[`31560385215`](https://github.com/jdylanmc/game-hub/actions/runs/31560385215)
+reached Azure login but Microsoft Entra ID rejected the token. GitHub emitted
+the immutable subject
+`repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review`,
+while the deployed credential still trusted the legacy name-only subject.
+
+This remediation must:
+
+- define the exact immutable protected-environment subjects declaratively;
+- reconcile inference, test deployment, and production deployment credentials
+  in subscription `11213dbd-39fe-46ba-87db-5f5e8c449aed`;
+- policy-test immutable owner/repository IDs and explicit subscription
+  selection; and
+- prove a fresh protected-main workflow authenticates and publishes the
+  genuine exact-head adversarial check on an affected pull request.

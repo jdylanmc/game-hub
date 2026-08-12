@@ -28,10 +28,11 @@ stored here.
 
 - Separate Microsoft Entra ID applications exist for inference, test
   deployment, and production deployment.
-- Federated subjects are exact protected environments:
-  `repo:jdylanmc/game-hub:environment:adversarial-review`,
-  `repo:jdylanmc/game-hub:environment:test`, and
-  `repo:jdylanmc/game-hub:environment:prod`.
+- Federated subjects are exact protected environments with immutable GitHub
+  owner and repository IDs:
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review`,
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:test`, and
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:prod`.
 - `test` and `prod` require a reviewer and protected branches. The
   `adversarial-review` environment is restricted to protected branches.
 - Environment variables contain only client, tenant, reviewer-principal, and
@@ -84,3 +85,83 @@ Repository policy, Ralph runtime status, prioritization, and deterministic tests
 enforce the same names through `config/ralph-required-checks.json`. Missing,
 stale, duplicated, pending, canceled, timed-out, malformed, neutral, or failed
 required results cannot complete the issue loop.
+
+## Post-merge regression evidence
+
+The preceding evidence remains the historical record for PR #35 and its
+pre-merge head. It did not prove that the newly protected `workflow_run`
+bootstrap worked on a fresh runner after merge.
+
+Protected-main adversarial run
+[`31556974503`](https://github.com/jdylanmc/game-hub/actions/runs/31556974503)
+failed in `Install protected base dependencies` before pull-request resolution.
+Yarn reported that `node_modules/.yarn-state.yml` was absent because the job
+invoked the `install:check` package script before direct installation. Review of
+the merged Continuous Integration workflow also found that its evidence
+pipelines used `tee` without `pipefail`, so identical Yarn failures could be
+masked by a successful `tee` exit.
+
+Issue #30 was reopened for bounded story US-010. Protected main remains affected
+until that remediation is merged and a fresh protected-main run verifies
+pull-request resolution and exact-head check publication.
+
+## Remediation pre-merge evidence
+
+The first exact-head Continuous Integration run for remediation PR #40,
+[`31557874975`](https://github.com/jdylanmc/game-hub/actions/runs/31557874975),
+failed twice at direct immutable installation because the public registry no
+longer served locked transitive dependency `uri-js@4.4.2`. This failure is
+additional evidence that `pipefail` now exposes the originating Yarn result
+rather than accepting `tee`.
+
+The second and final remediation attempt constrains that `^4.2.2` transitive
+dependency to registry-available `4.4.1`. The isolated proof installs with Yarn
+hardened mode enabled and global cache disabled before running all 14 failure
+probes. The complete local validation gate passed again. Exact-head GitHub
+checks after this correction remain the publication authority.
+
+## Immutable identity remediation
+
+Post-merge protected run
+[`31560385215`](https://github.com/jdylanmc/game-hub/actions/runs/31560385215)
+proved the workflow and environment were correct but Microsoft Entra ID still
+trusted the legacy name-only subject. The failed token metadata was:
+
+- issuer: `https://token.actions.githubusercontent.com`
+- subject:
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review`
+- audience: `api://AzureADTokenExchange`
+- workflow:
+  `jdylanmc/game-hub/.github/workflows/adversarial-review.yml@refs/heads/main`
+
+Read-only Azure inspection found one credential on each application, all using
+the legacy `repo:jdylanmc/game-hub:environment:*` subject. The existing
+applications were onboarded once with immutable Microsoft Graph `uniqueName`
+values, as required for managing resources created outside Bicep. The pinned
+Microsoft Graph Bicep extension then reconciled all three credentials through
+subscription-scoped deployments:
+
+- adversarial review:
+  `5e2d230b-94e7-49bb-a490-70aba25d371b`
+- test deployment: `e3662315-40f1-40da-a806-0a0a2cb8da9b`
+- production deployment: `48887ec1-2e0d-46da-b668-673314cfed4d`
+- repeat adversarial reconciliation:
+  `3d6cac37-d473-4285-afa1-9b6d56bf9780`
+
+All deployments succeeded in subscription
+`11213dbd-39fe-46ba-87db-5f5e8c449aed`. Readback showed exactly one credential
+per application with the exact immutable subject, issuer, and audience. Azure
+what-if completed with the expected `ExtensibleResourceNotSupported` warning
+for the Graph resource, so repeat deployment plus readback is the authoritative
+convergence evidence.
+
+Continuous Integration run
+[`31557612517`](https://github.com/jdylanmc/game-hub/actions/runs/31557612517)
+attempt 3 passed again for PR #39 head
+`49240626b04f5a85828edb2bfcdaf16366309a5e`. That completion triggered fresh
+protected-main run
+[`31561212543`](https://github.com/jdylanmc/game-hub/actions/runs/31561212543).
+Azure login succeeded with the immutable subject, the bounded reviewer returned
+`PASS`, and exact-head check
+[`94003877768`](https://github.com/jdylanmc/game-hub/runs/94003877768)
+completed successfully with zero findings on that exact pull-request head.

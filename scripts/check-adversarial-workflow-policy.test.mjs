@@ -30,6 +30,7 @@ describe('adversarial workflow policy', () => {
       'protected base checkout',
       workflow.replaceAll('ref: ${{ github.sha }}', 'ref: ${{ needs.resolve.outputs.head_sha }}'),
     ],
+    ['fresh protected-base dependency bootstrap', workflow.replace('yarn install --immutable', 'yarn install:check')],
     ['least write permissions', workflow.replace('checks: write', 'contents: write')],
     [
       'immutable action pins',

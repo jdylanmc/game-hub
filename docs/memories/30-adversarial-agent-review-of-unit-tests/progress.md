@@ -422,3 +422,68 @@
   suite, exact-head deterministic continuous integration, and the unique
   adversarial reviewer check succeed; the PR body records the final immutable
   check evidence.
+
+## 2026-08-11 - Reopened workflow remediation
+
+- Preserved the prior PR #35 rollout record as historical evidence and added
+  bounded story US-010 after protected-main run `31556974503` exposed a
+  fresh-runner bootstrap regression.
+- Confirmed the `node-modules` linker cannot invoke the `install:check` package
+  script before `node_modules/.yarn-state.yml` exists. Continuous Integration
+  and both protected-base adversarial jobs now call direct
+  `yarn install --immutable`.
+- Continuous Integration now gives all run steps `bash -eo pipefail` semantics,
+  preventing `tee` from masking a failed validation command.
+- Workflow policies and mutation tests reject script-based bootstrap, missing
+  pipefail, and fail-open shell overrides. The isolated failure proof now
+  reproduces the original bootstrap failure, verifies direct bootstrap creates
+  Yarn state, and exercises the evidence pipeline with pipefail.
+- Direct installation in the new worktree created
+  `node_modules/.yarn-state.yml`. The full `yarn validate` gate passed,
+  including 14 isolated fail-closed probes, 151 Vitest tests, 26 Ralph tests,
+  dependency audit, generation, typecheck, production build, bundle budgets,
+  and Storybook.
+- Exact-head pull-request publication evidence remains pending. Issue #30 stays
+  open until merge and protected-main post-merge verification.
+- Exact-head Continuous Integration run `31557874975` failed twice at the now
+  fail-closed install pipeline because the public registry no longer served the
+  locked transitive `uri-js@4.4.2`. This confirmed the previous `tee` masking
+  path was removed and exposed a second tightly coupled fresh-runner blocker.
+- Used the second and final remediation attempt to constrain Ajv's `^4.2.2`
+  transitive resolution to registry-available `uri-js@4.4.1`. The isolated
+  bootstrap proof now enables Yarn hardened mode and disables global cache so
+  it must validate and fetch the committed dependency graph.
+- Re-ran the complete `yarn validate` gate successfully after the lock repair.
+  Exact-head checks on the corrected commit remain pending.
+
+## 2026-08-11 - Immutable OpenID Connect identity remediation
+
+- Read the exact failed run `31560385215`, protected workflow environment/ref,
+  GitHub environment controls, repository OpenID Connect settings, and deployed
+  Microsoft Entra ID federated credentials before making changes.
+- Confirmed GitHub emitted immutable subject
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review`,
+  while inference, test deployment, and production deployment identities each
+  trusted a legacy name-only subject.
+- Added a pinned Microsoft Graph Bicep resource and three exact environment
+  parameter files. The subscription-guarded deployment script previews and
+  applies only to `11213dbd-39fe-46ba-87db-5f5e8c449aed`.
+- Onboarded the three preexisting applications once with immutable Graph
+  `uniqueName` values, then deployed all three credentials declaratively. A
+  repeat inference deployment succeeded and readback retained exactly one
+  credential per application. Azure what-if warned that Graph extensible
+  resources are not introspectable, so repeat apply plus exact readback is the
+  convergence proof.
+- Added a mandatory identity policy and seven focused mutation tests rejecting
+  mutable subjects, incorrect numeric IDs, wrong environment mapping, an
+  unpinned Graph extension, and missing explicit subscription verification.
+  Policy, lint, focused tests, all Bicep builds, shell syntax, and diff checks
+  passed.
+- The complete `yarn validate` run reached the isolated hardened bootstrap proof
+  but failed because current public-registry metadata normalized unchanged
+  executable paths with `./`, which would rewrite existing lockfile entries.
+  No dependency or lockfile change is part of this identity remediation.
+- Re-ran exact-head Continuous Integration for affected PR #39. Attempt 3
+  passed, fresh protected-main run `31561212543` authenticated successfully,
+  and check `94003877768` published `PASS` on exact head
+  `49240626b04f5a85828edb2bfcdaf16366309a5e`.
