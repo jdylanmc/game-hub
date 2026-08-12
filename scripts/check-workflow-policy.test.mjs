@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   validateContinuousIntegrationBootstrapPolicy,
   validateLintIntegrationPolicy,
+  validateTestIntegrationPolicy,
 } from './check-workflow-policy.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -16,6 +17,8 @@ const ralphIterationPrompt = readFileSync(
 );
 const lintBehaviorProof = readFileSync(path.join(root, 'scripts/prove-lint-behavior.mjs'), 'utf8');
 const continuousIntegrationFailureProof = readFileSync(path.join(root, 'scripts/prove-ci-fail-closed.mjs'), 'utf8');
+const testIntegrity = readFileSync(path.join(root, 'scripts/check-test-integrity.mjs'), 'utf8');
+const vitestConfig = readFileSync(path.join(root, 'vitest.config.ts'), 'utf8');
 
 function lintPolicy(overrides = {}) {
   return validateLintIntegrationPolicy({
@@ -23,6 +26,17 @@ function lintPolicy(overrides = {}) {
     lintBehaviorProof,
     packageManifest,
     ralphIterationPrompt,
+    workflow,
+    ...overrides,
+  });
+}
+
+function testPolicy(overrides = {}) {
+  return validateTestIntegrationPolicy({
+    continuousIntegrationFailureProof,
+    packageManifest,
+    testIntegrity,
+    vitestConfig,
     workflow,
     ...overrides,
   });
@@ -126,5 +140,61 @@ describe('lint integration policy', () => {
     ],
   ])('rejects weakening or removal of %s', (_label, overrides) => {
     expect(lintPolicy(overrides)).not.toEqual([]);
+  });
+});
+
+describe('test integration policy', () => {
+  it('accepts the canonical watch, deterministic run, discovery, and workflow contract', () => {
+    expect(testPolicy()).toEqual([]);
+  });
+
+  it.each([
+    [
+      'an interactive default test command',
+      {
+        packageManifest: {
+          ...packageManifest,
+          scripts: { ...packageManifest.scripts, test: 'yarn test:watch' },
+        },
+      },
+    ],
+    [
+      'focused tests',
+      {
+        vitestConfig: vitestConfig.replace('allowOnly: false', 'allowOnly: true'),
+      },
+    ],
+    [
+      'unbounded test timeouts',
+      {
+        vitestConfig: vitestConfig.replace('testTimeout: 10_000', 'testTimeout: 0'),
+      },
+    ],
+    [
+      'automatic workspace discovery',
+      {
+        vitestConfig: vitestConfig.replace(
+          'include: createVitestIncludePatterns(packageManifest)',
+          "include: ['src/**/*.test.ts']",
+        ),
+      },
+    ],
+    [
+      'the canonical workflow command',
+      {
+        workflow: workflow.replace('run: yarn test:ci 2>&1', 'run: yarn test:coverage 2>&1'),
+      },
+    ],
+    [
+      'the representative test proof',
+      {
+        continuousIntegrationFailureProof: continuousIntegrationFailureProof.replace(
+          "runSandbox(yarnExecutable, ['test:ci'])",
+          "runSandbox(yarnExecutable, ['test:coverage'])",
+        ),
+      },
+    ],
+  ])('rejects weakening or removal of %s', (_label, overrides) => {
+    expect(testPolicy(overrides)).not.toEqual([]);
   });
 });

@@ -2,8 +2,11 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { testRootsFromManifest } from './test-discovery.mjs';
+
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const requiredTestRoots = ['src', 'games', 'packages'];
+const packageManifest = JSON.parse(await fs.readFile(path.join(rootDirectory, 'package.json'), 'utf8'));
+const requiredTestRoots = testRootsFromManifest(packageManifest);
 const testFilePattern = /\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/;
 const prohibitedPatterns = [
   { label: 'focused test', pattern: /\b(?:describe|it|test)\.only\s*\(/ },
@@ -16,7 +19,7 @@ async function collectTestFiles(directory) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
   const files = [];
 
-  for (const entry of entries) {
+  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     const entryPath = path.join(directory, entry.name);
 
     if (entry.isDirectory()) {

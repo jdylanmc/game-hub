@@ -61,7 +61,7 @@ jobs:
         run: yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log
 
       - name: Run tests with coverage
-        run: yarn test:coverage 2>&1 | tee continuous-integration-evidence/test.log
+        run: yarn test:ci 2>&1 | tee continuous-integration-evidence/test.log
 
       - name: Build production website
         run: yarn build 2>&1 | tee continuous-integration-evidence/build.log

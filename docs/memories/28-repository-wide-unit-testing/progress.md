@@ -3,10 +3,14 @@
 ## Codebase Patterns
 
 - Root `package.json` commands are the canonical local and continuous
-  integration entry points.
-- Vitest currently discovers tests under `src/`, `games/`, `packages/`, and
-  `scripts/`; `scripts/check-test-integrity.mjs` separately requires at least
-  one test file under the first three roots.
+  integration entry points: `yarn test:watch` is interactive, while `yarn test`
+  and `yarn test:ci` are deterministic non-watch runs.
+- Vitest and test integrity derive game and shared-package roots from the root
+  Yarn workspace declarations, then add host `src/` and repository `scripts/`
+  suites. New workspace patterns therefore participate without maintaining a
+  second test catalog.
+- Vitest uses shuffle seed `29005`, zero retries, 10-second test/hook/teardown
+  timeouts, `allowOnly: false`, and `passWithNoTests: false`.
 - Browser-oriented tests use JSDOM and Testing Library setup from
   `src/test/setup.ts`.
 - Game rendering, input, timing, and simulation currently coexist in each
@@ -46,3 +50,35 @@
 - No story is marked passed. Existing pull request #32 work is a baseline to
   retain and reconcile, not evidence that issue #28 acceptance criteria are
   complete.
+
+## 2026-08-12 - US-001: Complete watch and continuous-integration commands
+
+- Safely merged `origin/main` at
+  `9199590dded564337554718ab095e056f7438006`, retaining the issue memory and
+  reconciling the merged lint and adversarial-review baselines.
+- Added `yarn test:watch` for interactive development and made `yarn test` plus
+  `yarn test:ci` the deterministic non-watch contract. Kept
+  `yarn test:coverage` as a compatibility alias.
+- Added shared discovery from `package.json` so Vitest and test integrity cover
+  host, every game/package workspace pattern, and repository scripts in stable
+  order.
+- Moved the shuffle seed into Vitest configuration, disabled retries, and
+  bounded test, hook, and teardown timeouts at 10 seconds. Empty and focused
+  probe runs exited nonzero for the intended reasons.
+- Updated the workflow, fail-closed assertion probe, policy enforcement,
+  continuous integration documentation, and root agent guidance to use and
+  protect the canonical command.
+- Files changed: `.github/workflows/continuous-integration.yml`, `AGENTS.md`,
+  `docs/continuous-integration.md`, `package.json`,
+  `scripts/check-test-integrity.mjs`, `scripts/check-workflow-policy.mjs`,
+  `scripts/check-workflow-policy.test.mjs`,
+  `scripts/prove-ci-fail-closed.mjs`, `scripts/test-discovery.mjs`,
+  `scripts/test-discovery.d.mts`, `scripts/test-discovery.test.mjs`,
+  `tsconfig.node.json`,
+  `vitest.config.ts`, and this issue memory.
+- Checks passed: targeted discovery/policy tests (22), `yarn policy:workflow`,
+  `yarn typecheck`, canonical `yarn test:ci` (26 Ralph tests and 200 Vitest
+  tests), interactive watch startup and rerun readiness, explicit
+  no-test/focused-test failure probes, and the full `yarn validate` contract.
+- Reusable discovery and command conventions were added to root `AGENTS.md`.
+  Later stories remain intentionally untouched.

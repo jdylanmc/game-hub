@@ -32,6 +32,7 @@ yarn build-storybook
 yarn generate:check
 yarn policy:check
 yarn bundle:check
+yarn test
 ```
 
 Adversarial reviewer calibration is versioned and fail-closed. Use
@@ -43,6 +44,10 @@ architecture change.
 
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
+
+Use `yarn test:watch` for interactive Vitest development. Use `yarn test` or
+`yarn test:ci` for deterministic non-watch validation; the latter is the
+canonical continuous integration command.
 
 Run `yarn generate:check` after changing game workspace metadata or discovery
 logic. It fails when generation changes Git state or the committed catalog

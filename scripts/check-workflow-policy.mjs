@@ -32,6 +32,8 @@ const continuousIntegrationFailureProof = await fs.readFile(
   path.join(rootDirectory, 'scripts', 'prove-ci-fail-closed.mjs'),
   'utf8',
 );
+const testIntegrity = await fs.readFile(path.join(rootDirectory, 'scripts', 'check-test-integrity.mjs'), 'utf8');
+const vitestConfig = await fs.readFile(path.join(rootDirectory, 'vitest.config.ts'), 'utf8');
 const violations = [];
 
 const requiredFragments = [
@@ -77,7 +79,7 @@ const requiredCommands = [
   'yarn generate:check 2>&1 | tee continuous-integration-evidence/generation.log',
   'yarn typecheck 2>&1 | tee continuous-integration-evidence/typecheck.log',
   'yarn security:audit 2>&1 | tee continuous-integration-evidence/security-audit.log',
-  'yarn test:coverage 2>&1 | tee continuous-integration-evidence/test.log',
+  'yarn test:ci 2>&1 | tee continuous-integration-evidence/test.log',
   'yarn build 2>&1 | tee continuous-integration-evidence/build.log',
   'yarn bundle:check 2>&1 | tee continuous-integration-evidence/bundle.log',
   'yarn build-storybook 2>&1 | tee continuous-integration-evidence/storybook.log',
@@ -106,6 +108,15 @@ violations.push(
     lintBehaviorProof,
     packageManifest,
     ralphIterationPrompt,
+    workflow,
+  }),
+);
+violations.push(
+  ...validateTestIntegrationPolicy({
+    continuousIntegrationFailureProof,
+    packageManifest,
+    testIntegrity,
+    vitestConfig,
     workflow,
   }),
 );
@@ -305,8 +316,74 @@ function validateLintIntegrationPolicy({
   return lintViolations;
 }
 
+function validateTestIntegrationPolicy({
+  continuousIntegrationFailureProof: failureProofSource,
+  packageManifest: manifest,
+  testIntegrity: integritySource,
+  vitestConfig: configSource,
+  workflow: workflowSource,
+}) {
+  const testViolations = [];
+  const expectedScripts = {
+    test: 'yarn test:ci',
+    'test:watch': 'vitest --watch',
+    'test:ci':
+      'yarn test:integrity && yarn test:ralph && vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=test-results/junit.xml',
+    'test:coverage': 'yarn test:ci',
+  };
+
+  for (const [scriptName, expectedCommand] of Object.entries(expectedScripts)) {
+    if (manifest.scripts?.[scriptName] !== expectedCommand) {
+      testViolations.push(`Canonical test script is missing or weakened: ${scriptName}`);
+    }
+  }
+  if (
+    typeof manifest.scripts?.validate !== 'string' ||
+    !manifest.scripts.validate.includes('yarn test:ci') ||
+    manifest.scripts.validate.includes('yarn test:coverage')
+  ) {
+    testViolations.push('The local validation contract must use the canonical continuous-integration test command.');
+  }
+
+  for (const fragment of [
+    'allowOnly: false',
+    'hookTimeout: 10_000',
+    'include: createVitestIncludePatterns(packageManifest)',
+    'passWithNoTests: false',
+    'retry: 0',
+    'seed: 29005',
+    'shuffle: true',
+    'teardownTimeout: 10_000',
+    'testTimeout: 10_000',
+  ]) {
+    if (!configSource.includes(fragment)) {
+      testViolations.push(`Vitest deterministic continuous-integration contract is missing: ${fragment}`);
+    }
+  }
+  for (const fragment of [
+    'testRootsFromManifest(packageManifest)',
+    'const prohibitedPatterns = [',
+    "{ label: 'focused test'",
+  ]) {
+    if (!integritySource.includes(fragment)) {
+      testViolations.push(`Automatic test-integrity discovery is missing or weakened: ${fragment}`);
+    }
+  }
+  for (const fragment of [
+    'run: yarn test:ci 2>&1 | tee continuous-integration-evidence/test.log',
+    "runSandbox(yarnExecutable, ['test:ci'])",
+  ]) {
+    const source = fragment.startsWith('run:') ? workflowSource : failureProofSource;
+    if (!source.includes(fragment)) {
+      testViolations.push(`Continuous-integration test execution is missing or weakened: ${fragment}`);
+    }
+  }
+
+  return testViolations;
+}
+
 function occurrences(source, fragment) {
   return source.split(fragment).length - 1;
 }
 
-export { validateContinuousIntegrationBootstrapPolicy, validateLintIntegrationPolicy };
+export { validateContinuousIntegrationBootstrapPolicy, validateLintIntegrationPolicy, validateTestIntegrationPolicy };

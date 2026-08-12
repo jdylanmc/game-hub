@@ -46,8 +46,10 @@
     "test:ci-fail-closed": "yarn test:lint && node scripts/prove-ci-fail-closed.mjs",
     "test:integrity": "node scripts/check-test-integrity.mjs",
     "test:ralph": "node --test .github/skills/ralph-loop/tests/*.test.mjs",
-    "test": "yarn test:coverage",
-    "test:coverage": "yarn test:integrity && yarn test:ralph && vitest run --sequence.shuffle --sequence.seed=29005 --coverage --reporter=default --reporter=junit --outputFile.junit=test-results/junit.xml",
+    "test": "yarn test:ci",
+    "test:watch": "vitest --watch",
+    "test:ci": "yarn test:integrity && yarn test:ralph && vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=test-results/junit.xml",
+    "test:coverage": "yarn test:ci",
     "build": "yarn generate:games && tsc -b && vite build",
     "bundle:check": "node scripts/check-bundle-budgets.mjs",
     "build-storybook": "yarn generate:games && storybook build",
@@ -55,7 +57,7 @@
     "preview": "vite preview",
     "storybook": "yarn generate:games && storybook dev -p 6006",
     "typecheck": "yarn generate:games && tsc -b",
-    "validate": "yarn install:check && yarn format:check && yarn lint && yarn policy:check && yarn test:ci-fail-closed && yarn security:audit && yarn test:coverage && yarn generate:check && yarn typecheck && yarn build && yarn bundle:check && yarn build-storybook"
+    "validate": "yarn install:check && yarn format:check && yarn lint && yarn policy:check && yarn test:ci-fail-closed && yarn security:audit && yarn test:ci && yarn generate:check && yarn typecheck && yarn build && yarn bundle:check && yarn build-storybook"
   },
   "dependencies": {
     "@game-hub/game-contract": "workspace:*",

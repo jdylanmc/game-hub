@@ -49,7 +49,7 @@ try {
         'src/ci-failure-probe.test.ts',
         "import { expect, it } from 'vitest';\nit('fails deliberately', () => expect(true).toBe(false));\n",
       ),
-    run: () => runSandbox(yarnExecutable, ['test:coverage']),
+    run: () => runSandbox(yarnExecutable, ['test:ci']),
   });
 
   await proveFailure({

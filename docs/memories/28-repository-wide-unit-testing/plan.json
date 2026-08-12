@@ -24,6 +24,10 @@
       ".github/workflows"
     ]
   },
+  "publication": {
+    "requiredStatusChecks": ["Continuous integration"],
+    "adversarialStatusChecks": ["Adversarial Review / unit-test-reviewer"]
+  },
   "stories": [
     {
       "id": "US-001",
@@ -35,8 +39,8 @@
         "Vitest configuration defines bounded timeouts, deterministic ordering or seeds, and no-test and focused-test failure behavior"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added explicit test:watch and deterministic test/test:ci commands while retaining test:coverage as a compatibility alias. Vitest now derives host, Yarn workspace, and repository-script globs from package.json; uses a fixed shuffle seed; disables retries; bounds test, hook, and teardown timeouts; and fails on focused or empty runs. Test integrity derives its roots from the same workspace declarations. Workflow policy, the protected workflow, local validation, and the representative assertion proof use test:ci."
     },
     {
       "id": "US-002",

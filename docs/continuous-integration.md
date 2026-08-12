@@ -28,7 +28,7 @@ dependencies already exist:
 | `yarn policy:check` | Lint suppressions are approved and workflow and Code Owner invariants remain intact. |
 | `yarn test:ci-fail-closed` | Canonical lint behavior proofs pass, then all 14 representative continuous integration failure probes fail for their expected reason. |
 | `yarn security:audit` | The recursive dependency audit reports no high-severity findings; an unavailable registry fails the command. |
-| `yarn test:coverage` | Test integrity, Ralph orchestration simulations, deterministic Vitest execution, JUnit output, and configured coverage thresholds pass. |
+| `yarn test:ci` | Test integrity, Ralph orchestration simulations, deterministic Vitest execution, JUnit output, and configured coverage thresholds pass. |
 | `yarn generate:check` | Workspace generation leaves the committed manifest and import map unchanged and clean. |
 | `yarn typecheck` | All TypeScript project references compile without emitting errors. |
 | `yarn build` | `dist/` contains the production website and Vite manifest. |
@@ -46,11 +46,18 @@ acceptance evidence are documented in
 
 ## Fail-closed enforcement
 
-- Test integrity requires deterministic suites under `src/`, `games/`, and
-  `packages/`; rejects focused, skipped, todo, and quarantined tests; and
-  disallows empty suites.
+- `yarn test:watch` runs the automatically discovered host, game, shared-package,
+  and repository-script suites interactively. `yarn test` and `yarn test:ci`
+  run the deterministic non-watch contract; `yarn test:coverage` remains a
+  compatibility alias.
+- Test integrity derives game and package roots from the root Yarn workspace
+  declarations, also requires deterministic suites under `src/` and `scripts/`,
+  rejects focused, skipped, todo, and quarantined tests, and disallows empty
+  suites.
 - Vitest shuffles tests with seed `29005` and enforces 85% line, function, and
   statement coverage plus 75% branch coverage over the configured host surface.
+  Tests, hooks, and teardown each have a 10-second timeout and retries are
+  disabled.
 - `config/lint-suppressions.json` is the reviewed allowlist for exceptional
   ESLint suppressions. New unapproved directives fail `yarn policy:check`.
 - `config/bundle-budgets.json` defines reviewed raw-byte limits. Missing build
