@@ -31,9 +31,12 @@ jobs:
       run:
         shell: bash -euo pipefail {0}
     env:
+      AZURE_SUBSCRIPTION_ID: '11213dbd-39fe-46ba-87db-5f5e8c449aed'
       GAME_HUB_ENVIRONMENT: ${{ inputs.environment }}
       GAME_HUB_EXTERNAL_ID_APP_ID: ${{ vars.EXTERNAL_ID_APP_ID }}
       GAME_HUB_EXTERNAL_ID_TENANT_ID: ${{ vars.EXTERNAL_ID_TENANT_ID }}
+      GAME_HUB_FACEBOOK_CLIENT_ID: ${{ vars.EXTERNAL_ID_FACEBOOK_CLIENT_ID }}
+      GAME_HUB_GOOGLE_CLIENT_ID: ${{ vars.EXTERNAL_ID_GOOGLE_CLIENT_ID }}
 
     steps:
       - name: Check out protected main
@@ -48,34 +51,98 @@ jobs:
 
       - name: Verify protected ref and non-secret environment configuration
         env:
+          AZURE_SECRET_CLIENT_ID: ${{ vars.AZURE_SECRET_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           EXTERNAL_ID_CONFIG_CLIENT_ID: ${{ vars.EXTERNAL_ID_CONFIG_CLIENT_ID }}
         run: |
           test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$AZURE_SECRET_CLIENT_ID"
+          test -n "$AZURE_TENANT_ID"
           test -n "$EXTERNAL_ID_CONFIG_CLIENT_ID"
           test -n "$GAME_HUB_EXTERNAL_ID_APP_ID"
           test -n "$GAME_HUB_EXTERNAL_ID_TENANT_ID"
+          test -n "$GAME_HUB_FACEBOOK_CLIENT_ID"
+          test -n "$GAME_HUB_GOOGLE_CLIENT_ID"
 
       - name: Enable pinned Yarn
         run: corepack enable
 
-      - name: Verify the reviewed local-account configuration
+      - name: Verify the reviewed account and federation configuration
         run: |
           yarn install --immutable
           yarn auth:check
 
-      - name: Sign in to the external tenant with OpenID Connect
+      - name: Sign in to the provider credential vault with OpenID Connect
         uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
         with:
-          allow-no-subscriptions: true
-          client-id: ${{ vars.EXTERNAL_ID_CONFIG_CLIENT_ID }}
-          tenant-id: ${{ vars.EXTERNAL_ID_TENANT_ID }}
+          client-id: ${{ vars.AZURE_SECRET_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: 11213dbd-39fe-46ba-87db-5f5e8c449aed
 
-      - name: Configure local accounts in Microsoft Entra External ID
+      - name: Configure accounts and social federation in Microsoft Entra External ID
+        env:
+          EXTERNAL_ID_CONFIG_CLIENT_ID: ${{ vars.EXTERNAL_ID_CONFIG_CLIENT_ID }}
         run: |
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          social_configuration='config/authentication/external-id-social-providers.json'
+          key_vault_name="$(
+            jq -er --arg environment "$GAME_HUB_ENVIRONMENT" \
+              '.credentialVault.nameTemplate | gsub("\\{environment\\}"; $environment)' \
+              "$social_configuration"
+          )"
+          google_secret_name="$(
+            jq -er \
+              '.providers[] | select(.identityProviderType == "Google") | .clientSecretKeyVaultSecretName' \
+              "$social_configuration"
+          )"
+          facebook_secret_name="$(
+            jq -er \
+              '.providers[] | select(.identityProviderType == "Facebook") | .clientSecretKeyVaultSecretName' \
+              "$social_configuration"
+          )"
+          google_client_secret="$(
+            az keyvault secret show \
+              --vault-name "$key_vault_name" \
+              --name "$google_secret_name" \
+              --query value \
+              --output tsv
+          )"
+          facebook_client_secret="$(
+            az keyvault secret show \
+              --vault-name "$key_vault_name" \
+              --name "$facebook_secret_name" \
+              --query value \
+              --output tsv
+          )"
+          test -n "$google_client_secret"
+          test -n "$facebook_client_secret"
+          echo "::add-mask::$google_client_secret"
+          echo "::add-mask::$facebook_client_secret"
+
+          external_id_federated_token="$(
+            curl --fail --silent --show-error \
+              --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api%3A%2F%2FAzureADTokenExchange" |
+              jq -er '.value'
+          )"
+          test -n "$external_id_federated_token"
+          echo "::add-mask::$external_id_federated_token"
+          az login \
+            --service-principal \
+            --username "$EXTERNAL_ID_CONFIG_CLIENT_ID" \
+            --tenant "$GAME_HUB_EXTERNAL_ID_TENANT_ID" \
+            --federated-token "$external_id_federated_token" \
+            --allow-no-subscriptions \
+            --output none
+          unset external_id_federated_token
           test "$(
             az account get-access-token \
               --resource-type ms-graph \
               --query tenant \
               --output tsv
           )" = "$GAME_HUB_EXTERNAL_ID_TENANT_ID"
-          yarn auth:configure
+          GAME_HUB_GOOGLE_CLIENT_SECRET="$google_client_secret" \
+            GAME_HUB_FACEBOOK_CLIENT_SECRET="$facebook_client_secret" \
+            yarn auth:configure
+          unset google_client_secret facebook_client_secret

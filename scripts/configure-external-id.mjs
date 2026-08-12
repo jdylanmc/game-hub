@@ -6,11 +6,21 @@ import {
   reconcileExternalIdLocalAccount,
   validateExternalIdLocalAccountConfiguration,
 } from './external-id-local-account.mjs';
+import {
+  buildExternalIdSocialProviderState,
+  loadExternalIdSocialProviderConfiguration,
+  reconcileExternalIdSocialProviders,
+  validateExternalIdSocialProviderConfiguration,
+} from './external-id-social-providers.mjs';
 
-const configuration = loadExternalIdLocalAccountConfiguration();
-const violations = validateExternalIdLocalAccountConfiguration(configuration);
+const localAccountConfiguration = loadExternalIdLocalAccountConfiguration();
+const socialProviderConfiguration = loadExternalIdSocialProviderConfiguration();
+const violations = [
+  ...validateExternalIdLocalAccountConfiguration(localAccountConfiguration),
+  ...validateExternalIdSocialProviderConfiguration(socialProviderConfiguration),
+];
 if (violations.length > 0) {
-  throw new Error(`External ID local-account configuration failed:\n- ${violations.join('\n- ')}`);
+  throw new Error(`External ID configuration failed:\n- ${violations.join('\n- ')}`);
 }
 
 const apply = process.argv.includes('--apply');
@@ -20,14 +30,18 @@ if (apply && check && process.argv.includes('--check')) {
 }
 
 if (!apply) {
-  console.log('External ID local-account configuration passed.');
+  console.log('External ID local-account and social-provider configuration passed.');
 } else {
   const applicationId = requiredEnvironmentVariable('GAME_HUB_EXTERNAL_ID_APP_ID');
   const environment = requiredEnvironmentVariable('GAME_HUB_ENVIRONMENT');
   const tenantId = requiredEnvironmentVariable('GAME_HUB_EXTERNAL_ID_TENANT_ID');
-  const desiredState = buildExternalIdLocalAccountState(configuration, {
+  const localAccountState = buildExternalIdLocalAccountState(localAccountConfiguration, {
     applicationId,
     environment,
+  });
+  const socialProviderState = buildExternalIdSocialProviderState(socialProviderConfiguration, {
+    environment,
+    userFlowDisplayName: localAccountState.userFlowDisplayName,
   });
   const credential = new DefaultAzureCredential({ tenantId });
   const graph = new MicrosoftGraphClient(async () => {
@@ -37,8 +51,24 @@ if (!apply) {
     }
     return token.token;
   });
-  const result = await reconcileExternalIdLocalAccount(graph, desiredState);
-  console.log(JSON.stringify(result, null, 2));
+  const localAccountResult = await reconcileExternalIdLocalAccount(graph, localAccountState);
+  const socialProviderResult = await reconcileExternalIdSocialProviders(graph, socialProviderState, {
+    userFlowId: localAccountResult.userFlowId,
+  });
+  console.log(
+    JSON.stringify(
+      {
+        applicationId,
+        localAccountChanges: localAccountResult.changes,
+        socialProviderChanges: socialProviderResult.changes,
+        socialProviders: socialProviderResult.providers,
+        userFlowDisplayName: localAccountResult.userFlowDisplayName,
+        userFlowId: localAccountResult.userFlowId,
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 function requiredEnvironmentVariable(name) {

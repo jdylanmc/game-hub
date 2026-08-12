@@ -142,7 +142,31 @@ export function validateDeploymentAutomation({
     ['vars.EXTERNAL_ID_CONFIG_CLIENT_ID', 'External ID configuration must use its dedicated keyless identity.'],
     ['vars.EXTERNAL_ID_TENANT_ID', 'External ID configuration must select the external tenant explicitly.'],
     ['vars.EXTERNAL_ID_APP_ID', 'External ID configuration must link the non-secret customer application ID.'],
-    ['allow-no-subscriptions: true', 'External ID configuration must not require an Azure subscription.'],
+    ['vars.EXTERNAL_ID_GOOGLE_CLIENT_ID', 'External ID configuration must use the non-secret Google client ID.'],
+    ['vars.EXTERNAL_ID_FACEBOOK_CLIENT_ID', 'External ID configuration must use the non-secret Facebook client ID.'],
+    ['vars.AZURE_SECRET_CLIENT_ID', 'External ID configuration must use the dedicated Key Vault identity.'],
+    [
+      "AZURE_SUBSCRIPTION_ID: '11213dbd-39fe-46ba-87db-5f5e8c449aed'",
+      'External ID configuration must pin the provider credential subscription.',
+    ],
+    [
+      'az account set --subscription "$AZURE_SUBSCRIPTION_ID"',
+      'External ID configuration must select the provider credential subscription.',
+    ],
+    [
+      'test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"',
+      'External ID configuration must verify the provider credential subscription.',
+    ],
+    [
+      'config/authentication/external-id-social-providers.json',
+      'External ID configuration must use reviewed provider secret references.',
+    ],
+    ['az keyvault secret show', 'External ID configuration must retrieve provider credentials from Azure Key Vault.'],
+    ['echo "::add-mask::$google_client_secret"', 'External ID configuration must mask the Google credential.'],
+    ['echo "::add-mask::$facebook_client_secret"', 'External ID configuration must mask the Facebook credential.'],
+    ['ACTIONS_ID_TOKEN_REQUEST_URL', 'External ID configuration must obtain a fresh GitHub OpenID Connect assertion.'],
+    ['--federated-token', 'External ID configuration must use workload identity for the external tenant.'],
+    ['--allow-no-subscriptions', 'External ID configuration must not require an external-tenant subscription.'],
     ['yarn auth:check', 'External ID configuration must validate the reviewed desired state.'],
     [
       'az account get-access-token',
@@ -153,6 +177,18 @@ export function validateDeploymentAutomation({
       'External ID configuration must bind Microsoft Graph to the selected external tenant.',
     ],
     ['yarn auth:configure', 'External ID configuration must reconcile the customer user flow.'],
+    [
+      'GAME_HUB_GOOGLE_CLIENT_SECRET="$google_client_secret"',
+      'External ID configuration must pass the Google credential only to the reconciliation process.',
+    ],
+    [
+      'GAME_HUB_FACEBOOK_CLIENT_SECRET="$facebook_client_secret"',
+      'External ID configuration must pass the Facebook credential only to the reconciliation process.',
+    ],
+    [
+      'unset google_client_secret facebook_client_secret',
+      'External ID configuration must clear provider credentials after reconciliation.',
+    ],
     ['persist-credentials: false', 'External ID checkout must not retain a GitHub credential.'],
     [
       'azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca',
@@ -163,6 +199,11 @@ export function validateDeploymentAutomation({
   }
   if (externalIdentityWorkflow.includes('${{ secrets.')) {
     violations.push('External ID configuration must not depend on a stored GitHub secret.');
+  }
+  for (const forbidden of ['$GITHUB_ENV', '$GITHUB_OUTPUT']) {
+    if (externalIdentityWorkflow.includes(forbidden)) {
+      violations.push(`External ID configuration must not persist provider credentials through ${forbidden}.`);
+    }
   }
   for (const line of externalIdentityWorkflow.split('\n')) {
     const actionReference = line.match(/^\s*uses:\s*[^@\s]+@([^\s#]+)/);

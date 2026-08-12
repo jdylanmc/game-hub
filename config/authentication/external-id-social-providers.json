@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "environments": ["dev", "prod"],
+  "credentialVault": {
+    "nameTemplate": "kv-gamehub-{environment}-eus2"
+  },
+  "providers": [
+    {
+      "identityProviderType": "Google",
+      "displayName": "Google",
+      "clientIdEnvironmentVariable": "GAME_HUB_GOOGLE_CLIENT_ID",
+      "clientSecretEnvironmentVariable": "GAME_HUB_GOOGLE_CLIENT_SECRET",
+      "clientSecretKeyVaultSecretName": "external-id-google-client-secret"
+    },
+    {
+      "identityProviderType": "Facebook",
+      "displayName": "Facebook",
+      "clientIdEnvironmentVariable": "GAME_HUB_FACEBOOK_CLIENT_ID",
+      "clientSecretEnvironmentVariable": "GAME_HUB_FACEBOOK_CLIENT_SECRET",
+      "clientSecretKeyVaultSecretName": "external-id-facebook-client-secret"
+    }
+  ]
+}

@@ -93,8 +93,8 @@
         "Provider credentials are absent from source, committed parameters, logs, artifacts, and pull-request content"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added reviewed Google and Facebook External ID social-provider desired state containing only non-secret client-ID references, environment-variable names, and Azure Key Vault secret aliases. Extended the protected-main keyless workflow to retrieve provider credentials directly from the environment vault, mask and retain them only in the configuring shell process, exchange a fresh GitHub OpenID Connect assertion for the external tenant identity, create or synchronize both Microsoft Graph socialIdentityProvider resources, and attach them to the existing customer user flow. Reconciliation results exclude credential values and repeated runs reapply current Key Vault values for rotation. Full yarn validate passed with 310 tests and yarn infra:check passed. No provider application creation, credential seeding, live Azure configuration, social sign-in verification, return-path behavior, sign-out change, or later failure and abuse-protection stories were implemented.",
       "dependencies": ["US-004"]
     },
     {

@@ -80,4 +80,12 @@ describe('deployment automation policy', () => {
       }),
     ).toContain('External ID configuration must not depend on a stored GitHub secret.');
   });
+
+  it('rejects provider credential persistence through workflow files', () => {
+    expect(
+      violations({
+        externalIdentityWorkflow: `${automation.externalIdentityWorkflow}\n          echo "VALUE=$google_client_secret" >> "$GITHUB_ENV"`,
+      }),
+    ).toContain('External ID configuration must not persist provider credentials through $GITHUB_ENV.');
+  });
 });

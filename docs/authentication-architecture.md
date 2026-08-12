@@ -155,6 +155,30 @@ user flow because External ID selects sign-in versus registration after the
 email step and exposes **Forgot password** on its password screen. Game Hub
 renders no password input and receives no password value.
 
+## Social Provider Federation
+
+`config/authentication/external-id-social-providers.json` declares Google and
+Facebook as the two social providers for the same environment-specific customer
+user flow. The committed desired state contains only provider types, display
+names, environment-variable names, the deterministic Key Vault name template,
+and Key Vault secret aliases. It contains no provider application credential.
+
+The protected `configure-external-id.yml` workflow first authenticates to the
+approved Azure subscription as the dedicated secure-configuration identity. It
+resolves the Google and Facebook credentials directly from the environment Key
+Vault, masks them immediately, and retains them only in the configuring shell
+process. It then exchanges a fresh GitHub OpenID Connect assertion for the
+external tenant configuration identity, creates or synchronizes both Microsoft
+Graph `socialIdentityProvider` resources, and adds their returned provider IDs
+to the existing local-account user flow. Repeated runs reapply the current Key
+Vault values so provider credential rotation converges without committing or
+publishing a credential.
+
+The Google OAuth client ID and Facebook application ID are non-secret protected
+environment variables. Provider secret values never enter source, committed
+parameters, GitHub secrets, workflow outputs, artifacts, browser configuration,
+or reconciliation results.
+
 Frontend publication renders the tenant-scoped
 `azureActiveDirectory` provider into the built Static Web Apps configuration.
 The client ID is a non-secret Static Web Apps application setting. The client
@@ -174,11 +198,11 @@ bundles, logs, artifacts, Ralph memory, or pull-request text.
   certificate stored in Azure Key Vault. The Static Web App's managed identity
   has only Key Vault Certificate User and reads the certificate through a Key
   Vault reference; no client secret is committed or exposed to the browser.
-- Google and Facebook require provider application credentials. Those
-  credentials are stored by Microsoft Entra External ID and supplied only
-  through an approved secure configuration path. Later automation must obtain
-  them from Azure Key Vault using keyless workload identity and must mask and
-  avoid retaining their values.
+- Google and Facebook provider application credentials are supplied to
+  Microsoft Entra External ID only by the protected configuration workflow. It
+  retrieves them from Azure Key Vault with keyless workload identity, masks
+  them, passes them only to the Microsoft Graph reconciliation process, and
+  clears the shell variables afterward.
 - Public identifiers such as tenant ID, application client ID, provider name,
   issuer URL, and redirect paths may be emitted as non-secret deployment
   configuration. Secret or private key material may not.
@@ -199,7 +223,8 @@ The current implementation still does not decide or implement:
 - whether and how a person can link local and social credentials;
 - session lifetime, refresh, revocation, or multi-device policy;
 - minimum age, consent, privacy, or account deletion policy;
-- Google or Facebook provider registration;
+- live Google and Facebook application registration, credential seeding, and
+  federation verification;
 - custom hosted login, registration, verification, reset, error, or signed-out
   screens beyond the managed External ID experience; or
 - live authentication or deployment verification.
@@ -231,6 +256,8 @@ Reviewed August 12, 2026:
 - [Create a customer sign-up and sign-in user flow](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-user-flow-sign-up-sign-in-customers)
 - [Add Google as an identity provider](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-google-federation-customers)
 - [Add Facebook as an identity provider](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-facebook-federation-customers)
+- [Create an identity provider with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/identitycontainer-post-identityproviders)
+- [Update an identity provider with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/identityproviderbase-update)
 - [Enable self-service password reset](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-enable-password-reset-customers)
 - [Create an authentication events flow with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/identitycontainer-post-authenticationeventsflows)
 - [Link an application to a user flow with Microsoft Graph](https://learn.microsoft.com/en-us/graph/api/authenticationconditionsapplications-post-includeapplications)

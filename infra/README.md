@@ -154,9 +154,11 @@ running the External ID and frontend workflows:
 | `EXTERNAL_ID_TENANT_SUBDOMAIN` | External tenant `ciamlogin.com` subdomain |
 | `EXTERNAL_ID_APP_ID` | Customer-facing External ID application client ID |
 | `EXTERNAL_ID_CERTIFICATE_KEY_VAULT_REFERENCE` | `@Microsoft.KeyVault(...)` reference to the customer application's certificate |
+| `EXTERNAL_ID_GOOGLE_CLIENT_ID` | Google OAuth web application client ID |
+| `EXTERNAL_ID_FACEBOOK_CLIENT_ID` | Facebook application ID |
 
 The configuration identity requires only Microsoft Graph
-`IdentityProvider.Read.All`, `EventListener.ReadWrite.All`, and
+`IdentityProvider.ReadWrite.All`, `EventListener.ReadWrite.All`, and
 `Policy.ReadWrite.AuthenticationMethod` application permissions with tenant
 administrator consent. The customer application must already have a service
 principal, the Static Web Apps callback URI, and the public half of the Key
@@ -164,6 +166,15 @@ Vault certificate. The certificate private key remains non-exportable in Key
 Vault. Creating these external-tenant objects and recording the non-secret
 identifiers is a deployment prerequisite, not a reason to store a credential
 in GitHub.
+
+Before running the External ID workflow, an approved secret broker must publish
+the Google and Facebook provider credentials to the environment Key Vault using
+the aliases in
+`config/authentication/external-id-social-providers.json`. Never put either
+resolved value in a GitHub variable, GitHub secret, command line, workflow
+output, artifact, or release record. The workflow reads both values with
+`AZURE_SECRET_CLIENT_ID`, masks them in runner memory, and supplies them only to
+Microsoft Graph.
 
 ## Preview and deploy
 
@@ -659,9 +670,11 @@ GitHub environment:
 2. **Publish approved runtime configuration** — an external secret broker
    writes values to Key Vault through `AZURE_SECRET_CLIENT_ID`; commit and
    deploy only aliases and versionless Key Vault URIs.
-3. **Configure Game Hub External ID** — reconciles the local email-and-password
-   user flow and email one-time-passcode reset policy through Microsoft Graph
-   using the external tenant's dedicated OpenID Connect identity.
+3. **Configure Game Hub External ID** — resolves the Google and Facebook
+   provider credentials from Key Vault with `AZURE_SECRET_CLIENT_ID`, then
+   reconciles both social providers, the local email-and-password user flow, and
+   email one-time-passcode reset policy through Microsoft Graph using the
+   external tenant's dedicated OpenID Connect identity.
 4. **Deploy Game Hub API image** — after `api/Dockerfile` exists, publishes the
    exact `main` commit to Azure Container Registry and updates Container Apps
    by digest.

@@ -23,6 +23,11 @@
   Protected workflows use OpenID Connect, non-secret tenant/application
   identifiers, and an Azure Key Vault certificate reference; no credential
   value belongs in repository or workflow configuration.
+- Google and Facebook federation uses one reviewed desired state containing
+  only non-secret references. The protected workflow reads provider credentials
+  from Azure Key Vault with the secure-configuration identity, masks them, and
+  passes them only to Microsoft Graph after a separate keyless external-tenant
+  sign-in.
 
 ## Iteration 1: Select the identity architecture and contracts
 
@@ -133,3 +138,31 @@
 - No Google or Facebook federation, provider credential, return-path behavior,
   sign-out change, custom hosted identity screens, live Azure configuration,
   or deployment verification was implemented.
+
+## Iteration 5: Enable Google and Facebook sign-in
+
+- Added `config/authentication/external-id-social-providers.json` as the
+  reviewed non-secret desired state for Google and Facebook federation in the
+  existing environment-specific customer user flow.
+- The committed configuration contains provider types and display names,
+  non-secret client-ID environment references, the deterministic environment
+  Key Vault name, and provider credential secret aliases. It contains no
+  credential value.
+- Extended the protected-main External ID workflow to sign in to the approved
+  subscription as `AZURE_SECRET_CLIENT_ID`, resolve both provider credentials
+  from Azure Key Vault, mask them immediately, and keep them out of GitHub
+  secrets, workflow environment/output files, logs, and artifacts.
+- The same shell process exchanges a fresh GitHub OpenID Connect assertion for
+  the dedicated external-tenant configuration identity. Microsoft Graph then
+  creates or synchronizes both `socialIdentityProvider` resources and attaches
+  their IDs to the existing local-account user flow.
+- Repeated workflow runs reapply the current Key Vault values so provider
+  credential rotation converges. Reconciliation output includes only provider
+  types, provider IDs, user-flow identity, and change names.
+- Added deterministic configuration, reconciliation, rotation, secret-policy,
+  and deployment-workflow coverage. Full `yarn validate` passed with 310 tests
+  and `yarn infra:check` passed.
+- No Google or Facebook application creation, provider credential seeding, live
+  Azure configuration, deployed social sign-in verification, return-path
+  behavior, sign-out change, error-state work, abuse protection, or later story
+  was implemented.
