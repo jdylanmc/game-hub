@@ -5,11 +5,12 @@ repository-authored JSON document can claim `runMode: "azure"` and recompute an
 unkeyed report hash. Promotion must additionally verify a GitHub artifact
 attestation created by the trusted calibration workflow.
 
-US-004A installs the predicate builder, verifier, policy, and deterministic
-tests. It does not run calibration or promote Gilfoyle. US-004B must add the
-protected workflow, generate a new Azure report, meet the calibration
-thresholds, attest it, verify it in the same workflow run, and only then propose
-promotion.
+This prerequisite installs the predicate builder, verifier, protected workflow,
+policy, deterministic tests, and disabled calibration configuration on
+protected `main`. It does not run calibration, retain a report, enable the
+reviewer, publish a pull-request check, or promote Gilfoyle. US-004B must
+generate a fresh Azure report in that protected workflow, meet every threshold,
+attest it, verify it in the same run, and only then propose promotion.
 
 ## Trust model
 
@@ -39,8 +40,9 @@ artifact, report, and configuration.
 
 ## Protected workflow sequence
 
-The protected calibration workflow implements this order without accepting
-report or predicate content from workflow inputs:
+The protected calibration workflow is inert until manually dispatched. When
+dispatched, it implements this order without accepting report or predicate
+content from workflow inputs:
 
 1. Start only through `workflow_dispatch` on protected `main`, enter the
    `adversarial-review` environment, and record the workflow start time.
@@ -56,7 +58,7 @@ report or predicate content from workflow inputs:
    (`v4.2.2`) with the report as `subject-path`, the policy predicate type, and
    the generated predicate path.
 8. Run `yarn calibration:attestation:verify` against the returned bundle in the
-   same run and attempt before any promotion file is written.
+   same run and attempt. The workflow never writes a promotion file.
 
 The attestation job needs only `contents: read`, `id-token: write`, and
 `attestations: write`. The attestation bundle and calibration report are
@@ -103,4 +105,6 @@ same-run verification. The trust policy intentionally requires
 `refs/heads/main`; a feature branch cannot self-attest or self-promote its own
 workflow and configuration. A signed report that misses thresholds is still
 not promotable, and a threshold-passing unsigned or non-main report is also not
-promotable.
+promotable. Enabling the reviewer, registering a required check, changing branch
+protection, retaining an active calibration report, and promoting fixture
+evidence are outside this prerequisite.

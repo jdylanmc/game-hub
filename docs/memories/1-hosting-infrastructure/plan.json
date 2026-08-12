@@ -1,0 +1,157 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 1,
+  "issueTitle": "Hosting Infrastructure",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/1",
+  "branchName": "ralph/issue-1-hosting-infrastructure",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 1,
+    "dependencies": [30],
+    "changeScopes": [
+      "infra",
+      ".github/workflows",
+      "docs",
+      "public/staticwebapp.config.json",
+      "api",
+      "packages/api",
+      "config",
+      "src/config"
+    ]
+  },
+  "publication": {
+    "requiredStatusChecks": ["Continuous integration"],
+    "adversarialStatusChecks": ["Adversarial Review / unit-test-reviewer"]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Document the architecture and cost topology",
+      "description": "Resolve and document a cost-aware baseline topology for the static frontend, containerized API, registry, blob assets, content delivery, authentication readiness, public ingress protection, environments, and Azure subscription.",
+      "acceptanceCriteria": [
+        "The design maps every issue requirement to a named Azure service and documents the boundaries between the static frontend, API, assets, authentication, and public ingress",
+        "The design records cost, scaling, regional, environment, and operational tradeoffs without claiming deployment evidence",
+        "The deployment target explicitly names subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Selected and documented the Azure Front Door Premium, Azure Static Web Apps Standard, linked Azure Container Apps, Azure Container Registry, private blob storage, authentication, observability, environment, and cost topology in docs/hosting-infrastructure.md. This story performed no Azure deployment and claims no live endpoint evidence."
+    },
+    {
+      "id": "US-002",
+      "title": "Create modular Bicep and environment parameters",
+      "description": "Introduce the idempotent Bicep entry point, reusable modules, explicit environment parameter files, naming conventions, regions, tags, and deployment outputs needed by later resource stories.",
+      "acceptanceCriteria": [
+        "Bicep is organized into bounded modules with a documented deployment entry point",
+        "Development and production-ready environment values are explicit in committed parameter or configuration files without secret values",
+        "Repeated deployment with the same parameters is designed to converge without duplicate resources or portal-only setup",
+        "The Bicep command-line interface version and explicit subscription selection are pinned or documented for automation"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Added the subscription-scope infra/main.bicep entry point, bounded resource-group and foundation modules, deterministic naming and non-secret output contracts, explicit dev and prod Bicep parameter files, strict linter configuration, and repository tooling pinned to Bicep CLI v0.46.1. Deployment documentation selects subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed for validation, what-if, and create commands with no portal-only steps. Local compilation and lint validation passed; no Azure deployment was performed or claimed.",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-003",
+      "title": "Provision Azure Static Web Apps frontend hosting",
+      "description": "Add the Azure Static Web Apps module, environment configuration, deployment outputs, and frontend deployment contract for the existing Vite dist output.",
+      "acceptanceCriteria": [
+        "Bicep declares Azure Static Web Apps frontend hosting with environment-aware naming and configuration",
+        "Outputs expose the public frontend endpoint and non-secret deployment configuration",
+        "Documentation explains how the existing dist output is deployed without asserting that a live endpoint was created"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Added an idempotent Azure Static Web Apps Standard module using the deterministic environment name, explicit development and production staging policies, configuration-file updates, and no repository credential or generated workflow. Subscription outputs expose the resource identity, generated hostname, direct HTTPS endpoint, and a non-secret Vite dist publication contract. Infrastructure documentation covers the dist artifact handoff, Microsoft Entra ID/OpenID Connect automation boundary, approved secret references for service-issued publication credentials, and the absence of live deployment evidence. Local Bicep, formatting, lint, policy, Vite build, artifact, and diff validation passed; no Azure deployment was performed or claimed.",
+      "dependencies": ["US-002"]
+    },
+    {
+      "id": "US-004",
+      "title": "Provision Azure Container Apps API and Azure Container Registry",
+      "description": "Add Azure Container Registry and Azure Container Apps modules for a future Docker-based API, including stable endpoint outputs, image configuration, scaling defaults, and environment parameters.",
+      "acceptanceCriteria": [
+        "Bicep declares an Azure Container Registry and an Azure Container Apps environment and application boundary",
+        "The API image reference, ingress, scaling, and environment settings are configurable without committed secrets",
+        "Outputs expose the stable API endpoint and registry information required by deployment automation"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Added bounded Azure Container Registry and Azure Container Apps Bicep modules with environment-aware image, ingress, scaling, allocation, HTTP concurrency, and non-secret settings parameters. Azure Container Registry Basic disables administrative credentials and anonymous pull; a dedicated user-assigned identity receives only AcrPull, while the Container App has a separate system-assigned runtime identity with no data-plane roles yet. Stable registry, image repository, environment, app, endpoint, deployment contract, and identity outputs are non-secret. Development and production use explicit bounded scaling defaults and a digest-pinned public bootstrap image until workload-identity automation publishes the future API image. Bicep, compiled-contract, formatting, lint, policy, build, and diff validation passed; no Azure deployment, image publication, endpoint reachability test, or live deployment evidence was performed or claimed.",
+      "dependencies": ["US-002"]
+    },
+    {
+      "id": "US-005",
+      "title": "Provision blob assets and content delivery",
+      "description": "Add blob storage containers and a cost-aware content delivery layer for game assets, user-facing media, and other static assets, with explicit caching and endpoint outputs.",
+      "acceptanceCriteria": [
+        "Bicep declares blob storage and separates the required asset categories through documented containers or prefixes",
+        "A content delivery endpoint fronts blob-hosted assets with an explicit baseline caching policy",
+        "Outputs and documentation identify the upload targets and public content endpoint without claiming live upload evidence"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Added dedicated private Blob Storage containers for game assets, user-facing media, and other static assets; environment-aware LRS/ZRS redundancy and recovery settings; a publication-only managed identity with GitHub OpenID Connect federation and Storage Blob Data Contributor; and Azure Front Door Premium category routes with system-assigned managed origin authentication, Storage Blob Data Reader, compression, explicit cache durations, upload-target outputs, and public content endpoint outputs. Azure Front Door managed origin authentication currently cannot be combined with Private Link, so the storage endpoint remains network reachable while anonymous and Shared Key authorization are disabled. Bicep, compiled-contract, credential-pattern, formatting, lint, policy, build, and diff validation passed. No Azure deployment, upload, purge, endpoint reachability check, or live evidence was performed or claimed.",
+      "dependencies": ["US-002"]
+    },
+    {
+      "id": "US-006",
+      "title": "Make the topology authentication-ready",
+      "description": "Define the infrastructure configuration and application-facing outputs needed to enable website authentication later without redesigning the frontend, API, or ingress topology.",
+      "acceptanceCriteria": [
+        "The selected authentication integration point and trust boundaries are documented",
+        "Bicep exposes non-secret authentication configuration placeholders and outputs needed by the frontend and API",
+        "Enabling authentication does not require replacing the selected frontend, API, asset, or public ingress boundaries"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Enabled a keyless Azure-managed Microsoft Entra ID/OpenID Connect surface on the existing Azure Static Web App, added its system-assigned managed identity, protected /api/* with the authenticated role, blocked the unused GitHub provider, and declaratively linked the existing Container App as the production backend. Non-secret environment placeholders and outputs expose the provider, role, principal header, login/logout/current-user paths, same-origin authenticated API endpoint, managed identity principals, linked-backend ID, and stable trust boundaries. Added fail-closed infrastructure policy tests. Local Bicep, compiled-contract, credential-pattern, formatting, lint, policy, coverage, generated-state, type, build, bundle, and Storybook validation passed. No Azure infrastructure deployment or live authentication-flow verification was performed or claimed.",
+      "dependencies": ["US-003", "US-004"]
+    },
+    {
+      "id": "US-007",
+      "title": "Protect public ingress from bots and abuse",
+      "description": "Add the public ingress layer and environment-aware web application firewall, bot protection, and rate-limiting policy that fronts the appropriate public endpoints.",
+      "acceptanceCriteria": [
+        "The public ingress topology identifies which frontend, API, and asset endpoints are protected",
+        "Bicep declares baseline web application firewall, bot protection, and rate-limiting configuration",
+        "Protection settings are explicit, environment-aware, and documented with cost and operational tradeoffs"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Extended the existing Azure Front Door Premium endpoint into the canonical frontend, authentication, API, and asset ingress. Added one all-path WAF security policy with Default Rule Set 2.1, Bot Manager Rule Set 1.1, and explicit five-minute API, authentication, and general socket-IP rate limits. Development uses detection mode with higher tuning thresholds; production uses prevention mode with lower starting thresholds. Added non-secret protected-path, WAF, security-policy, Front Door ID, and Static Web Apps forwarding-gateway outputs plus fail-closed policy tests and cost/operations documentation. Local validation and a live Azure subscription-scope validation against 11213dbd-39fe-46ba-87db-5f5e8c449aed passed. No Azure resources, application content, forwarding-gateway configuration, WAF enforcement, bot classification, rate-limit event, or endpoint was deployed or verified.",
+      "dependencies": ["US-003", "US-004", "US-005"]
+    },
+    {
+      "id": "US-008",
+      "title": "Add identities, secrets, observability, and cost controls",
+      "description": "Complete the baseline with managed identities, secure configuration references, logs and metrics, resource tags, scaling limits, retention settings, and budget-conscious defaults.",
+      "acceptanceCriteria": [
+        "Workload access uses managed identities and least-privilege role assignments where supported",
+        "Secret values are absent from committed files and the secure runtime injection mechanism is documented",
+        "Diagnostics, retention, scaling limits, tags, and cost-aware defaults are explicit and environment-aware",
+        "Required operational and application deployment outputs are exposed without revealing secrets"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Added a per-environment Standard Key Vault, a dedicated user-assigned API runtime identity with Key Vault Secrets User, and a separate publication identity with Key Vault Secrets Officer plus immutable GitHub OpenID Connect federation. Container Apps now accepts only alias-to-versionless-Key-Vault references, resolves them with the runtime identity, and routes platform logs through Azure Monitor without a workspace key. Added Log Analytics, workspace-based Application Insights, diagnostic settings across frontend, registry, Container Apps, blob, Front Door, and Key Vault boundaries, explicit retention/sampling/ingestion caps, environment tags, existing replica ceilings, recovery defaults, grouped non-secret operational outputs, and fail-closed policy tests. Development and production subscription-scope validation passed against 11213dbd-39fe-46ba-87db-5f5e8c449aed. Pinned Bicep validation, full yarn validate with 216 tests, builds, Storybook, security audit, and diff validation passed after merging the latest main branch. The fresh-worktree bootstrap proof uses the same immutable Yarn metadata semantics as Continuous Integration instead of forcing a platform-divergent hardened mode. No Azure resource deployment, secret publication, application publication, endpoint verification, or live telemetry was performed or claimed.",
+      "dependencies": ["US-003", "US-004", "US-005", "US-006", "US-007"]
+    },
+    {
+      "id": "US-009",
+      "title": "Document deployment and end-to-end verification",
+      "description": "Add repeatable preview, deployment, application publication, asset upload, and end-to-end verification procedures for the complete baseline stack without deploying from the Ralph iteration.",
+      "acceptanceCriteria": [
+        "Documentation selects subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed explicitly and describes preview and idempotent deployment commands",
+        "Continuous deployment workflows validate and deploy the Bicep and publish the frontend, API image, and assets using approved secret injection",
+        "The verification procedure covers frontend reachability, frontend-to-API access, authentication readiness, asset content delivery, ingress protection, outputs, and repeat deployment",
+        "Repository checks validate templates, configuration, and documentation without inventing live Azure acceptance evidence"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Added a one-time Bicep bootstrap for environment-scoped keyless infrastructure deployment, dedicated frontend and API publisher identities, and scoped read/publication roles for frontend, API, assets, and secure configuration. Added protected main-only GitHub Actions workflows for Bicep validate/what-if/create/repeat-what-if, Vite frontend publication with runtime-only masked Static Web Apps token retrieval and Front Door origin restriction, immutable API image publication by digest when api/Dockerfile exists, and Microsoft Entra-authorized asset upload with mutable Front Door purge. Added a complete runbook for explicit subscription selection, environment variables, secure Key Vault runtime injection, output reconciliation, frontend and direct-origin reachability, authenticated frontend-to-API access, authentication readiness, assets/CDN, WAF and bot/rate-limit policy, diagnostics, and repeat deployment. Repository policy tests fail closed on these contracts. Pinned Bicep validation, dev/prod Azure subscription-scope validation for both bootstrap and stack, refreshed real-Azure adversarial calibration, full yarn validate with 224 tests, builds, Storybook, security audit, sensitive-value scanning, and diff validation passed. No Azure resource, application, image, asset, secret, endpoint, authentication flow, or WAF behavior was deployed or verified by this story.",
+      "dependencies": ["US-008"]
+    }
+  ]
+}

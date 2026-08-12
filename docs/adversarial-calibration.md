@@ -52,11 +52,12 @@ The report records:
 - latency and error rate;
 - exact case evidence and a tamper-evident report hash.
 
-The report hash detects accidental byte changes but is not signer provenance.
-Security-specialized agents must also satisfy their registered protected-run
-attestation policy. For Gilfoyle, see
+The report hash detects byte changes but does not prove signer provenance.
+Gilfoyle additionally requires the protected-run GitHub artifact attestation
+documented in
 [Adversarial calibration attestation](adversarial-calibration-attestation.md).
-Repository-authored JSON must never promote itself by claiming Azure mode.
+A repository-authored JSON claim, fixture report, feature-branch run, or
+unsigned Azure report cannot promote the reviewer.
 
 ## Promotion policy
 
@@ -85,7 +86,7 @@ verdict policy version/hash, system policy, reviewer engine configuration,
 benchmark corpus, or architecture fingerprint changes. Re-run calibration
 before any later story can make the model-backed check required.
 
-## Gilfoyle calibration
+## Protected Gilfoyle calibration
 
 Gilfoyle uses its independent 24-case corpus and promotion policy:
 
@@ -115,7 +116,9 @@ Only `.github/workflows/adversarial-calibration.yml` may perform the real Azure
 run. It uses the protected `adversarial-review` environment, Microsoft Entra ID
 OpenID Connect, subscription `11213dbd-39fe-46ba-87db-5f5e8c449aed`, and the
 dedicated versioned deployment. The workflow checks strict thresholds before
-creating and verifying the same-run GitHub artifact attestation.
+creating and verifying the same-run GitHub artifact attestation. It is manually
+dispatched from protected `main`; fixture mode and feature-branch runs remain
+non-promotable.
 
 Model-backed evaluation remains downstream of complete deterministic
 continuous integration. No workflow invokes it in US-005.
