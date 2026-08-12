@@ -1,5 +1,6 @@
 import {
   createSeededRandomSource,
+  createSubmitScoreOnce,
   type GameHost,
   type GameInstance,
   type GameManifest,
@@ -280,8 +281,8 @@ export function createGame(
   let phaseMessage = 'Press Space, click, or tap to flap upward.';
   let lastFrameTime = 0;
   let simulation = createFloppyBirdSimulationState();
-  let submittedScore = false;
   let startedAt = 0;
+  const submitScoreOnce = createSubmitScoreOnce(host);
 
   renderer.setClearColor(new Color('#020617'));
   renderer.shadowMap.enabled = false;
@@ -363,18 +364,15 @@ export function createGame(
     emitAnnouncement(`Game over. Final score ${simulation.score}.`, 'assertive');
     emitHud('Crash detected. Restart to try another run.');
 
-    if (!submittedScore) {
-      submittedScore = true;
-      host.submitScore({
-        gameId: manifest.id,
-        score: simulation.score,
-        occurredAt: scoreOccurredAt(),
-        metadata: {
-          durationSeconds: Math.max(0, Math.round((clock.nowMilliseconds() - startedAt) / 1000)),
-          technology: manifest.technology,
-        },
-      });
-    }
+    submitScoreOnce({
+      gameId: manifest.id,
+      score: simulation.score,
+      occurredAt: scoreOccurredAt(),
+      metadata: {
+        durationSeconds: Math.max(0, Math.round((clock.nowMilliseconds() - startedAt) / 1000)),
+        technology: manifest.technology,
+      },
+    });
   };
 
   const flap = () => {

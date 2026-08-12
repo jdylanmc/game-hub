@@ -38,6 +38,12 @@
   committed outputs under `public/generated/` and `src/generated/`.
 - Generated import maps delegate unknown-id and rejected-import handling to the
   directly testable `src/game-module-loader.ts` boundary.
+- Games with one terminal score use the shared `createSubmitScoreOnce` helper
+  over `GameHost.submitScore`; repeated terminal work cannot create a private
+  score channel or duplicate the public host submission.
+- `ControllerInputNormalizer` is intentionally a generic type-only seam.
+  Controller mapping, dead zones, and normalization semantics remain
+  unspecified until product behavior is implemented.
 - Issue #28 is orchestration priority 3 and remains blocked on issues #30 and
   #27 because adversarial test review and lint completion overlap package,
   configuration, source, test, documentation, and workflow-policy surfaces.
@@ -286,3 +292,28 @@
   `yarn validate` contract with 311 Vitest tests.
 - Shared-contract, broader host/component, cleanup, coverage, integrity,
   workflow-evidence, and documentation stories remain intentionally untouched.
+
+## 2026-08-12 - US-009: Expand shared contract tests
+
+- Replaced the shared contract smoke test with compile-time fixtures covering
+  every lifecycle phase, each phase, heads-up display, and announcement event
+  variant, complete score metadata, manifests, manifest indexes, modules, and
+  hosts.
+- Added a representative runtime module fixture that receives the exact public
+  canvas and host, drives start, pause, resume, game-over, and disposal through
+  `GameInstance`, and emits polite, assertive, and default announcements.
+- Added `createSubmitScoreOnce`, which closes over the public
+  `GameHost.submitScore` boundary and reports whether an attempt was accepted.
+  Adopted it in FloppyBird's existing final-score path without changing the
+  score payload or adding a private host channel.
+- Added the generic type-only `ControllerInputNormalizer` seam and compile-time
+  coverage for its raw-to-normalized shape without defining controller
+  mappings, dead zones, or other unimplemented product behavior.
+- Files changed: `packages/game-contract/src/index.ts`,
+  `packages/game-contract/src/index.test.ts`,
+  `packages/game-contract/AGENTS.md`, `games/floppy-bird/src/index.ts`, and this
+  issue memory.
+- Checks passed: targeted Prettier and ESLint, eight contract and FloppyBird
+  runtime tests, `yarn typecheck`, explicit `yarn generate:check`, and the full
+  `yarn validate` contract with 313 Vitest tests.
+- Broader host/component state remains intentionally deferred to US-010.

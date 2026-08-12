@@ -11,6 +11,10 @@ website and every trusted game workspace. Read the
 - Preserve lifecycle cleanup through `dispose`.
 - Keep score submissions, phase events, heads-up display events, and
   announcements typed.
+- Use `createSubmitScoreOnce` when a game has one terminal score so repeated
+  terminal frames cannot duplicate the public host submission.
+- Keep controller normalization as a type-only adapter seam until product
+  normalization behavior is implemented and specified.
 - Keep exported simulation clocks, random sources, and stepping helpers
   dependency-free and deterministic; they must not read or replace ambient
   browser or Node.js globals.

@@ -150,8 +150,8 @@
         "Future controller-input normalization has an explicit test seam without inventing unimplemented product behavior"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Expanded the shared contract suite with compile-time fixtures for phases, events, manifests, manifest indexes, scores, modules, hosts, and a generic type-only ControllerInputNormalizer seam. Added createSubmitScoreOnce on the public GameHost score channel, adopted it in FloppyBird's existing terminal-score path, and proved complete metadata is delivered once despite duplicate attempts. Runtime host-game interactions exercise every lifecycle phase, phase/HUD/announcement event variants, canvas and host identity, lifecycle disposal, and polite, assertive, and default announcements. Targeted checks, yarn generate:check, and the full yarn validate contract passed with 313 Vitest tests.",
       "dependencies": ["US-001"]
     },
     {
