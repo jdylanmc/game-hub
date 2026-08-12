@@ -4,12 +4,56 @@ This document resolves the baseline Azure topology for Game Hub. It is the
 design input for the Bicep implementation tracked by GitHub issue #1.
 
 The implementation entry point, environment parameters, pinned tooling, and
-preview commands are documented in [Game Hub Azure Infrastructure](../infra/README.md).
+preview, publication, and end-to-end verification commands are documented in
+[Game Hub Azure Infrastructure](../infra/README.md).
 
 > **Evidence boundary:** The architecture and Bicep declarations are not
 > deployment evidence. No Azure resources, frontend, container image, asset,
 > authentication flow, web application firewall rule, or public endpoint was
-> deployed or verified by these stories.
+> deployed or verified by this repository change. Live acceptance requires a
+> protected workflow run and the recorded verification procedure.
+
+## Deployment and publication automation
+
+The implementation includes protected, main-only GitHub Actions workflows for
+the complete deployment boundary:
+
+- `deploy-hosting-infrastructure.yml` selects subscription
+  `11213dbd-39fe-46ba-87db-5f5e8c449aed`, validates and previews Bicep, deploys
+  with a stable name, captures non-secret outputs, and fails if the repeated
+  preview does not converge.
+- `deploy-frontend.yml` builds the reviewed Vite artifact, merges the live
+  Azure Front Door forwarding restriction, retrieves the Static Web Apps
+  service token only after keyless Microsoft Entra ID sign-in, masks it, and
+  publishes the prebuilt output.
+- `deploy-api-image.yml` uses a dedicated OpenID Connect identity with
+  `AcrPush`, builds `api/Dockerfile` when the API source exists, publishes a
+  commit-tagged image, resolves its digest, and updates Azure Container Apps by
+  immutable digest.
+- `deploy-assets.yml` accepts reviewed repository directories, uploads with
+  Microsoft Entra authorization, and purges only changed mutable content
+  categories.
+
+The Bicep bootstrap creates one environment-specific infrastructure deployment
+identity. The main stack creates separate frontend, API, asset, and secure
+configuration publisher identities. Every federated credential is restricted
+to the immutable repository and matching protected GitHub environment subject.
+No client credential, registry password, storage key, Shared Access Signature
+(SAS), connection string, or resolved application value is committed.
+
+Secure application settings enter Azure Key Vault through the dedicated
+publication identity and an approved external secret broker. Bicep contains
+only aliases and versionless Key Vault URIs. Azure Container Apps resolves
+those references with the runtime identity and injects values into named
+environment variables without exposing them to build or deployment outputs.
+
+The [end-to-end verification procedure](../infra/README.md#end-to-end-verification-procedure)
+covers output reconciliation, canonical frontend reachability, direct-origin
+rejection, same-origin authenticated API access, Microsoft Entra sign-in and
+sign-out readiness, asset delivery, Azure Front Door cache observations, web
+application firewall policy and diagnostic correlation, secure runtime
+configuration, and repeat-deployment convergence. Repository checks validate
+the declared contracts only and never substitute for live Azure evidence.
 
 ## Deployment Scope
 

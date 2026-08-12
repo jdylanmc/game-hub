@@ -27,12 +27,14 @@ var resourceNames = {
   applicationInsights: 'appi-${baseName}'
   assetPublisherManagedIdentity: 'id-assets-${baseName}'
   apiManagedIdentity: 'id-api-${baseName}'
+  apiPublisherManagedIdentity: 'id-publish-api-${baseName}'
   apiRuntimeManagedIdentity: 'id-runtime-${baseName}'
   containerApp: 'ca-${baseName}'
   containerAppsEnvironment: 'cae-${baseName}'
   containerRegistry: take('acr${compactName}${uniquenessSuffix}', 50)
   frontDoorEndpoint: take('fde-${baseName}-${uniquenessSuffix}', 46)
   frontDoorProfile: 'afd-${baseName}'
+  frontendPublisherManagedIdentity: 'id-publish-web-${baseName}'
   keyVault: take('kv-${baseName}-${uniquenessSuffix}', 24)
   logAnalyticsWorkspace: 'log-${baseName}'
   secretPublisherManagedIdentity: 'id-secrets-${baseName}'

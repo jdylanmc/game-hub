@@ -345,6 +345,25 @@ module authenticationReadiness './modules/authentication-readiness.bicep' = {
   }
 }
 
+module deploymentPublishers './modules/deployment-publishers.bicep' = {
+  name: '${applicationName}-${environmentName}-deployment-publishers'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    apiPublisherIdentityName: foundation.outputs.resourceNames.apiPublisherManagedIdentity
+    assetPublisherIdentityName: foundation.outputs.resourceNames.assetPublisherManagedIdentity
+    containerAppName: containerAppApi.outputs.appName
+    containerRegistryName: containerRegistry.outputs.registryName
+    environmentName: environmentName
+    federatedSubject: githubEnvironmentFederatedSubject
+    frontDoorProfileName: assetContentDelivery.outputs.profileName
+    frontendPublisherIdentityName: foundation.outputs.resourceNames.frontendPublisherManagedIdentity
+    location: location
+    configurationPublisherIdentityName: foundation.outputs.resourceNames.secretPublisherManagedIdentity
+    staticWebAppName: staticWebApp.outputs.name
+    tags: tags
+  }
+}
+
 module observability './modules/observability.bicep' = {
   name: '${applicationName}-${environmentName}-observability'
   scope: resourceGroup(targetSubscriptionId, resourceGroupName)
@@ -509,6 +528,9 @@ output secureConfiguration object = union(secureConfigurationModule.outputs.conf
   keyVaultReferences: apiKeyVaultSecretReferences
   secretEnvironmentReferences: apiSecretEnvironmentReferences
 })
+
+@description('Non-secret keyless application publication identities and scoped role assignments.')
+output deploymentPublisherIdentities object = deploymentPublishers.outputs.configuration
 
 @description('Asset storage account resource identifier.')
 output assetStorageAccountId string = assetStorage.outputs.storageAccountId

@@ -14,6 +14,7 @@ import {
   loadOperationalInfrastructure,
   validateOperationalInfrastructure,
 } from './check-operational-infrastructure.mjs';
+import { loadDeploymentAutomation, validateDeploymentAutomation } from './check-deployment-automation.mjs';
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const infraDirectory = path.join(rootDirectory, 'infra');
@@ -57,6 +58,11 @@ if (publicIngressViolations.length > 0) {
 const operationalViolations = validateOperationalInfrastructure(loadOperationalInfrastructure(rootDirectory));
 if (operationalViolations.length > 0) {
   throw new Error(`Operational infrastructure policy failed:\n- ${operationalViolations.join('\n- ')}`);
+}
+
+const deploymentAutomationViolations = validateDeploymentAutomation(loadDeploymentAutomation(rootDirectory));
+if (deploymentAutomationViolations.length > 0) {
+  throw new Error(`Deployment automation policy failed:\n- ${deploymentAutomationViolations.join('\n- ')}`);
 }
 
 console.log(

@@ -1,0 +1,161 @@
+name: Deploy Game Hub frontend
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        description: Protected Azure environment
+        options:
+          - dev
+          - prod
+        default: dev
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: game-hub-frontend-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.environment }} frontend
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      AZURE_SUBSCRIPTION_ID: '11213dbd-39fe-46ba-87db-5f5e8c449aed'
+      DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment }}
+
+    steps:
+      - name: Check out protected main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.13.0
+
+      - name: Verify protected ref and keyless environment configuration
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_FRONTEND_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$AZURE_CLIENT_ID"
+          test -n "$AZURE_TENANT_ID"
+
+      - name: Enable pinned Yarn
+        run: corepack enable
+
+      - name: Build the reviewed frontend artifact
+        run: |
+          yarn install --immutable
+          yarn build
+          test -f dist/index.html
+          test -f dist/staticwebapp.config.json
+
+      - name: Sign in to Azure with OpenID Connect
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          client-id: ${{ vars.AZURE_FRONTEND_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: 11213dbd-39fe-46ba-87db-5f5e8c449aed
+
+      - name: Select the approved subscription and resolve frontend targets
+        run: |
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          resource_group="rg-gamehub-${DEPLOYMENT_ENVIRONMENT}-eus2"
+          static_web_app="swa-gamehub-${DEPLOYMENT_ENVIRONMENT}-eus2"
+          front_door_profile="afd-gamehub-${DEPLOYMENT_ENVIRONMENT}-eus2"
+          front_door_host="$(
+            az afd endpoint list \
+              --resource-group "$resource_group" \
+              --profile-name "$front_door_profile" \
+              --query '[0].hostName' \
+              --output tsv
+          )"
+          front_door_id="$(
+            az afd profile show \
+              --resource-group "$resource_group" \
+              --profile-name "$front_door_profile" \
+              --query frontDoorId \
+              --output tsv
+          )"
+          test -n "$front_door_host"
+          test -n "$front_door_id"
+          {
+            echo "GAME_HUB_RESOURCE_GROUP=$resource_group"
+            echo "GAME_HUB_STATIC_WEB_APP=$static_web_app"
+            echo "GAME_HUB_FRONT_DOOR_HOST=$front_door_host"
+            echo "GAME_HUB_FRONT_DOOR_ID=$front_door_id"
+          } >> "$GITHUB_ENV"
+
+      - name: Merge the Front Door origin restriction into the artifact
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'dist/staticwebapp.config.json';
+          const config = JSON.parse(fs.readFileSync(path, 'utf8'));
+          config.forwardingGateway = {
+            allowedForwardedHosts: [process.env.GAME_HUB_FRONT_DOOR_HOST],
+            requiredHeaders: {
+              'X-Azure-FDID': process.env.GAME_HUB_FRONT_DOOR_ID,
+            },
+          };
+          config.networking = {
+            allowedIpRanges: ['AzureFrontDoor.Backend'],
+          };
+          fs.writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);
+          NODE
+          jq -e '
+            .forwardingGateway.allowedForwardedHosts == [env.GAME_HUB_FRONT_DOOR_HOST] and
+            .forwardingGateway.requiredHeaders["X-Azure-FDID"] == env.GAME_HUB_FRONT_DOOR_ID and
+            .networking.allowedIpRanges == ["AzureFrontDoor.Backend"]
+          ' dist/staticwebapp.config.json > /dev/null
+
+      - name: Resolve the service-issued deployment token at runtime
+        id: deployment-token
+        run: |
+          deployment_token="$(
+            az staticwebapp secrets list \
+              --subscription "$AZURE_SUBSCRIPTION_ID" \
+              --resource-group "$GAME_HUB_RESOURCE_GROUP" \
+              --name "$GAME_HUB_STATIC_WEB_APP" \
+              --query properties.apiKey \
+              --output tsv
+          )"
+          test -n "$deployment_token"
+          echo "::add-mask::$deployment_token"
+          printf 'value=%s\n' "$deployment_token" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the prebuilt frontend
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+        with:
+          action: upload
+          app_location: /
+          azure_static_web_apps_api_token: ${{ steps.deployment-token.outputs.value }}
+          output_location: dist
+          skip_app_build: true
+
+      - name: Verify the canonical frontend is reachable
+        run: |
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error \
+              "https://${GAME_HUB_FRONT_DOOR_HOST}/" \
+              --output /dev/null; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1

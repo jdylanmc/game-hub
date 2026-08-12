@@ -15,8 +15,9 @@ Front Door Premium as the canonical frontend, API, authentication, and asset
 ingress. The Front Door endpoint has a web application firewall (WAF), managed
 bot protection, and environment-aware rate limits. Azure Key Vault,
 least-privilege managed identities, Log Analytics, Application Insights, and
-platform diagnostic settings complete the operational baseline. Later issue #1
-work adds publication automation and end-to-end verification.
+platform diagnostic settings complete the operational baseline. Protected
+GitHub Actions workflows perform infrastructure, frontend, API image, and asset
+publication without storing an Azure credential.
 
 ## Layout
 
@@ -34,6 +35,8 @@ work adds publication automation and end-to-end verification.
 | `modules/asset-storage.bicep` | Private Blob Storage containers, recovery policy, and OpenID Connect-federated asset publisher identity |
 | `modules/asset-content-delivery.bicep` | Azure Front Door Premium profile, managed origin authentication, category routes, and explicit edge caching |
 | `modules/public-ingress.bicep` | Canonical frontend route, WAF security policy, managed default and bot rules, per-path rate limits, and Static Web Apps forwarding-gateway contract |
+| `modules/deployment-publishers.bicep` | Frontend and API publication identities, immutable GitHub federation, and scoped publication roles |
+| `bootstrap/` | One-time Bicep bootstrap for the environment-scoped infrastructure deployment identity |
 | `environments/dev.bicepparam` | On-demand development values |
 | `environments/prod.bicepparam` | Persistent production-ready values |
 | `.bicep-version` | Exact Bicep command-line interface (CLI) version used locally and by future automation |
@@ -67,6 +70,79 @@ Automation must use Microsoft Entra workload identity federation and OpenID
 Connect. Do not create or store a client secret for deployment. Authentication
 grants access only; every command below still selects the subscription
 explicitly.
+
+## Bootstrap protected deployment identities
+
+An Azure administrator performs one Bicep bootstrap per environment. The
+bootstrap creates the workload resource group, a separate identity resource
+group, one user-assigned deployment identity, and the immutable GitHub
+environment federation. It grants only subscription deployment execution at
+subscription scope and grants Contributor plus Role Based Access Control
+Administrator only on that environment's workload resource group. It does not
+grant a client credential or a data-plane role.
+
+```bash
+SUBSCRIPTION_ID='11213dbd-39fe-46ba-87db-5f5e8c449aed'
+ENVIRONMENT='dev'
+BOOTSTRAP_NAME="game-hub-deployment-identity-${ENVIRONMENT}"
+
+az account set --subscription "$SUBSCRIPTION_ID"
+test "$(az account show --query id --output tsv)" = "$SUBSCRIPTION_ID"
+
+az deployment sub what-if \
+  --subscription "$SUBSCRIPTION_ID" \
+  --name "$BOOTSTRAP_NAME" \
+  --location eastus2 \
+  --template-file infra/bootstrap/main.bicep \
+  --parameters "infra/bootstrap/${ENVIRONMENT}.bicepparam"
+
+az deployment sub create \
+  --subscription "$SUBSCRIPTION_ID" \
+  --name "$BOOTSTRAP_NAME" \
+  --location eastus2 \
+  --template-file infra/bootstrap/main.bicep \
+  --parameters "infra/bootstrap/${ENVIRONMENT}.bicepparam"
+```
+
+Configure protected GitHub environments named `dev` and `prod`, restrict
+deployment branches to `main`, require the intended reviewers, and populate
+only non-secret environment variables. Resolve the repository-owner token in
+the current process; do not change the globally active GitHub CLI account.
+
+```bash
+DEPLOYMENT_OUTPUT="$(
+  az deployment sub show \
+    --subscription "$SUBSCRIPTION_ID" \
+    --name "$BOOTSTRAP_NAME" \
+    --query properties.outputs.deploymentIdentityConfiguration.value \
+    --output json
+)"
+GH_TOKEN="$(GH_TOKEN= GITHUB_TOKEN= gh auth token --hostname github.com --user jdylanmc)"
+
+GH_TOKEN="$GH_TOKEN" gh variable set AZURE_INFRA_CLIENT_ID \
+  --repo jdylanmc/game-hub \
+  --env "$ENVIRONMENT" \
+  --body "$(jq -r .clientId <<< "$DEPLOYMENT_OUTPUT")"
+GH_TOKEN="$GH_TOKEN" gh variable set AZURE_TENANT_ID \
+  --repo jdylanmc/game-hub \
+  --env "$ENVIRONMENT" \
+  --body "$(jq -r .tenantId <<< "$DEPLOYMENT_OUTPUT")"
+unset GH_TOKEN DEPLOYMENT_OUTPUT
+```
+
+After the first full stack deployment, set the following additional
+environment variables from the non-secret deployment outputs:
+
+| GitHub environment variable | Deployment output |
+| --- | --- |
+| `AZURE_FRONTEND_CLIENT_ID` | `deploymentPublisherIdentities.value.frontend.clientId` |
+| `AZURE_API_CLIENT_ID` | `deploymentPublisherIdentities.value.api.clientId` |
+| `AZURE_ASSET_CLIENT_ID` | `assetPublisherIdentityClientId.value` |
+| `AZURE_SECRET_CLIENT_ID` | `secretPublisherIdentity.value.clientId` |
+
+The infrastructure, frontend, API, asset, and secure-configuration identities
+are separate. All federation subjects use
+`repo:jdylanmc@6954990/game-hub@1330993568:environment:<environment>`.
 
 ## Preview and deploy
 
@@ -109,6 +185,12 @@ Run `what-if` before every deployment. Re-run `what-if` with the same commit
 and parameters after deployment to verify convergence. The commands use the
 same fixed subscription deployment name and location because Azure keeps a
 deployment name's location immutable.
+
+`.github/workflows/deploy-hosting-infrastructure.yml` performs the same
+validate, `what-if`, create, output capture, and repeat-`what-if` sequence from
+protected `main`. It authenticates through `AZURE_INFRA_CLIENT_ID`, uses the
+repository-pinned Bicep CLI, and fails if the repeated preview contains a
+create, modify, or delete operation.
 
 The outputs contain only the selected subscription and region, resource group
 identity, required tags, deterministic resource names, and the frontend, API,
@@ -220,11 +302,13 @@ build command.
 Infrastructure automation authenticates to Azure with Microsoft Entra ID and
 OpenID Connect, then explicitly selects subscription
 `11213dbd-39fe-46ba-87db-5f5e8c449aed`. Content publication must use an
-approved secret reference for any service-issued deployment credential and
-keep the resolved value masked and process-local. Never place that value in
-Bicep parameters, deployment outputs, repository files, logs, artifacts, or
-pull request content. The deployment workflow and exact publisher invocation
-are intentionally deferred to US-009.
+approved service-issued deployment credential and keep the resolved value
+masked and process-local. `.github/workflows/deploy-frontend.yml` first signs
+in with `AZURE_FRONTEND_CLIENT_ID`, merges the live non-secret Front Door
+hostname and ID into the built `staticwebapp.config.json`, then resolves the
+Static Web Apps deployment token at runtime and masks it before invoking the
+pinned publisher. Azure authentication is keyless; the service-issued token is
+never stored in GitHub, Bicep, repository files, logs, or retained artifacts.
 
 ## Containerized API and registry
 
@@ -264,11 +348,12 @@ to one of those aliases. Neither parameter accepts or resolves a secret value.
 
 The initial image is the digest-pinned Microsoft Container Apps hello-world
 image. It is a deterministic bootstrap revision only, not the Game Hub API and
-not API functionality evidence. Future image automation publishes an immutable
-image to the `apiImageRepository` output, then supplies that full image
-reference as `apiContainerImage`. Push automation must use a separate
-Microsoft Entra workload identity federated through OpenID Connect and a
-least-privilege registry role; registry administrative credentials remain
+not API functionality evidence. `.github/workflows/deploy-api-image.yml`
+requires `api/Dockerfile`, builds the reviewed `main` commit, signs in through
+the dedicated API publisher identity, pushes a commit-tagged image with
+`AcrPush`, resolves its registry digest, and updates the Container App to the
+immutable digest. The identity has only resource-group read, registry push, and
+Container App contributor access; registry administrative credentials remain
 disabled.
 
 The subscription deployment returns these non-secret API and registry outputs:
@@ -306,13 +391,14 @@ subject `repo:jdylanmc@6954990/game-hub@1330993568:environment:<environment>`.
 The same immutable subject format is used by the asset publisher. No client
 credential is created.
 
-A future publication workflow supplies each resolved value from an approved
-external secret source directly to Key Vault while authenticated as the
-publication identity. Infrastructure deployment receives only versionless
-vault references. Container Apps resolves those references through the runtime
-identity and injects the resulting value only into the named container
-environment variable. Do not put a resolved value in a parameter file, command
-argument, output, log, artifact, issue, or pull request.
+An approved secret broker supplies each resolved value directly to Key Vault
+while authenticated through `AZURE_SECRET_CLIENT_ID`. Infrastructure
+deployment receives only a secret alias and versionless vault URI in
+`apiKeyVaultSecretReferences`, then maps the alias to the named container
+environment variable through `apiSecretEnvironmentReferences`. Container Apps
+resolves the value through the API runtime identity and injects it only at
+runtime. Do not put a resolved value in a parameter file, command argument,
+output, log, artifact, issue, pull request, or deployment workflow input.
 
 The secure outputs are intentionally non-secret:
 
@@ -406,18 +492,19 @@ types use edge compression.
 
 Game asset publishers must use content-hashed object names because the
 production route intentionally treats them as immutable for one year. Mutable
-media and static files use shorter category-specific durations. Purge only
-changed mutable paths after publication; the exact publication and purge
-workflow is deferred to US-009.
+media and static files use shorter category-specific durations.
+`.github/workflows/deploy-assets.yml` accepts repository-relative source
+directories, uploads with `--auth-mode login`, and purges only the mutable
+category paths that were supplied. Immutable game assets are not purged.
 
 ### Microsoft Entra upload targets
 
 The storage module creates a publication-only user-assigned managed identity,
 grants it `Storage Blob Data Contributor` on the dedicated asset account, and
 adds a GitHub OpenID Connect federated credential with subject
-`repo:jdylanmc@6954990/game-hub@1330993568:environment:<environment>`. A later
-workflow must run in the matching protected GitHub environment and use this
-identity; it must not create a client credential.
+`repo:jdylanmc@6954990/game-hub@1330993568:environment:<environment>`. The
+asset deployment workflow runs in that matching protected environment and does
+not create a client credential.
 
 After an actual infrastructure deployment and Microsoft Entra login, the
 non-secret `assetUploadTargets` output supplies the account and container
@@ -537,6 +624,211 @@ forwarding-gateway contract, or canonical authentication hostname regresses.
 No Azure resource deployment, WAF enforcement, bot classification, rate-limit
 event, origin restriction, or endpoint reachability was performed or verified
 by US-007.
+
+## Deployment workflow order
+
+Run deployments only from protected `main` and select the matching protected
+GitHub environment:
+
+1. **Deploy Game Hub infrastructure** — validates, previews, applies, captures
+   outputs, and proves a repeated preview converges.
+2. **Publish approved runtime configuration** — an external secret broker
+   writes values to Key Vault through `AZURE_SECRET_CLIENT_ID`; commit and
+   deploy only aliases and versionless Key Vault URIs.
+3. **Deploy Game Hub API image** — after `api/Dockerfile` exists, publishes the
+   exact `main` commit to Azure Container Registry and updates Container Apps
+   by digest.
+4. **Deploy Game Hub frontend** — builds `dist/`, injects the non-secret Front
+   Door forwarding restriction, resolves the Static Web Apps publication token
+   only in runner memory, and publishes.
+5. **Deploy Game Hub assets** — uploads one or more reviewed directories with
+   Microsoft Entra authorization and purges changed mutable paths.
+
+Production environment approval is the release gate. Do not run production
+application publication against infrastructure from another commit; compare
+the infrastructure workflow artifact and application workflow SHA first.
+
+## End-to-end verification procedure
+
+The commands below are a procedure, not evidence that this pull request
+deployed Azure. Record the Azure deployment name, GitHub workflow run URLs,
+exact commit SHA, UTC timestamps, command output, and any browser screenshots
+in the release record outside the repository. Never record a resolved secret,
+deployment token, storage authorization value, or authentication cookie.
+
+### 1. Select the subscription and inspect outputs
+
+```bash
+SUBSCRIPTION_ID='11213dbd-39fe-46ba-87db-5f5e8c449aed'
+ENVIRONMENT='dev'
+DEPLOYMENT_NAME="game-hub-${ENVIRONMENT}"
+
+az account set --subscription "$SUBSCRIPTION_ID"
+test "$(az account show --query id --output tsv)" = "$SUBSCRIPTION_ID"
+
+az deployment sub show \
+  --subscription "$SUBSCRIPTION_ID" \
+  --name "$DEPLOYMENT_NAME" \
+  --query 'properties.outputs.{
+    subscriptionId:subscriptionId.value,
+    resourceGroup:resourceGroupName.value,
+    publicEndpoint:publicEndpoint.value,
+    authenticatedApiEndpoint:authenticatedApiEndpoint.value,
+    frontend:frontendResourceName.value,
+    api:apiResourceName.value,
+    registry:registryName.value,
+    storage:assetStorageAccountName.value,
+    content:assetContentEndpoints.value,
+    auth:authenticationConfiguration.value,
+    ingress:publicIngressConfiguration.value,
+    publishers:deploymentPublisherIdentities.value,
+    secureConfiguration:secureConfiguration.value
+  }' \
+  --output jsonc
+```
+
+Confirm every output is present, the subscription matches exactly, endpoint
+outputs use HTTPS, environment names match, and no output contains a resolved
+value, key, connection string, registry credential, or deployment token.
+
+### 2. Verify frontend reachability and origin protection
+
+```bash
+PUBLIC_ENDPOINT="$(
+  az deployment sub show \
+    --subscription "$SUBSCRIPTION_ID" \
+    --name "$DEPLOYMENT_NAME" \
+    --query properties.outputs.publicEndpoint.value \
+    --output tsv
+)"
+DIRECT_FRONTEND_ENDPOINT="$(
+  az deployment sub show \
+    --subscription "$SUBSCRIPTION_ID" \
+    --name "$DEPLOYMENT_NAME" \
+    --query properties.outputs.frontendEndpoint.value \
+    --output tsv
+)"
+
+curl --fail --silent --show-error "$PUBLIC_ENDPOINT/" --output /dev/null
+test "$(curl --silent --output /dev/null --write-out '%{http_code}' "$DIRECT_FRONTEND_ENDPOINT/")" = '403'
+```
+
+The canonical endpoint must return the deployed frontend. The generated Static
+Web Apps origin must reject a direct request after the publisher has applied
+the forwarding-gateway configuration.
+
+### 3. Verify frontend-to-API and authentication readiness
+
+Before the Game Hub API replaces the bootstrap image, this step must be marked
+not applicable; the bootstrap image is not API evidence. After the API exposes
+a non-sensitive `/health` route:
+
+1. Request `$PUBLIC_ENDPOINT/api/health` without a session and confirm the
+   authenticated route does not return a successful API response.
+2. Open `$PUBLIC_ENDPOINT/login`, complete Microsoft Entra ID sign-in, and
+   confirm `$PUBLIC_ENDPOINT/.auth/me` returns the expected authenticated
+   principal.
+3. From the same browser session, request
+   `$PUBLIC_ENDPOINT/api/health`; confirm the frontend receives the API health
+   response through the same origin.
+4. Confirm the API logs show the request through the Static Web Apps linked
+   backend and that authorization used the platform-generated
+   `x-ms-client-principal` context.
+5. Open `$PUBLIC_ENDPOINT/logout`, then confirm `/api/health` is protected
+   again.
+
+Do not claim authentication acceptance from the presence of Bicep outputs
+alone.
+
+### 4. Verify asset upload and Azure Front Door delivery
+
+Use the asset publisher identity or the protected asset workflow. This example
+uploads a non-sensitive committed file and deletes the verification object
+after the check:
+
+```bash
+STORAGE_ACCOUNT="$(
+  az deployment sub show \
+    --subscription "$SUBSCRIPTION_ID" \
+    --name "$DEPLOYMENT_NAME" \
+    --query properties.outputs.assetStorageAccountName.value \
+    --output tsv
+)"
+VERIFY_OBJECT="verification/$(git rev-parse HEAD)/games.manifest.json"
+
+az storage blob upload \
+  --subscription "$SUBSCRIPTION_ID" \
+  --auth-mode login \
+  --account-name "$STORAGE_ACCOUNT" \
+  --container-name static-assets \
+  --name "$VERIFY_OBJECT" \
+  --file public/generated/games.manifest.json \
+  --overwrite true \
+  --output none
+
+curl --fail --silent --show-error \
+  "$PUBLIC_ENDPOINT/static-assets/$VERIFY_OBJECT" \
+  --output verification-download.json
+cmp public/generated/games.manifest.json verification-download.json
+rm verification-download.json
+
+az storage blob delete \
+  --subscription "$SUBSCRIPTION_ID" \
+  --auth-mode login \
+  --account-name "$STORAGE_ACCOUNT" \
+  --container-name static-assets \
+  --name "$VERIFY_OBJECT" \
+  --output none
+```
+
+Inspect response headers twice and record the Azure Front Door reference and
+cache status. Do not require an immediate cache hit; propagation and cache
+state are service runtime behavior. Also confirm an anonymous direct Blob
+Storage request cannot read the private object.
+
+### 5. Verify the ingress policy
+
+```bash
+RESOURCE_GROUP="rg-gamehub-${ENVIRONMENT}-eus2"
+FRONT_DOOR_PROFILE="afd-gamehub-${ENVIRONMENT}-eus2"
+WAF_POLICY="waf-gamehub-${ENVIRONMENT}-eus2"
+
+az network front-door waf-policy show \
+  --subscription "$SUBSCRIPTION_ID" \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$WAF_POLICY" \
+  --query '{enabled:policySettings.enabledState,mode:policySettings.mode,managedRules:managedRules.managedRuleSets[].ruleSetType,customRules:customRules.rules[].name}' \
+  --output jsonc
+```
+
+Confirm the default and bot managed rule sets, the API/authentication/general
+rate-limit rules, the all-path security-policy association, and the expected
+environment mode. Send at most one approved web application firewall (WAF)
+probe request and correlate it with the WAF diagnostic log. Development
+detection mode should log the match; production prevention mode should block
+the approved probe. Do not load-test rate limits as part of release
+verification.
+
+### 6. Verify secure runtime injection without reading values
+
+Confirm Key Vault contains the approved secret names and enabled versions, then
+inspect the Container App configuration only for each alias, versionless
+`keyVaultUrl`, runtime identity resource ID, and environment-variable
+`secretRef`. Do not run a command that returns a resolved value. Restart or
+deploy the API revision, exercise the feature that consumes the setting, and
+confirm success through application behavior and redacted diagnostics.
+
+### 7. Repeat the deployment
+
+Re-run the infrastructure workflow for the same environment and exact commit.
+Its final `repeat-deployment-what-if.json` must contain no `Create`, `Modify`,
+or `Delete` change. Then rerun the frontend, API image, and asset workflows
+with the same immutable inputs. Confirm the canonical endpoint, authenticated
+API path, and asset URLs remain stable and no duplicate resource was created.
+
+Repository validation proves only that templates compile and that these
+contracts remain present. Live acceptance requires the protected deployment
+workflows and this procedure against the selected Azure environment.
 ---
 
 # Adversarial review infrastructure

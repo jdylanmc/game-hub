@@ -68,6 +68,15 @@ through Azure Monitor diagnostic settings rather than a Log Analytics workspace
 key, and preserve environment retention, sampling, ingestion caps, replica
 ceilings, and required cost-allocation tags.
 
+Hosting publication runs only from protected `main` through the `dev` or
+`prod` GitHub environment. Keep infrastructure, frontend, application
+programming interface image, asset, and secure-configuration identities
+separate and federated to the immutable environment subject. Azure Static Web
+Apps still requires its service publication token; retrieve it only after
+OpenID Connect sign-in, mask it immediately, and never store or retain it.
+Infrastructure deployment must validate, preview, apply, capture non-secret
+outputs, and prove the repeated preview converges.
+
 Run `yarn generate:check` after changing game workspace metadata or discovery
 logic. It fails when generation changes Git state or the committed catalog
 outputs are dirty.

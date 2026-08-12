@@ -149,8 +149,8 @@
         "Repository checks validate templates, configuration, and documentation without inventing live Azure acceptance evidence"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a one-time Bicep bootstrap for environment-scoped keyless infrastructure deployment, dedicated frontend and API publisher identities, and scoped read/publication roles for frontend, API, assets, and secure configuration. Added protected main-only GitHub Actions workflows for Bicep validate/what-if/create/repeat-what-if, Vite frontend publication with runtime-only masked Static Web Apps token retrieval and Front Door origin restriction, immutable API image publication by digest when api/Dockerfile exists, and Microsoft Entra-authorized asset upload with mutable Front Door purge. Added a complete runbook for explicit subscription selection, environment variables, secure Key Vault runtime injection, output reconciliation, frontend and direct-origin reachability, authenticated frontend-to-API access, authentication readiness, assets/CDN, WAF and bot/rate-limit policy, diagnostics, and repeat deployment. Repository policy tests fail closed on these contracts. Pinned Bicep validation, dev/prod Azure subscription-scope validation for both bootstrap and stack, refreshed real-Azure adversarial calibration, full yarn validate with 224 tests, builds, Storybook, security audit, sensitive-value scanning, and diff validation passed. No Azure resource, application, image, asset, secret, endpoint, authentication flow, or WAF behavior was deployed or verified by this story.",
       "dependencies": ["US-008"]
     }
   ]

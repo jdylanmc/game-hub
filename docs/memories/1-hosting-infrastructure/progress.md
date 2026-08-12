@@ -412,3 +412,71 @@
 - No Azure resource deployment, secret publication, frontend or application
   publication, asset upload, endpoint verification, or live telemetry
   collection was performed or claimed. US-009 remains incomplete.
+
+## 2026-08-12 — US-009 Document deployment and end-to-end verification
+
+- Added a one-time Bicep bootstrap for separate development and production
+  infrastructure deployment identities. Each identity trusts only the
+  immutable matching GitHub environment subject, can start and inspect
+  subscription deployments, and receives Contributor plus Role Based Access
+  Control Administrator only on its environment resource group.
+- Added dedicated frontend and application programming interface publication
+  identities. The frontend identity has resource-group read and Static Web Apps
+  publication access. The API identity has resource-group read, `AcrPush`, and
+  Container App update access. Existing asset and secure-configuration
+  publishers gained only the read or Front Door purge access required by their
+  workflows.
+- Added protected main-only GitHub Actions workflows for infrastructure,
+  frontend, API image, and asset publication. Every workflow selects
+  subscription `11213dbd-39fe-46ba-87db-5f5e8c449aed`, verifies the selected
+  account, uses OpenID Connect, pins action references, rejects stored GitHub
+  secrets, and runs in `dev` or `prod`.
+- The infrastructure workflow validates, previews, applies with the stable
+  environment deployment name, captures non-secret outputs, repeats `what-if`,
+  and fails if the second preview contains a create, modify, or delete.
+- The frontend workflow builds the immutable reviewed dependency graph, merges
+  the live Front Door hostname, ID, and `AzureFrontDoor.Backend` restriction
+  into the artifact, then retrieves and masks the Static Web Apps service token
+  only in runner memory. No publication token is stored in GitHub, Bicep,
+  repository files, logs, or artifacts.
+- The API workflow intentionally fails until `api/Dockerfile` exists. Once
+  issue scope introduces API source, it builds the exact protected-main commit,
+  pushes a commit tag through Microsoft Entra ID, resolves the registry digest,
+  updates Container Apps by immutable digest, and verifies the configured
+  image.
+- The asset workflow validates repository-relative source paths, uploads only
+  supplied categories with `--auth-mode login`, avoids purging immutable game
+  assets, and purges supplied mutable media or static paths through the scoped
+  Front Door role.
+- Documented process-local GitHub CLI environment-variable setup from Bicep
+  outputs, workflow ordering, approved external-secret publication, alias and
+  versionless Key Vault references, runtime managed-identity resolution, and
+  the prohibition on resolved values in workflow inputs or evidence.
+- Added a complete verification procedure for deployment outputs, canonical
+  frontend reachability, direct Static Web Apps origin rejection,
+  frontend-to-API access, Microsoft Entra sign-in/sign-out readiness, private
+  asset upload and Front Door delivery, cache observation, WAF managed and bot
+  rules, rate limits, diagnostic correlation, secure runtime injection, and
+  repeat-deployment convergence. The runbook explicitly labels itself as a
+  procedure rather than live evidence.
+- Added `scripts/check-deployment-automation.mjs` and eight fail-closed tests;
+  `yarn infra:check` now validates Bicep, workflow, identity, secure
+  publication, documentation, and evidence-boundary invariants together.
+- Explicitly selected the approved subscription and successfully ran Azure
+  subscription-scope validation for both bootstrap and full-stack development
+  and production parameter files. No create deployment or `what-if` was run.
+- The architecture update invalidated the promoted adversarial fingerprint.
+  Refreshed the real-Azure calibration through Microsoft Entra ID with two
+  repetitions: full blocking-pattern detection, no false positives, no missed
+  critical scenarios, no errors, and `0.972222` reviewer agreement.
+- Final validation passed: pinned Bicep lint/build/parameter compilation and
+  deployment policies; immutable install; formatting; lint; policy;
+  fail-closed continuous integration simulation; security audit; 224 tests
+  with coverage; generated-state check; type check; production build; bundle
+  budget; Storybook build; sensitive-value pattern scan; and
+  `git diff --check`.
+- All US-001 through US-009 acceptance criteria now pass in repository scope.
+  No Azure resource, frontend, API image, asset, secret, application,
+  authentication flow, endpoint, cache behavior, web application firewall
+  enforcement, bot classification, rate-limit event, or live telemetry was
+  deployed, published, exercised, or verified by this story.

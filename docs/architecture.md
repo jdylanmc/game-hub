@@ -154,6 +154,16 @@ Store environment-specific values in committed Bicep parameter or configuration
 files. Keep credentials and secret values in an approved secret store and pass
 them at deployment time; do not commit them in environment files.
 
+Protected GitHub deployment environments use separate OpenID
+Connect-federated identities for infrastructure, frontend, application
+programming interface image, asset, and secure-configuration publication. The
+infrastructure workflow must select the approved subscription, run validation
+and `what-if`, apply the stable deployment name, retain only non-secret outputs,
+and reject a repeated preview that would create, modify, or delete resources.
+Azure Static Web Apps content publication resolves its service-issued token
+only in runner memory after keyless Azure sign-in; the token is never a stored
+GitHub secret or deployment output.
+
 The first infrastructure change must pin the Bicep CLI version used by local and
 continuous integration (CI) deployments. Update that pin through a reviewed
 dependency change, not an implicit workstation or hosted-agent upgrade.
