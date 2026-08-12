@@ -140,6 +140,10 @@ Target Azure subscription
 defines another subscription for a specific environment. Deployment automation
 must select the subscription explicitly before previewing or applying changes.
 
+The [Azure Hosting Infrastructure](hosting-infrastructure.md) decision defines
+the cost-aware service topology, public and trust boundaries, environment
+strategy, and required deployment outputs for the first Bicep implementation.
+
 ## Architectural Invariants
 
 1. **The root website does not own game rendering dependencies.** Each game
@@ -190,6 +194,7 @@ When an issue requires a core technology update:
 
 ## See Also
 
+- [Azure Hosting Infrastructure](hosting-infrastructure.md)
 - [Ralph Loop](ralph-loop.md)
 - [Root Agent Guide](../AGENTS.md)
 - [Game Contract Agent Guide](../packages/game-contract/AGENTS.md)

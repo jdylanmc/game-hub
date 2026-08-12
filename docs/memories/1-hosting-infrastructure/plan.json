@@ -8,9 +8,7 @@
   "continuousByBestJudgment": true,
   "orchestration": {
     "priority": 1,
-    "dependencies": [
-      30
-    ],
+    "dependencies": [30],
     "changeScopes": [
       "infra",
       ".github/workflows",
@@ -21,6 +19,10 @@
       "config",
       "src/config"
     ]
+  },
+  "publication": {
+    "requiredStatusChecks": ["Continuous integration"],
+    "adversarialStatusChecks": []
   },
   "stories": [
     {
@@ -33,8 +35,8 @@
         "The deployment target explicitly names subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Selected and documented the Azure Front Door Premium, Azure Static Web Apps Standard, linked Azure Container Apps, Azure Container Registry, private blob storage, authentication, observability, environment, and cost topology in docs/hosting-infrastructure.md. This story performed no Azure deployment and claims no live endpoint evidence."
     },
     {
       "id": "US-002",
@@ -49,9 +51,7 @@
       "priority": 2,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-001"
-      ]
+      "dependencies": ["US-001"]
     },
     {
       "id": "US-003",
@@ -65,9 +65,7 @@
       "priority": 3,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-002"
-      ]
+      "dependencies": ["US-002"]
     },
     {
       "id": "US-004",
@@ -81,9 +79,7 @@
       "priority": 4,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-002"
-      ]
+      "dependencies": ["US-002"]
     },
     {
       "id": "US-005",
@@ -97,9 +93,7 @@
       "priority": 5,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-002"
-      ]
+      "dependencies": ["US-002"]
     },
     {
       "id": "US-006",
@@ -113,10 +107,7 @@
       "priority": 6,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-003",
-        "US-004"
-      ]
+      "dependencies": ["US-003", "US-004"]
     },
     {
       "id": "US-007",
@@ -130,11 +121,7 @@
       "priority": 7,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-003",
-        "US-004",
-        "US-005"
-      ]
+      "dependencies": ["US-003", "US-004", "US-005"]
     },
     {
       "id": "US-008",
@@ -149,13 +136,7 @@
       "priority": 8,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-003",
-        "US-004",
-        "US-005",
-        "US-006",
-        "US-007"
-      ]
+      "dependencies": ["US-003", "US-004", "US-005", "US-006", "US-007"]
     },
     {
       "id": "US-009",
@@ -170,9 +151,7 @@
       "priority": 9,
       "passes": false,
       "notes": "",
-      "dependencies": [
-        "US-008"
-      ]
+      "dependencies": ["US-008"]
     }
   ]
 }

@@ -25,3 +25,29 @@
 - Recorded continuous continuation by best judgment as explicitly delegated.
 - No infrastructure was implemented or deployed, and no live acceptance
   evidence is claimed.
+
+## 2026-08-11 — US-001 Document the architecture and cost topology
+
+- Selected Azure Front Door Premium as the canonical protected ingress, Azure
+  Static Web Apps Standard for the frontend and authentication boundary, a
+  linked Azure Container Apps backend with Azure Container Registry, and
+  private blob containers for game assets, media, and other static content.
+- Documented trust boundaries, environment defaults, scaling and regional
+  choices, cost drivers, least-privilege identity and secret handling,
+  observability, required outputs, alternatives, and requirement traceability.
+- Explicitly bound every deployment to subscription
+  `11213dbd-39fe-46ba-87db-5f5e8c449aed`.
+- Added `docs/hosting-infrastructure.md` and linked it from `README.md` and
+  `docs/architecture.md`.
+- Recovered the cancelled prior runner state only after confirming its process
+  was gone and the worktree was clean; its lease and checkpoint remain archived
+  in Git-local Ralph state.
+- Validation: `corepack enable && yarn install --immutable`,
+  `yarn format:check`, and `git diff --check`.
+- Reusable discovery: Azure Static Web Apps must use Standard to link an Azure
+  Container Apps backend; linked backends are unavailable in pull-request
+  environments. Azure Front Door Premium is required for both the managed bot
+  rule set and Private Link to Blob Storage, while Static Web Apps is locked to
+  Front Door with its backend service tag and forwarding-gateway header.
+- No Azure resources were deployed, and no live endpoint or deployment evidence
+  is claimed.
