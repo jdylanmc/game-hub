@@ -12,6 +12,12 @@
   privileged review workflow.
 - Model-backed security review runs only after the exact head commit passes the
   complete deterministic gate set, ordered from cheapest to most expensive.
+- Security context profiles are selected only by trusted collector arguments,
+  independently versioned and content-hashed, and cannot be selected or
+  rewritten by issue, pull-request, diff, or repository evidence.
+- Required security surfaces record bounded Git-object inventories, explicit
+  trust boundaries, privileged identities, data sources and sinks, and changed
+  control domains. Missing or incomplete mandatory security context blocks.
 
 ## 2026-08-11 - Planning
 
@@ -53,3 +59,39 @@
 - Gilfoyle remains disabled and uncalibrated by design; US-002 through US-007
   own context collection, evidence integration, implementation/calibration,
   workflow registration, exceptions/outages, and live enforcement.
+
+## 2026-08-11 - US-002 Collect security context and trust boundaries
+
+- Added Gilfoyle's independently versioned and content-hashed bounded context
+  profile and registered its attribution separately from prompt, tools, schema,
+  policy, model, and workflow configuration.
+- Extended the shared collector with trusted `--agent` selection and explicit
+  coverage for application, game, infrastructure, workflow, dependency,
+  container, configuration, contract, and manifest surfaces.
+- Security packets now identify privileged identities, trusted and untrusted
+  sources, privileged sinks, authentication and authorization boundaries, data
+  flows, protected control-plane authority, changed boundaries, and changed
+  security-control domains.
+- Pull-request attempts to rewrite Gilfoyle's prompt, policy, workflow, or
+  collector remain inert diff evidence. The collector still invokes only Git,
+  reads object IDs without checkout, and never imports, installs, builds, tests,
+  or executes pull-request content.
+- Missing profiles, required surface definitions, trust-model elements,
+  context sections, security-relevant diffs, binary evidence, truncation, or
+  file-limit breaches produce a blocking packet. A repository with no container
+  surface records that absence explicitly rather than silently skipping it.
+- Added focused deterministic proofs for attribution, all required surfaces,
+  trust boundaries, privileged identities, sources and sinks, control changes,
+  malicious control-plane instructions, missing mandatory context, binary
+  workflow evidence, and byte-identical command-line reproduction.
+- Files changed: the shared collector and tests, Gilfoyle context profile,
+  agent registry and validators, policy enforcement, developer documentation,
+  root guidance, and this issue memory.
+- Checks passed: 28 focused collector/registry/contract tests,
+  `yarn agents:validate`, `yarn policy:gilfoyle`,
+  `yarn policy:adversarial`, `yarn policy:check`, static formatting/lint/type
+  gates, and complete `yarn validate` including fail-closed simulations,
+  security audit, 158 tests, coverage, generated-state verification,
+  production build, bundle budgets, and Storybook.
+- Gilfoyle remains disabled and uncalibrated by design. US-003 is the next
+  eligible story and owns deterministic security evidence integration.

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   validateGilfoyleFindingSchema,
   validateGilfoyleSecurityContract,
+  validateGilfoyleSecurityContext,
   validateGilfoyleSecurityPolicy,
   validateGilfoyleToolsContract,
 } from './validate-gilfoyle-security-contract.ts';
@@ -14,6 +15,7 @@ const configRoot = path.join(repoRoot, 'config/adversarial-agents/gilfoyle-secur
 const schema = JSON.parse(fs.readFileSync(path.join(configRoot, 'schema.json'), 'utf8'));
 const policy = JSON.parse(fs.readFileSync(path.join(configRoot, 'policy.json'), 'utf8'));
 const tools = JSON.parse(fs.readFileSync(path.join(configRoot, 'tools.json'), 'utf8'));
+const securityContext = JSON.parse(fs.readFileSync(path.join(configRoot, 'context.json'), 'utf8'));
 
 describe('Gilfoyle security contract', () => {
   it('validates the independently registered contract and content hashes', () => {
@@ -51,5 +53,12 @@ describe('Gilfoyle security contract', () => {
       writeCapabilities: ['checks:write'],
     };
     expect(validateGilfoyleToolsContract(changed)).toMatchObject({ valid: false });
+  });
+
+  it('rejects missing trust boundaries or pull-request-accessible privileged identities', () => {
+    const changed = structuredClone(securityContext);
+    changed.trustModel.trustBoundaries = [];
+    changed.trustModel.privilegedIdentities[0].pullRequestAccessible = true;
+    expect(validateGilfoyleSecurityContext(changed)).toMatchObject({ valid: false });
   });
 });

@@ -51,6 +51,7 @@ describe('validateAgentRegistry', () => {
     for (const [fileField, hashField] of [
       ['promptFile', 'promptContentHash'],
       ['toolsConfigFile', 'toolsConfigContentHash'],
+      ['contextConfigFile', 'contextConfigContentHash'],
       ['schemaFile', 'schemaContentHash'],
       ['policyFile', 'policyContentHash'],
       ['engineConfigFile', 'engineConfigContentHash'],

@@ -16,6 +16,9 @@ interface AgentRegistration extends JsonObject {
   promptContentHash: string;
   toolsConfigFile: string;
   toolsConfigContentHash: string;
+  contextConfigFile: string;
+  contextConfigVersion: string;
+  contextConfigContentHash: string;
   schemaFile: string;
   schemaContentHash: string;
   policyFile: string;
@@ -49,6 +52,9 @@ const REQUIRED_AGENT_FIELDS = [
   'promptContentHash',
   'toolsConfigFile',
   'toolsConfigContentHash',
+  'contextConfigFile',
+  'contextConfigVersion',
+  'contextConfigContentHash',
   'schemaFile',
   'schemaContentHash',
   'policyFile',
@@ -144,6 +150,8 @@ function validateAgentRegistry(
       !/^\d+\.\d+\.\d+$/.test(candidate.promptVersion) ||
       typeof candidate.toolsVersion !== 'string' ||
       !/^\d+\.\d+\.\d+$/.test(candidate.toolsVersion) ||
+      typeof candidate.contextConfigVersion !== 'string' ||
+      !/^\d+\.\d+\.\d+$/.test(candidate.contextConfigVersion) ||
       typeof candidate.enabled !== 'boolean' ||
       typeof candidate.checkName !== 'string' ||
       candidate.checkName !== `Adversarial Review / ${candidate.name}` ||
@@ -170,6 +178,7 @@ function validateAgentRegistry(
     const filePairs: Array<[string, string]> = [
       ['promptFile', 'promptContentHash'],
       ['toolsConfigFile', 'toolsConfigContentHash'],
+      ['contextConfigFile', 'contextConfigContentHash'],
       ['schemaFile', 'schemaContentHash'],
       ['policyFile', 'policyContentHash'],
       ['engineConfigFile', 'engineConfigContentHash'],
@@ -204,6 +213,7 @@ function validateAgentRegistry(
     'name',
     'promptFile',
     'toolsConfigFile',
+    'contextConfigFile',
     'schemaFile',
     'policyFile',
     'engineConfigFile',

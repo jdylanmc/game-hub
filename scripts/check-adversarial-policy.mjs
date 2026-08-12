@@ -13,6 +13,9 @@ const agentConfig = JSON.parse(
 const collectorConfig = JSON.parse(
   await fs.readFile(path.join(root, 'config/adversarial-agents/context-collector.json'), 'utf8'),
 );
+const securityContextConfig = JSON.parse(
+  await fs.readFile(path.join(root, 'config/adversarial-agents/gilfoyle-security-architect/context.json'), 'utf8'),
+);
 const collector = await fs.readFile(path.join(root, 'scripts/collect-adversarial-context.ts'), 'utf8');
 const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
 const reviewerConfig = JSON.parse(
@@ -135,16 +138,71 @@ if (
 ) {
   violations.push('Context collector version or reviewed byte limits were weakened.');
 }
+const requiredSecuritySurfaces = [
+  'application',
+  'games',
+  'infrastructure',
+  'workflows',
+  'dependencies',
+  'containers',
+  'configuration',
+  'contracts',
+  'manifests',
+];
+if (
+  securityContextConfig.version !== '1.0.0' ||
+  securityContextConfig.agentName !== 'gilfoyle-security-architect' ||
+  JSON.stringify(securityContextConfig.requiredSurfaces) !== JSON.stringify(requiredSecuritySurfaces) ||
+  securityContextConfig.maxFilesPerSurface !== 500
+) {
+  violations.push('Gilfoyle security context identity, surfaces, or file bound was weakened.');
+}
+for (const surface of requiredSecuritySurfaces) {
+  const configuredSurface = securityContextConfig.surfaces?.[surface];
+  if (
+    configuredSurface?.required !== true ||
+    typeof configuredSurface.allowAbsent !== 'boolean' ||
+    !Array.isArray(configuredSurface.patterns) ||
+    configuredSurface.patterns.length === 0 ||
+    !Array.isArray(configuredSurface.requiredContextSections)
+  ) {
+    violations.push(`Gilfoyle security context surface is incomplete: ${surface}`);
+  }
+}
+if (
+  securityContextConfig.trustModel?.protectedControlPlane?.authoritySource !== 'trusted-protected-branch-workflow' ||
+  securityContextConfig.trustModel?.protectedControlPlane?.untrustedOverrideAllowed !== false ||
+  securityContextConfig.trustModel?.protectedControlPlane?.evidenceInstructionAuthority !== 'none' ||
+  !Array.isArray(securityContextConfig.trustModel?.privilegedIdentities) ||
+  securityContextConfig.trustModel.privilegedIdentities.length === 0 ||
+  securityContextConfig.trustModel.privilegedIdentities.some((identity) => identity.pullRequestAccessible !== false) ||
+  !Array.isArray(securityContextConfig.trustModel?.dataSources) ||
+  securityContextConfig.trustModel.dataSources.length === 0 ||
+  !Array.isArray(securityContextConfig.trustModel?.dataSinks) ||
+  securityContextConfig.trustModel.dataSinks.length === 0 ||
+  !Array.isArray(securityContextConfig.trustModel?.trustBoundaries) ||
+  securityContextConfig.trustModel.trustBoundaries.length === 0 ||
+  !Array.isArray(securityContextConfig.controlDomains) ||
+  securityContextConfig.controlDomains.length === 0
+) {
+  violations.push('Gilfoyle security trust model or control mapping is incomplete.');
+}
 const requiredCollectorFragments = [
   "classification: 'UNTRUSTED_DATA_ONLY'",
+  "classification: 'UNTRUSTED_SECURITY_EVIDENCE_ONLY'",
   'executableContentAllowed: false',
   'instructionsFromEvidenceAllowed: false',
+  'controlPlaneMutationAllowed: false',
   "'--no-ext-diff'",
   "'--no-textconv'",
   "'MANDATORY_CONTEXT_MISSING'",
   "'MANDATORY_CONTEXT_TRUNCATED'",
   "'GLOBAL_EVIDENCE_LIMIT'",
   "'PACKET_SIZE_LIMIT'",
+  "'MANDATORY_SECURITY_CONTEXT_MISSING'",
+  "'MANDATORY_SECURITY_BINARY_DIFF'",
+  "'MANDATORY_SECURITY_DIFF_TRUNCATED'",
+  "'--agent'",
 ];
 for (const fragment of requiredCollectorFragments) {
   if (!collector.includes(fragment)) {

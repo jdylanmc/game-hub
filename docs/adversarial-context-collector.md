@@ -16,6 +16,27 @@ have no authority. The collector invokes `git` directly with argument arrays,
 disables external diff and text-conversion hooks, and never invokes a shell for
 repository content.
 
+The trusted command-line `--agent` selection cannot be supplied by issue,
+pull-request, or repository content. Selecting
+`gilfoyle-security-architect` adds the independently versioned and content-hashed
+profile at
+`config/adversarial-agents/gilfoyle-security-architect/context.json`.
+The resulting packet explicitly records:
+
+- all required application, game, infrastructure, workflow, dependency,
+  container, configuration, contract, and manifest surfaces;
+- privileged identities and whether pull-request content can access them;
+- trusted and untrusted data sources, privileged sinks, and data flows across
+  each trust boundary;
+- changed security-control domains and affected files; and
+- a protected control plane that pull-request evidence cannot use to replace
+  Gilfoyle's prompt, tools, policy, schema, workflow, identity, or collector.
+
+Surface inventories contain only bounded paths and Git object identifiers.
+Changed content remains in the existing bounded diff evidence. An absent
+container surface is explicit; a missing required surface, trust-model element,
+context section, or complete security-relevant diff blocks collection.
+
 ## Input
 
 Provide a local JSON file:
@@ -52,6 +73,15 @@ does not fetch network content.
 yarn context:collect --input review-input.json --output review-context.json
 ```
 
+Collect the Gilfoyle profile with trusted local configuration:
+
+```bash
+yarn context:collect \
+  --agent gilfoyle-security-architect \
+  --input review-input.json \
+  --output security-review-context.json
+```
+
 The same input commits and versioned configuration produce byte-identical JSON.
 Attribution includes the exact base/head commits plus canonical input and
 configuration SHA-256 hashes.
@@ -76,6 +106,12 @@ Mandatory missing, binary, file-limited, or truncated evidence sets packet
 status to `BLOCKED`, records stable machine-readable reasons, and makes the
 command exit `3`. Invalid input or unavailable commits exit `1`. A ready packet
 exits `0`.
+
+Gilfoyle additionally blocks when its mandatory context profile is absent or
+malformed, a required security surface cannot be covered, no changed file maps
+to a required review surface, or any security-relevant diff is binary or
+truncated. Security profile version and SHA-256 hash are recorded independently
+from the shared collector configuration.
 
 The packet is only context. Model invocation, prompt construction, network
 access, and enforcement belong to US-004 and later stories.

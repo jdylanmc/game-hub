@@ -38,8 +38,8 @@
         "Missing mandatory security context produces a blocking configuration result"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Extended the shared Git-object-only collector with an independently hashed Gilfoyle context profile covering all required repository surfaces, explicit trust boundaries, privileged identities, sources, sinks, and changed controls. Trusted agent selection and protected control-plane declarations keep pull-request instructions inert; missing, binary, truncated, or incomplete mandatory security context blocks. Focused proofs and full yarn validate passed.",
       "dependencies": ["US-001"]
     },
     {

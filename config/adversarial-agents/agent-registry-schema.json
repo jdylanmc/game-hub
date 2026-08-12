@@ -25,6 +25,9 @@
           "promptContentHash",
           "toolsConfigFile",
           "toolsConfigContentHash",
+          "contextConfigFile",
+          "contextConfigVersion",
+          "contextConfigContentHash",
           "schemaFile",
           "schemaContentHash",
           "policyFile",
@@ -71,6 +74,15 @@
             "$ref": "#/$defs/repositoryPath"
           },
           "toolsConfigContentHash": {
+            "$ref": "#/$defs/sha256"
+          },
+          "contextConfigFile": {
+            "$ref": "#/$defs/repositoryPath"
+          },
+          "contextConfigVersion": {
+            "$ref": "#/$defs/semanticVersion"
+          },
+          "contextConfigContentHash": {
             "$ref": "#/$defs/sha256"
           },
           "schemaFile": {

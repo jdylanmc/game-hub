@@ -13,6 +13,16 @@ calibration, check, and state paths. A result identifies the agent, model
 deployment and version, prompt version and hash, schema version and hash, policy
 version and hash, tools version, repository commit, and timestamp.
 
+Gilfoyle also owns the independently versioned and content-hashed bounded
+context profile at
+`config/adversarial-agents/gilfoyle-security-architect/context.json`. Run
+`yarn context:collect --agent gilfoyle-security-architect` to collect explicit
+security surfaces, trust boundaries, privileged identities, data sources,
+sinks, and changed control domains. Pull-request content remains inert evidence
+and cannot select the agent or replace the active prompt, tools, policy, schema,
+workflow, identity, or collector behavior. Missing mandatory security context
+returns a blocking packet.
+
 The model is Azure-hosted GPT-4.1 mini. The registered engine permits no model
 tools, pull-request code execution, write capability, or network destination
 other than the reviewed Azure OpenAI endpoint.

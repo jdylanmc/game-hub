@@ -13,6 +13,17 @@ interface ContractValidation {
 }
 
 const AGENT_NAME = 'gilfoyle-security-architect';
+const REQUIRED_SECURITY_SURFACES = [
+  'application',
+  'games',
+  'infrastructure',
+  'workflows',
+  'dependencies',
+  'containers',
+  'configuration',
+  'contracts',
+  'manifests',
+] as const;
 const SECURITY_CATEGORIES = [
   'authentication',
   'authorization',
@@ -214,6 +225,54 @@ function validateGilfoyleToolsContract(value: unknown): ContractValidation {
   return { valid: errors.length === 0, errors };
 }
 
+function validateGilfoyleSecurityContext(value: unknown): ContractValidation {
+  const errors: string[] = [];
+  if (!isObject(value)) return { valid: false, errors: ['Security context profile must be an object.'] };
+  if (
+    value.version !== '1.0.0' ||
+    value.agentName !== AGENT_NAME ||
+    value.maxFilesPerSurface !== 500 ||
+    !sameValues(value.requiredSurfaces, REQUIRED_SECURITY_SURFACES)
+  ) {
+    errors.push('Security context identity, required surfaces, or file bound is invalid.');
+  }
+  const surfaces = objectProperty(value, 'surfaces');
+  for (const surfaceName of REQUIRED_SECURITY_SURFACES) {
+    const surface = objectProperty(surfaces, surfaceName);
+    if (
+      surface?.required !== true ||
+      typeof surface.allowAbsent !== 'boolean' ||
+      stringArray(surface.patterns).length === 0 ||
+      !Array.isArray(surface.requiredContextSections)
+    ) {
+      errors.push(`Security context surface is incomplete: ${surfaceName}.`);
+    }
+  }
+  const trustModel = objectProperty(value, 'trustModel');
+  const protectedControlPlane = objectProperty(trustModel, 'protectedControlPlane');
+  if (
+    protectedControlPlane?.authoritySource !== 'trusted-protected-branch-workflow' ||
+    protectedControlPlane.untrustedOverrideAllowed !== false ||
+    protectedControlPlane.evidenceInstructionAuthority !== 'none' ||
+    !Array.isArray(trustModel?.privilegedIdentities) ||
+    trustModel.privilegedIdentities.length === 0 ||
+    trustModel.privilegedIdentities.some(
+      (identity) => !isObject(identity) || identity.pullRequestAccessible !== false,
+    ) ||
+    !Array.isArray(trustModel?.dataSources) ||
+    trustModel.dataSources.length === 0 ||
+    !Array.isArray(trustModel?.dataSinks) ||
+    trustModel.dataSinks.length === 0 ||
+    !Array.isArray(trustModel?.trustBoundaries) ||
+    trustModel.trustBoundaries.length === 0 ||
+    !Array.isArray(value.controlDomains) ||
+    value.controlDomains.length === 0
+  ) {
+    errors.push('Security context trust boundaries, identities, sources, sinks, or controls are incomplete.');
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 function validateGilfoyleSecurityContract(repoRoot: string): ContractValidation {
   const errors: string[] = [];
   const registryPath = path.join(repoRoot, 'config/adversarial-agents/agents-config.json');
@@ -228,6 +287,8 @@ function validateGilfoyleSecurityContract(repoRoot: string): ContractValidation 
     agent.version !== '1.0.0' ||
     agent.promptVersion !== '1.0.0' ||
     agent.toolsVersion !== '1.0.0' ||
+    agent.contextConfigVersion !== '1.0.0' ||
+    agent.contextConfigFile !== 'config/adversarial-agents/gilfoyle-security-architect/context.json' ||
     agent.modelDeployment !== 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard' ||
     agent.modelVersion !== '2025-04-14' ||
     agent.verdictRules.blockingThreshold !== 1 ||
@@ -254,9 +315,11 @@ function validateGilfoyleSecurityContract(repoRoot: string): ContractValidation 
   const schema: unknown = JSON.parse(fs.readFileSync(path.join(repoRoot, agent.schemaFile), 'utf8'));
   const policy: unknown = JSON.parse(fs.readFileSync(path.join(repoRoot, agent.policyFile), 'utf8'));
   const tools: unknown = JSON.parse(fs.readFileSync(path.join(repoRoot, agent.toolsConfigFile), 'utf8'));
+  const securityContext: unknown = JSON.parse(fs.readFileSync(path.join(repoRoot, agent.contextConfigFile), 'utf8'));
   errors.push(...validateGilfoyleFindingSchema(schema).errors);
   errors.push(...validateGilfoyleSecurityPolicy(policy).errors);
   errors.push(...validateGilfoyleToolsContract(tools).errors);
+  errors.push(...validateGilfoyleSecurityContext(securityContext).errors);
 
   const engine: unknown = JSON.parse(fs.readFileSync(path.join(repoRoot, agent.engineConfigFile), 'utf8'));
   if (
@@ -291,6 +354,7 @@ if (isCli) {
 export {
   validateGilfoyleFindingSchema,
   validateGilfoyleSecurityContract,
+  validateGilfoyleSecurityContext,
   validateGilfoyleSecurityPolicy,
   validateGilfoyleToolsContract,
 };
