@@ -144,3 +144,27 @@ This remediation must:
   selection; and
 - prove a fresh protected-main workflow authenticates and publishes the
   genuine exact-head adversarial check on an affected pull request.
+
+## Shared Resolver Defect
+
+PR #37 exact head `ac2f41696798b03cacbd9ccb051b6730462f4826`
+passed Continuous Integration in run `31560643929`, but protected adversarial
+run
+[`31560833700`](https://github.com/jdylanmc/game-hub/actions/runs/31560833700)
+failed during metadata resolution with
+`Pull request must identify exactly one source issue`.
+
+The normal Ralph pull request had three agreeing source signals for issue #27:
+its canonical `ralph-issue:27` marker, `Tracks #27`, and
+`ralph/issue-27-...` branch. Its body also described an integrated dependency as
+`issue #30`; GitHub reported no linked closing issues. The resolver incorrectly
+treated that incidental dependency prose as a second source identity.
+
+This remediation must:
+
+- resolve source identity only from canonical Ralph markers, issue branches,
+  and explicit close/fix/resolve/track/address declarations;
+- keep conflicting canonical signals fail-closed;
+- policy-test the real PR #37 ambiguity and weakening mutations; and
+- restore genuine exact-head adversarial publication on PR #37 without
+  weakening OpenID Connect identity or protected-main execution.

@@ -19,7 +19,10 @@ Model work is eligible only when:
 - the event is a completed pull-request run with conclusion `success`;
 - the current open pull request still targets `jdylanmc/game-hub:main`;
 - the triggering workflow head SHA still equals the current pull-request head;
-- exactly one source issue is attributable; and
+- exactly one source issue is attributable through agreeing canonical Ralph
+  marker, `issue-<number>` branch identity, or explicit
+  close/fix/resolve/track/address declaration; incidental dependency issue
+  prose is not identity; and
 - at least one changed path is relevant to code, tests, validation,
   infrastructure, or workflow behavior.
 

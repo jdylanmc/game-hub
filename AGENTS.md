@@ -75,6 +75,11 @@ independently hashed security profile. Preserve its explicit security-surface
 inventory, trust boundaries, privileged identities, source/sink flows,
 control-change mapping, and fail-closed mandatory-context behavior.
 
+Adversarial source-issue resolution accepts canonical Ralph markers, matching
+`issue-<number>` branch identity, and explicit close/fix/resolve/track/address
+declarations. Generic prose such as a dependency's "issue #N" is not identity;
+conflicting canonical signals must fail closed.
+
 `yarn review:adversarial` consumes only a ready context packet. Keep its
 versioned system policy separate from the human review prompt, authenticate with
 Microsoft Entra ID, register no model tools, restrict Azure OpenAI destinations,
