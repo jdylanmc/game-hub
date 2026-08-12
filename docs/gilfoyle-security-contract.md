@@ -51,6 +51,21 @@ The model is Azure-hosted GPT-4.1 mini. The registered engine permits no model
 tools, pull-request code execution, write capability, or network destination
 other than the reviewed Azure OpenAI endpoint.
 
+## Calibration provenance
+
+An Azure-mode field and an unkeyed JSON hash are integrity hints, not
+provenance. Gilfoyle promotion additionally requires the protected-run artifact
+attestation described in
+[Adversarial calibration attestation](adversarial-calibration-attestation.md).
+The verifier binds GitHub's certificate and transparency-log evidence to the
+exact protected workflow, repository head, run attempt, registered
+configuration, Azure deployment and workload identity, benchmark inputs, and
+report artifact. Unsigned, untrusted, stale, replayed, mismatched, or tampered
+evidence blocks.
+
+Gilfoyle remains disabled and unpromoted until a later story runs a new
+threshold-passing Azure calibration through that protected workflow.
+
 ## Finding contract
 
 Every finding requires:

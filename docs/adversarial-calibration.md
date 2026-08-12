@@ -52,6 +52,12 @@ The report records:
 - latency and error rate;
 - exact case evidence and a tamper-evident report hash.
 
+The report hash detects accidental byte changes but is not signer provenance.
+Security-specialized agents must also satisfy their registered protected-run
+attestation policy. For Gilfoyle, see
+[Adversarial calibration attestation](adversarial-calibration-attestation.md).
+Repository-authored JSON must never promote itself by claiming Azure mode.
+
 ## Promotion policy
 
 `config/adversarial-agents/promotion-policy.json` requires:

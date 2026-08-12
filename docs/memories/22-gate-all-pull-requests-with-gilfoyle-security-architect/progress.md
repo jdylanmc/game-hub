@@ -28,6 +28,12 @@
   runtime option; registration alone must not imply live workflow enforcement.
 - Prompt-injection calibration must pair an injected safe case with an injected
   blocking vulnerability so obeying the attack cannot satisfy promotion.
+- Calibration JSON and unkeyed hashes are not provenance. Promotion evidence
+  must be a GitHub Sigstore artifact attestation signed by exact protected
+  workflow code and checked against certificate and transparency-log evidence.
+- Calibration attestation verification is same-run and exact-attempt: the
+  trusted certificate run URI, repository/head, signer digest, artifact digest,
+  and replay nonce must match the current protected workflow context.
 
 ## 2026-08-11 - Planning
 
@@ -149,7 +155,7 @@
 - US-004 is next and owns Gilfoyle implementation and real calibration. Gilfoyle
   remains disabled in this story.
 
-## 2026-08-12 - US-004 blocked and cleaned up
+## 2026-08-12 - Original US-004 blocked and cleaned up
 
 - Exhausted the authorized two-attempt limit using keyless Azure identity. The
   final run was not promotable: 27.27% blocking detection, 9.09% safe false
@@ -161,5 +167,38 @@
 - Removed every incomplete US-004 implementation file and failed calibration
   report. No reviewer, workflow, required check, or status configuration was
   changed.
-- US-004 remains unpassed. Resume only with a reviewed provenance design and a
-  newly authorized calibration budget.
+- Split the blocked story into US-004A for non-forgeable provenance and
+  US-004B for the remaining implementation, calibration, and promotion work.
+
+## 2026-08-12 - US-004A Attest protected calibration provenance
+
+- Added a versioned Gilfoyle calibration-attestation policy that pins immutable
+  repository owner/repository IDs, protected `main`, the exact future
+  calibration workflow, GitHub-hosted runner, OpenID Connect issuer, immutable
+  protected-environment workload subject, reviewed `actions/attest` commit,
+  Azure deployment identity, fingerprint set, and freshness bounds.
+- Added a protected-run predicate builder that binds exact repository/head,
+  workflow commit/run/attempt, registered agent and configuration fingerprints,
+  Azure tenant/client/deployment/model identity, benchmark corpus and case IDs,
+  report hashes, uploaded artifact ID/digest, timestamps, and a replay nonce.
+- Added a verifier that invokes `gh attestation verify` without a shell and
+  requires the GitHub Sigstore root, exact signer/source digests and protected
+  ref, GitHub OpenID Connect issuer, GitHub-hosted runner, one attestation, one
+  subject, exact certificate identity/run URI, verified timestamps, and an
+  exact predicate match.
+- Unsigned/untrusted, duplicate, replayed, wrong-run, wrong-head, wrong-Azure,
+  wrong-config, stale, future-dated, mismatched-artifact, and tampered-report
+  evidence all fail closed. Repository-authored JSON cannot self-assert
+  promotion.
+- Added operator documentation for the required future protected-workflow
+  sequence, least permissions, retained evidence, failure handling, and local
+  deterministic commands. The workflow and new Azure calibration remain
+  intentionally deferred to US-004B.
+- Checks passed: focused Prettier and ESLint, calibration-attestation policy,
+  29 focused tests, complete repository policy, and complete `yarn validate`
+  including 17 fail-closed simulations, dependency audit, 216 tests, coverage,
+  generation, type checking, production build, bundle budgets, and Storybook.
+- Gilfoyle remains disabled and `promotionAllowed` remains false. US-004B is
+  blocked on a new authorized calibration budget and must meet the existing
+  detection, false-positive, advisory-escalation, error, and agreement
+  thresholds with a genuine same-run protected attestation.

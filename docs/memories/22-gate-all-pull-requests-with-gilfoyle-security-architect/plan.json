@@ -58,20 +58,37 @@
       "dependencies": ["US-002"]
     },
     {
-      "id": "US-004",
-      "title": "Implement and calibrate Gilfoyle",
-      "description": "Implement the security-architect reviewer, prompt-injection defenses, seeded vulnerable and safe benchmarks, severity calibration, false-positive evaluation, and bounded cost and latency.",
+      "id": "US-004A",
+      "title": "Attest protected calibration provenance",
+      "description": "Add non-forgeable protected-workflow calibration provenance that binds exact code, registered configuration, Azure identity, benchmark inputs, report artifacts, trusted workload identity, and verified timestamps before promotion can consume a report.",
+      "acceptanceCriteria": [
+        "A cryptographically verified attestation binds the protected workflow run and attempt to the exact repository and head commit",
+        "The signed predicate binds registered agent/config fingerprints, Azure deployment and workload identity, benchmark inputs, and report and artifact digests",
+        "Unsigned, untrusted, replayed, mismatched, stale, duplicate, or tampered evidence fails closed",
+        "Deterministic policy and tests prevent repository-authored JSON from self-asserting promotion",
+        "Operators can generate and verify retained evidence without secrets or raw tokens"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Added a GitHub Sigstore artifact-attestation contract, protected-run predicate builder, exact signer/source/run verifier, pinned repository and Azure workload policy, replay/freshness/tamper defenses, 29 focused tests, and operator documentation. The complete yarn validate suite passed. No calibration was run and Gilfoyle remains disabled and unpromoted.",
+      "dependencies": ["US-001", "US-002", "US-003"]
+    },
+    {
+      "id": "US-004B",
+      "title": "Implement, calibrate, and promote Gilfoyle",
+      "description": "Implement the security-architect reviewer, prompt-injection defenses, seeded vulnerable and safe benchmarks, severity calibration, false-positive evaluation, bounded cost and latency, and protected-run attested promotion.",
       "acceptanceCriteria": [
         "Benchmarks cover authorization bypass, injection, secret exposure, workflow escalation, dependency risk, Bicep privilege, archive traversal, unsafe deserialization, race conditions, and cleanup leaks",
         "High and critical seeded issues and control-bypass uncertainty are blocked at the promotion threshold",
         "Safe examples and medium advisory cases remain within the approved false-positive threshold",
         "Prompt changes invalidate and rerun Gilfoyle calibration",
-        "Model, tool, timeout, malformed-output, and service failures fail closed"
+        "Model, tool, timeout, malformed-output, and service failures fail closed",
+        "Only a threshold-passing Azure report with a valid US-004A protected-run attestation can be promoted"
       ],
-      "priority": 4,
+      "priority": 5,
       "passes": false,
-      "notes": "Blocked after two authorized keyless Azure calibration attempts. The final attempt was not promotable: 27.27% blocking detection, 9.09% safe false positives, 50% advisory escalation, 6.25% errors, and 93.75% agreement. Security review also found that self-asserted Azure mode plus an unkeyed report hash cannot prove calibration provenance; promotion needs non-forgeable protected-run attestation. All incomplete US-004 code and failed reports were removed. US-004 remains unpassed.",
-      "dependencies": ["US-001", "US-002", "US-003"]
+      "notes": "Blocked after two authorized keyless Azure calibration attempts. The final attempt was not promotable: 27.27% blocking detection, 9.09% safe false positives, 50% advisory escalation, 6.25% errors, and 93.75% agreement. All incomplete implementation and failed reports were removed. Do not retry without a new authorized calibration budget; US-004A must pass first.",
+      "dependencies": ["US-004A"]
     },
     {
       "id": "US-005",
@@ -85,10 +102,10 @@
         "Gilfoyle has an independent prompt, policy, calibration, check name, and exception scope",
         "Shared max-three concurrency cannot let one agent suppress or impersonate another"
       ],
-      "priority": 5,
+      "priority": 6,
       "passes": false,
       "notes": "",
-      "dependencies": ["US-004"]
+      "dependencies": ["US-004B"]
     },
     {
       "id": "US-006",
@@ -101,7 +118,7 @@
         "Retries apply only to identified transient infrastructure failures and preserve original evidence",
         "Administrator emergency actions are documented and auditable"
       ],
-      "priority": 6,
+      "priority": 7,
       "passes": false,
       "notes": "",
       "dependencies": ["US-005"]
@@ -118,10 +135,10 @@
         "Developers can tune the versioned prompt and reproduce findings locally",
         "Every issue acceptance criterion is reconciled to live implementation evidence"
       ],
-      "priority": 7,
+      "priority": 8,
       "passes": false,
       "notes": "",
-      "dependencies": ["US-004", "US-005", "US-006"]
+      "dependencies": ["US-004B", "US-005", "US-006"]
     }
   ]
 }

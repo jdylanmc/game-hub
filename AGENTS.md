@@ -41,6 +41,14 @@ only a complete real-Azure report that passes
 after any fingerprinted model, prompt, tool, framework, schema, policy, or
 architecture change.
 
+Gilfoyle additionally requires a GitHub artifact attestation from its exact
+protected calibration workflow run. `yarn calibration:attestation:verify`
+cryptographically binds the exact repository head, workflow run and attempt,
+registered configuration, Azure deployment and workload identity, benchmark
+inputs, report artifact, and verified timestamps. Repository-authored JSON,
+unsigned bundles, stale or replayed runs, and mismatched evidence cannot
+self-assert promotion.
+
 When lint and test scripts exist, treat them as required gates for every Ralph
 Loop iteration.
 
