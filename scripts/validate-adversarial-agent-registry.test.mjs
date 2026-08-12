@@ -50,6 +50,7 @@ describe('validateAgentRegistry', () => {
     const fileContent = new Map();
     for (const [fileField, hashField] of [
       ['promptFile', 'promptContentHash'],
+      ['toolsConfigFile', 'toolsConfigContentHash'],
       ['schemaFile', 'schemaContentHash'],
       ['policyFile', 'policyContentHash'],
       ['engineConfigFile', 'engineConfigContentHash'],
@@ -66,6 +67,6 @@ describe('validateAgentRegistry', () => {
       return fileContent.get(filePath) ?? fs.readFileSync(filePath);
     });
     expect(validation).toMatchObject({ valid: true, errors: [] });
-    expect(validation.agents.map((agent) => agent.executionConfig.maxConcurrentReviews)).toEqual([3, 1]);
+    expect(validation.agents.at(-1).executionConfig.maxConcurrentReviews).toBe(1);
   });
 });

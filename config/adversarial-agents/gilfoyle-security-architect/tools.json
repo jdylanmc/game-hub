@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "agentName": "gilfoyle-security-architect",
+  "modelTools": [],
+  "repositoryCodeExecution": false,
+  "writeCapabilities": [],
+  "allowedNetworkDestinations": ["https://*.openai.azure.com"],
+  "evidenceSource": "bounded-security-context-packet"
+}

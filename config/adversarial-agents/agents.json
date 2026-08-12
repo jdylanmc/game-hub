@@ -15,7 +15,16 @@
       "description": "List of configured adversarial review agents.",
       "items": {
         "type": "object",
-        "required": ["name", "version", "enabled", "promptFile", "promptVersion", "description"],
+        "required": [
+          "name",
+          "version",
+          "enabled",
+          "promptFile",
+          "promptVersion",
+          "toolsConfigFile",
+          "toolsVersion",
+          "description"
+        ],
         "properties": {
           "name": {
             "type": "string",
@@ -50,6 +59,12 @@
             "description": "Current semantic version of the prompt. Updated when the prompt file changes.",
             "pattern": "^\\d+\\.\\d+\\.\\d+$",
             "examples": ["1.0.0"]
+          },
+          "toolsConfigFile": {
+            "type": "string",
+            "description": "Relative path to the agent-specific bounded-tools contract.",
+            "pattern": "^config/adversarial-agents/[a-z0-9]+(-[a-z0-9]+)*/tools\\.json$",
+            "examples": ["config/adversarial-agents/unit-test-reviewer/tools.json"]
           },
           "modelDeployment": {
             "type": "string",
@@ -136,7 +151,7 @@
               },
               "allowHighConfidenceOnly": {
                 "type": "boolean",
-                "description": "If true, only HIGH-confidence findings can cause a FAIL.",
+                "description": "If true, only HIGH-confidence findings can cause a FAIL. Security agents may use independently defined severity and control-bypass thresholds instead.",
                 "examples": [true]
               }
             }
@@ -150,6 +165,7 @@
           "enabled": true,
           "promptFile": ".github/adversarial-agents/unit-test-reviewer/prompt.md",
           "promptVersion": "1.0.3",
+          "toolsConfigFile": "config/adversarial-agents/unit-test-reviewer/tools.json",
           "modelDeployment": "gpt-4.1-mini@2025-04-14/eastus/GlobalStandard",
           "modelVersion": "2025-04-14",
           "toolsVersion": "1.0.0",

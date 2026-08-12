@@ -1,0 +1,18 @@
+{
+  "version": "0.1.0",
+  "agentName": "gilfoyle-security-architect",
+  "status": "contract-only",
+  "requiredScenarios": [
+    "authorization-bypass",
+    "injection",
+    "secret-exposure",
+    "workflow-permission-escalation",
+    "dependency-risk",
+    "bicep-privilege",
+    "archive-traversal",
+    "unsafe-deserialization",
+    "race-condition",
+    "cleanup-leak"
+  ],
+  "cases": []
+}

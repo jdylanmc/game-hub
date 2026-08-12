@@ -1,0 +1,8 @@
+{
+  "version": "0.1.0",
+  "agentName": "gilfoyle-security-architect",
+  "status": "contract-only",
+  "requiredRunMode": "azure",
+  "promotionAllowed": false,
+  "reason": "Gilfoyle remains disabled until security benchmarks are implemented and a complete real-Azure calibration is promoted."
+}

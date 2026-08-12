@@ -23,8 +23,8 @@
         "Findings require confidence, category, exact citations, exploit or failure scenario, impact, remediation, and verification guidance"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a disabled, independently hashed Gilfoyle registration with a versioned prompt, security schema, policy, bounded-tools contract, engine identity, contract validator, tests, and developer documentation. Full yarn validate passed.",
       "dependencies": []
     },
     {

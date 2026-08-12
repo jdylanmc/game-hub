@@ -14,6 +14,8 @@ interface AgentRegistration extends JsonObject {
   promptFile: string;
   promptVersion: string;
   promptContentHash: string;
+  toolsConfigFile: string;
+  toolsConfigContentHash: string;
   schemaFile: string;
   schemaContentHash: string;
   policyFile: string;
@@ -45,6 +47,8 @@ const REQUIRED_AGENT_FIELDS = [
   'promptFile',
   'promptVersion',
   'promptContentHash',
+  'toolsConfigFile',
+  'toolsConfigContentHash',
   'schemaFile',
   'schemaContentHash',
   'policyFile',
@@ -152,7 +156,7 @@ function validateAgentRegistry(
       !isObject(candidate.verdictRules) ||
       Object.keys(candidate.verdictRules).length !== 2 ||
       candidate.verdictRules.blockingThreshold !== 1 ||
-      candidate.verdictRules.allowHighConfidenceOnly !== true ||
+      typeof candidate.verdictRules.allowHighConfidenceOnly !== 'boolean' ||
       !Array.isArray(candidate.targetScopes) ||
       candidate.targetScopes.length < 1 ||
       candidate.targetScopes.some((scope) => typeof scope !== 'string' || scope.length < 1) ||
@@ -165,6 +169,7 @@ function validateAgentRegistry(
     const registration = candidate as AgentRegistration;
     const filePairs: Array<[string, string]> = [
       ['promptFile', 'promptContentHash'],
+      ['toolsConfigFile', 'toolsConfigContentHash'],
       ['schemaFile', 'schemaContentHash'],
       ['policyFile', 'policyContentHash'],
       ['engineConfigFile', 'engineConfigContentHash'],
@@ -198,6 +203,7 @@ function validateAgentRegistry(
   const uniqueFields: Array<keyof AgentRegistration> = [
     'name',
     'promptFile',
+    'toolsConfigFile',
     'schemaFile',
     'policyFile',
     'engineConfigFile',

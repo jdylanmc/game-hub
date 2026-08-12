@@ -131,9 +131,10 @@ yarn exceptions:validate
 
 ## Registering another reviewer
 
-Every reviewer registration must have its own immutable prompt, output schema,
-policy, engine configuration, benchmark corpus, promotion policy, active
-calibration report path, check name, state namespace, and concurrency limit.
+Every reviewer registration must have its own immutable prompt, bounded-tools
+contract, output schema, policy, engine configuration, benchmark corpus,
+promotion policy, active calibration report path, check name, state namespace,
+and concurrency limit.
 Run `yarn agents:validate` after updating
 `config/adversarial-agents/agents-config.json`. Runtime selection uses
 `ADVERSARIAL_AGENT_NAME`; output validation and publication bind to that exact

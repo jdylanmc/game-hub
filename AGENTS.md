@@ -74,6 +74,10 @@ Microsoft Entra ID, register no model tools, restrict Azure OpenAI destinations,
 and return schema-valid blocking errors whenever bounded execution cannot
 produce a policy-safe verdict.
 
+Every adversarial agent also owns a content-hashed bounded-tools contract.
+Keep prompt, tools, schema, policy, model, calibration, check, and state
+attribution independent so one agent cannot weaken or impersonate another.
+
 `yarn publish:adversarial` validates reviewer output again before publishing one
 agent-specific GitHub check for the exact head commit. It writes a retained,
 redacted evidence bundle; the artifact is authoritative when repeated runs
