@@ -15,7 +15,7 @@ function result(decision = 'PASS') {
       promptVersion: '1.0.4',
       promptContentHash: '42b66f498c9dcc443fb8c4c18ecd5ce8ddc315715340e4c3dde0f7ad26d48c14',
       schemaVersion: '2.0.0',
-      schemaContentHash: '87392e8ee01e14b3a9fa43bf8c54bf92104f7589b6257440fe369ba7e467fd2a',
+      schemaContentHash: 'cd46bbd7d12fd7b257c2ee24304f673a6a79ab13bda0696247ebc2b9313e375a',
       policyVersion: '2.0.0',
       policyContentHash: 'ed7e5906234a69d282c2102490fc3227703c049c97e63170ffb968c34b478286',
       toolsVersion: '1.0.1',

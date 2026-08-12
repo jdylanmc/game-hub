@@ -15,7 +15,7 @@
       "contextConfigVersion": "1.0.1",
       "contextConfigContentHash": "07e048caf9224ef75c50f7f6b60d8796f53753d6ebbad65306d63ee2a27e1872",
       "schemaFile": "config/adversarial-agents/schema.json",
-      "schemaContentHash": "87392e8ee01e14b3a9fa43bf8c54bf92104f7589b6257440fe369ba7e467fd2a",
+      "schemaContentHash": "cd46bbd7d12fd7b257c2ee24304f673a6a79ab13bda0696247ebc2b9313e375a",
       "policyFile": "config/adversarial-agents/policy.json",
       "policyContentHash": "ed7e5906234a69d282c2102490fc3227703c049c97e63170ffb968c34b478286",
       "engineConfigFile": "config/adversarial-agents/reviewer-engine.json",

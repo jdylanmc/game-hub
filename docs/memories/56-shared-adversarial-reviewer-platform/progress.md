@@ -167,3 +167,25 @@
   active report remains the prior attested report until the owner reruns real
   Azure calibration with this fix and replaces it through the protected
   attestation path.
+
+## Calibration output-contract reliability repair
+
+- **Confirmed seam:** injected primary and critic transports through
+  `review-adversarial-context.ts`.
+- **Red:** `yarn vitest run scripts/review-adversarial-context.test.mjs
+  --coverage.enabled=false` reproduced the real flattened critic citation
+  shape as `CRITIC_OUTPUT_INVALID`, and preserved model IDs instead of
+  canonical category-derived IDs.
+- **Green:** Critic instructions and its Azure schema now require a non-empty
+  flat citation array. Runtime accepts only citations that exactly match a
+  primary citation, canonicalizes them into the authoritative production/test
+  collection, and fails closed with `CRITIC_CITATIONS_MISMATCH` for invented,
+  changed, or duplicate evidence. Finding IDs are deterministically derived
+  from validated category plus stable ordinal before validation.
+- **Broader checks:** `yarn vitest run
+  scripts/review-adversarial-context.test.mjs
+  scripts/evaluate-adversarial-reviewer.test.mjs
+  --coverage.enabled=false`; `yarn lint`; `yarn typecheck`;
+  `yarn agents:validate`; `yarn policy:adversarial`.
+- The failed live report was discarded after using its diagnostics; it is not
+  retained as active calibration evidence.

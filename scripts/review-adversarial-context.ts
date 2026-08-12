@@ -316,7 +316,11 @@ const criticResponseSchema: JsonObject = {
   properties: {
     decision: { enum: ['CONFIRM', 'REJECT', 'INCONCLUSIVE'] },
     rationale: { type: 'string' },
-    citations: citationsSchema,
+    citations: {
+      type: 'array',
+      minItems: 1,
+      items: citationSchema,
+    },
   },
 };
 
@@ -560,6 +564,64 @@ function deduplicateFindings(findings: unknown[]): unknown[] {
     .map(({ finding }) => finding);
 }
 
+function canonicalCategoryId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const canonical = value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return canonical.length > 0 ? canonical : undefined;
+}
+
+function canonicalizeFindingIds(findings: unknown[]): unknown[] {
+  const ordered = findings
+    .map((finding) => ({
+      finding,
+      category: isObject(finding) ? canonicalCategoryId(finding.category) : undefined,
+      fingerprint: findingFingerprint(finding),
+    }))
+    .sort((left, right) => {
+      const categoryOrder = String(left.category ?? '').localeCompare(String(right.category ?? ''));
+      return categoryOrder === 0 ? left.fingerprint.localeCompare(right.fingerprint) : categoryOrder;
+    });
+  const ordinals = new Map<string, number>();
+  return ordered.map(({ finding, category }) => {
+    if (!isObject(finding) || !category) return finding;
+    const ordinal = (ordinals.get(category) ?? 0) + 1;
+    ordinals.set(category, ordinal);
+    return {
+      ...finding,
+      id: `${category}-${String(ordinal).padStart(3, '0')}`,
+    };
+  });
+}
+
+function canonicalizeCriticCitations(value: unknown, primaryValue: unknown): JsonObject {
+  if (!Array.isArray(value) || value.length === 0 || !isObject(primaryValue)) {
+    throw new Error('CRITIC_CITATIONS_MISMATCH');
+  }
+  const authoritative: JsonObject = { productionFiles: [], testFiles: [] };
+  const primarySources: Array<[string, unknown[]]> = [
+    ['productionFiles', Array.isArray(primaryValue.productionFiles) ? primaryValue.productionFiles : []],
+    ['testFiles', Array.isArray(primaryValue.testFiles) ? primaryValue.testFiles : []],
+  ];
+  const consumed = new Set<string>();
+  for (const citation of value) {
+    if (!isObject(citation) || Object.keys(citation).sort().join(',') !== 'endLine,path,snippet,startLine') {
+      throw new Error('CRITIC_CITATIONS_MISMATCH');
+    }
+    const source = primarySources.find(([, citations]) =>
+      citations.some((candidate) => stableStringify(candidate) === stableStringify(citation)),
+    );
+    if (!source) throw new Error('CRITIC_CITATIONS_MISMATCH');
+    const key = `${source[0]}\n${stableStringify(citation)}`;
+    if (consumed.has(key)) throw new Error('CRITIC_CITATIONS_MISMATCH');
+    consumed.add(key);
+    (authoritative[source[0]] as unknown[]).push(citation);
+  }
+  return authoritative;
+}
+
 function withProvisionalCritics(findings: unknown[]): unknown[] {
   return findings.map((finding) => {
     if (!isObject(finding) || finding.proposedSeverity !== 'BLOCKING' || finding.critic !== undefined) {
@@ -784,7 +846,7 @@ class AdversarialReviewerEngine {
           {
             role: 'developer',
             content:
-              'Critic review: return only JSON with decision CONFIRM, REJECT, or INCONCLUSIVE, a cited rationale, and citations. Do not change the primary finding.',
+              'Critic review: return only JSON with decision CONFIRM, REJECT, or INCONCLUSIVE, a cited rationale, and a non-empty citations ARRAY. Every array item must be an exact, unmodified {path,startLine,endLine,snippet} citation copied from the primary finding; never invent, alter, categorize, or wrap citations. Do not change the primary finding.',
           },
           { role: 'user', content: stableStringify(finding) },
         ],
@@ -819,11 +881,14 @@ class AdversarialReviewerEngine {
       if (
         !critic ||
         !['CONFIRM', 'REJECT', 'INCONCLUSIVE'].includes(String(critic.decision)) ||
-        typeof critic.rationale !== 'string' ||
-        !isObject(critic.citations)
+        typeof critic.rationale !== 'string'
       ) {
         throw new Error('CRITIC_OUTPUT_INVALID');
       }
+      critic = {
+        ...critic,
+        citations: canonicalizeCriticCitations(critic.citations, finding.citations),
+      };
       const severity =
         critic.decision === 'CONFIRM' || (critic.decision === 'INCONCLUSIVE' && finding.confidence === 'HIGH')
           ? 'BLOCKING'
@@ -1040,7 +1105,9 @@ class AdversarialReviewerEngine {
     }
     const candidate = {
       ...modelResult,
-      findings: withProvisionalCritics(Array.isArray(modelResult.findings) ? modelResult.findings : []),
+      findings: canonicalizeFindingIds(
+        withProvisionalCritics(Array.isArray(modelResult.findings) ? modelResult.findings : []),
+      ),
       schemaVersion: '2.0.0',
       findingVersion: `${runtime.agentConfig.name}@${timestamp}`,
       attribution: runtimeAttribution(

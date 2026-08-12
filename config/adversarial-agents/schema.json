@@ -263,7 +263,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[A-Z0-9]+-\\d+$"
+          "pattern": "^[A-Z0-9]+(?:-[A-Z0-9]+)*-\\d+$"
         },
         "title": {
           "type": "string",

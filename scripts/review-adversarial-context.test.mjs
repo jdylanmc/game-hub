@@ -111,17 +111,14 @@ class FakeTransport {
   criticResult = {
     decision: 'CONFIRM',
     rationale: 'The cited evidence confirms the proposed blocker.',
-    citations: {
-      productionFiles: [],
-      testFiles: [
-        {
-          path: 'src/example.test.ts',
-          startLine: 4,
-          endLine: 4,
-          snippet: 'expect(true).toBe(true);',
-        },
-      ],
-    },
+    citations: [
+      {
+        path: 'src/example.test.ts',
+        startLine: 4,
+        endLine: 4,
+        snippet: 'expect(true).toBe(true);',
+      },
+    ],
   };
 
   constructor(handler) {
@@ -355,7 +352,7 @@ describe('AdversarialReviewerEngine', () => {
     const result = await engine(transport).review(packet());
 
     expect(result.findings).toHaveLength(1);
-    expect(result.findings[0]).toMatchObject({ id: 'TAUTOLOGY-1' });
+    expect(result.findings[0]).toMatchObject({ id: 'TAUTOLOGY-001' });
     expect(result.verdict).toMatchObject({
       decision: 'FAIL',
       severity: 'BLOCKING',
@@ -401,6 +398,74 @@ describe('AdversarialReviewerEngine', () => {
     expect(inconclusive.findings[0]).toMatchObject({
       severity: 'BLOCKING',
       critic: expect.objectContaining({ decision: 'INCONCLUSIVE' }),
+    });
+  });
+
+  it('canonicalizes exact flat critic citations and category-derived finding identifiers', async () => {
+    const weakAssertion = {
+      ...finding('WEAKASSERTION-001'),
+      category: 'weak-assertion',
+    };
+    const transport = new FakeTransport(async () => response(modelResult({ findings: [weakAssertion] })));
+    transport.criticResult = {
+      decision: 'CONFIRM',
+      rationale: 'The primary test citation confirms the weak assertion.',
+      citations: [
+        {
+          path: 'src/example.test.ts',
+          startLine: 4,
+          endLine: 4,
+          snippet: 'expect(true).toBe(true);',
+        },
+      ],
+    };
+
+    const result = await engine(transport).review(packet());
+
+    expect(result).toMatchObject({
+      verdict: { decision: 'FAIL', kind: 'POLICY' },
+      findings: [
+        expect.objectContaining({
+          id: 'WEAK-ASSERTION-001',
+          critic: expect.objectContaining({
+            citations: {
+              productionFiles: [],
+              testFiles: [
+                expect.objectContaining({
+                  path: 'src/example.test.ts',
+                }),
+              ],
+            },
+          }),
+        }),
+      ],
+    });
+  });
+
+  it('fails closed when a critic invents or changes a primary citation', async () => {
+    const transport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
+    transport.criticResult = {
+      decision: 'CONFIRM',
+      rationale: 'Invented evidence.',
+      citations: [
+        {
+          path: 'src/invented.test.ts',
+          startLine: 4,
+          endLine: 4,
+          snippet: 'expect(true).toBe(true);',
+        },
+      ],
+    };
+
+    await expect(engine(transport).review(packet())).resolves.toMatchObject({
+      verdict: {
+        decision: 'FAIL',
+        kind: 'PLATFORM',
+        platformError: {
+          code: 'CRITIC_EXECUTION_FAILED',
+          message: expect.stringContaining('CRITIC_CITATIONS_MISMATCH'),
+        },
+      },
     });
   });
 

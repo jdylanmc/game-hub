@@ -420,7 +420,7 @@ class AdversarialFindingValidator {
     ];
     this.rejectUnknownProperties(finding, [...required, 'critic'], field, errors);
     this.requireFields(finding, required, field, errors);
-    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+-\d+$/.test(finding.id)) {
+    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/.test(finding.id)) {
       this.addError(errors, 2, `${field}.id`, 'id must match CATEGORY-001');
     }
     for (const name of [
@@ -684,7 +684,7 @@ class AdversarialFindingValidator {
     this.rejectUnknownProperties(finding, [...required, 'additionalContext'], field, errors);
     this.requireFields(finding, required, field, errors);
 
-    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+-\d+$/.test(finding.id)) {
+    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/.test(finding.id)) {
       this.addError(errors, 2, `${field}.id`, 'id must match CATEGORY-001');
     }
     for (const property of ['title', 'description', 'missingScenario', 'expectedFailureSignal', 'suggestedTest']) {
@@ -750,7 +750,7 @@ class AdversarialFindingValidator {
     this.rejectUnknownProperties(finding, [...required, 'evidenceLimitations'], field, errors);
     this.requireFields(finding, required, field, errors);
 
-    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+-\d+$/.test(finding.id)) {
+    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/.test(finding.id)) {
       this.addError(errors, 2, `${field}.id`, 'id must match CATEGORY-001');
     }
     for (const property of [

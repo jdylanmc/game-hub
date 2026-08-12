@@ -739,24 +739,20 @@ function createFixtureReviewer(
   const criticResponse = {
     decision: 'CONFIRM',
     rationale: 'The benchmark evidence directly demonstrates the proposed blocker.',
-    citations: {
-      productionFiles: [
-        {
-          path: 'src/benchmark.ts',
-          startLine: 1,
-          endLine: Math.max(1, benchmark.production.split('\n').length),
-          snippet: benchmark.production,
-        },
-      ],
-      testFiles: [
-        {
-          path: 'src/benchmark.test.ts',
-          startLine: 1,
-          endLine: Math.max(1, benchmark.test.split('\n').length),
-          snippet: benchmark.test,
-        },
-      ],
-    },
+    citations: [
+      {
+        path: 'src/benchmark.ts',
+        startLine: 1,
+        endLine: Math.max(1, benchmark.production.split('\n').length),
+        snippet: benchmark.production,
+      },
+      {
+        path: 'src/benchmark.test.ts',
+        startLine: 1,
+        endLine: Math.max(1, benchmark.test.split('\n').length),
+        snippet: benchmark.test,
+      },
+    ],
   };
   const transport = {
     complete: async (request: { messages: Array<{ content: string }> }) => ({
