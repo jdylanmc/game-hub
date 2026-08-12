@@ -404,6 +404,29 @@ describe('AdversarialReviewerEngine', () => {
     });
   });
 
+  it('uses distinct v2 primary and critic response schemas so Azure can invoke both passes', async () => {
+    const transport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
+
+    await engine(transport).review(packet());
+
+    const [primary, critic] = transport.requests;
+    expect(primary.responseSchema.required).toEqual(['verdict', 'findings']);
+    expect(critic.responseSchema.required).toEqual(['decision', 'rationale', 'citations']);
+  });
+
+  it('adds only a provisional critic for primary validation before replacing it with the critic pass', async () => {
+    const primaryFinding = finding();
+    delete primaryFinding.critic;
+    const transport = new FakeTransport(async () => response(modelResult({ findings: [primaryFinding] })));
+
+    const result = await engine(transport).review(packet());
+
+    expect(result).toMatchObject({
+      verdict: { decision: 'FAIL', kind: 'POLICY' },
+      findings: [expect.objectContaining({ critic: expect.objectContaining({ decision: 'CONFIRM' }) })],
+    });
+  });
+
   it('uses a neutral validated presentation fallback without changing the authoritative verdict', async () => {
     const transport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
     const result = await engine(transport, {
@@ -476,8 +499,8 @@ describe('AdversarialReviewerEngine', () => {
       agentName: 'unit-test-reviewer',
       agentVersion: '1.0.0',
       modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
-      promptVersion: '1.0.3',
-      promptContentHash: '9d5667c8233da813b06adc93eba7daf832339653b44c617a006df51b21697c68',
+      promptVersion: '1.0.4',
+      promptContentHash: '42b66f498c9dcc443fb8c4c18ecd5ce8ddc315715340e4c3dde0f7ad26d48c14',
       policyVersion: '2.0.0',
       toolsVersion: '1.0.1',
       subscriptionId: '11213dbd-39fe-46ba-87db-5f5e8c449aed',

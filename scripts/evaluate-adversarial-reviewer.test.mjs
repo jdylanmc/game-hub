@@ -436,7 +436,7 @@ describe('calibration promotion gate', () => {
     expect(fingerprint.components).toMatchObject({
       modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
       modelVersion: '2025-04-14',
-      promptVersion: '1.0.3',
+      promptVersion: '1.0.4',
       toolsVersion: '1.0.1',
       testFramework: 'vitest@4.1.10',
       schemaVersion: '2.0.0',

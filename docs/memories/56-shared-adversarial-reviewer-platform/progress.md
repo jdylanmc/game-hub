@@ -152,7 +152,10 @@
 - **Green:** Benchmark packets now include the v2 workflow identity; fixture
   transports execute the reviewer and critic path; calibration evidence
   records POLICY, PLATFORM, and COMPUTE kinds plus retained diagnostic code and
-  message. Platform failures count toward the unchanged error-rate threshold
+  message. The primary and critic Azure calls now use their distinct,
+  model-shaped response schemas, and the versioned prompt asks only for primary
+  verdict/findings while runtime supplies authoritative provenance and critic
+  evidence. Platform failures count toward the unchanged error-rate threshold
   instead of being silently discarded.
 - **Broader checks:** `yarn vitest run
   scripts/evaluate-adversarial-reviewer.test.mjs

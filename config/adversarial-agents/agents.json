@@ -178,7 +178,7 @@
           "version": "1.0.0",
           "enabled": true,
           "promptFile": ".github/adversarial-agents/unit-test-reviewer/prompt.md",
-          "promptVersion": "1.0.3",
+          "promptVersion": "1.0.4",
           "toolsConfigFile": "config/adversarial-agents/unit-test-reviewer/tools.json",
           "contextConfigFile": "config/adversarial-agents/context-collector.json",
           "contextConfigVersion": "1.0.1",

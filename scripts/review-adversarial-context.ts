@@ -221,6 +221,105 @@ function loadJson(filePath: string): JsonObject {
   return value;
 }
 
+const citationSchema: JsonObject = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['path', 'startLine', 'endLine', 'snippet'],
+  properties: {
+    path: { type: 'string' },
+    startLine: { type: 'integer', minimum: 1 },
+    endLine: { type: 'integer', minimum: 1 },
+    snippet: { type: 'string' },
+  },
+};
+
+const citationsSchema: JsonObject = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['productionFiles', 'testFiles'],
+  properties: {
+    productionFiles: { type: 'array', items: citationSchema },
+    testFiles: { type: 'array', items: citationSchema },
+    issueRequirements: { type: 'array', items: { type: 'string' } },
+  },
+};
+
+const primaryResponseSchema: JsonObject = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['verdict', 'findings'],
+  properties: {
+    verdict: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'decision',
+        'kind',
+        'severity',
+        'blockingFindingsCount',
+        'advisoryFindingsCount',
+        'policyDecisionRationale',
+      ],
+      properties: {
+        decision: { enum: ['PASS', 'FAIL'] },
+        kind: { const: 'POLICY' },
+        severity: { enum: ['INFO', 'ADVISORY', 'BLOCKING'] },
+        blockingFindingsCount: { type: 'integer', minimum: 0 },
+        advisoryFindingsCount: { type: 'integer', minimum: 0 },
+        policyDecisionRationale: { type: 'string' },
+      },
+    },
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'id',
+          'title',
+          'category',
+          'proposedSeverity',
+          'severity',
+          'confidence',
+          'description',
+          'citations',
+          'policyRule',
+          'failureScenario',
+          'impact',
+          'remediation',
+          'verificationGuidance',
+        ],
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          category: { type: 'string' },
+          proposedSeverity: { enum: ['BLOCKING', 'ADVISORY'] },
+          severity: { enum: ['BLOCKING', 'ADVISORY'] },
+          confidence: { enum: ['HIGH', 'MEDIUM', 'LOW'] },
+          description: { type: 'string' },
+          citations: citationsSchema,
+          policyRule: { type: 'string' },
+          failureScenario: { type: 'string' },
+          impact: { type: 'string' },
+          remediation: { type: 'array', items: { type: 'string' }, minItems: 1 },
+          verificationGuidance: { type: 'string' },
+        },
+      },
+    },
+  },
+};
+
+const criticResponseSchema: JsonObject = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['decision', 'rationale', 'citations'],
+  properties: {
+    decision: { enum: ['CONFIRM', 'REJECT', 'INCONCLUSIVE'] },
+    rationale: { type: 'string' },
+    citations: citationsSchema,
+  },
+};
+
 function loadRuntime(
   repoRoot: string,
   agentName = 'unit-test-reviewer',
@@ -228,7 +327,6 @@ function loadRuntime(
 ): {
   engineConfig: ReviewerEngineConfig;
   agentConfig: AgentConfig;
-  responseSchema: JsonObject;
   policyVersion: string;
   blockingFindingsMinimum: number;
   reviewerPrompt: string;
@@ -237,7 +335,6 @@ function loadRuntime(
   const registration = loadAgentRegistration(repoRoot, agentName, { allowDisabledForCalibration });
   const engineConfig = loadJson(path.join(repoRoot, registration.engineConfigFile)) as unknown as ReviewerEngineConfig;
   const policy = loadJson(path.join(repoRoot, registration.policyFile));
-  const responseSchema = loadJson(path.join(repoRoot, registration.schemaFile));
   const policyProperties = isObject(policy.properties) ? policy.properties : {};
   const failThresholds = isObject(policyProperties.failThresholds) ? policyProperties.failThresholds : {};
   const failThresholdProperties = isObject(failThresholds.properties) ? failThresholds.properties : {};
@@ -269,7 +366,6 @@ function loadRuntime(
   return {
     engineConfig,
     agentConfig,
-    responseSchema,
     policyVersion: String(policy.version),
     blockingFindingsMinimum: blockingThreshold,
     reviewerPrompt,
@@ -462,6 +558,22 @@ function deduplicateFindings(findings: unknown[]): unknown[] {
       return true;
     })
     .map(({ finding }) => finding);
+}
+
+function withProvisionalCritics(findings: unknown[]): unknown[] {
+  return findings.map((finding) => {
+    if (!isObject(finding) || finding.proposedSeverity !== 'BLOCKING' || finding.critic !== undefined) {
+      return finding;
+    }
+    return {
+      ...finding,
+      critic: {
+        decision: 'CONFIRM',
+        rationale: 'Pending separate critic validation.',
+        citations: finding.citations,
+      },
+    };
+  });
 }
 
 function deriveVerdict(findings: unknown[], blockingFindingsMinimum: number, agentName: string): JsonObject {
@@ -666,6 +778,7 @@ class AdversarialReviewerEngine {
       }
       const criticRequest = deepFreeze<ReviewerTransportRequest>({
         ...request,
+        responseSchema: criticResponseSchema,
         messages: [
           request.messages[0],
           {
@@ -823,7 +936,7 @@ class AdversarialReviewerEngine {
       apiVersion: runtime.engineConfig.apiVersion,
       credentialScope: runtime.engineConfig.credentialScope,
       messages,
-      responseSchema: runtime.responseSchema,
+      responseSchema: primaryResponseSchema,
       maxOutputTokens: runtime.engineConfig.limits.maxOutputTokens,
       temperature: 0,
       allowedTools: [],
@@ -927,6 +1040,7 @@ class AdversarialReviewerEngine {
     }
     const candidate = {
       ...modelResult,
+      findings: withProvisionalCritics(Array.isArray(modelResult.findings) ? modelResult.findings : []),
       schemaVersion: '2.0.0',
       findingVersion: `${runtime.agentConfig.name}@${timestamp}`,
       attribution: runtimeAttribution(
