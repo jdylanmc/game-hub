@@ -1,15 +1,23 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/jdylanmc/game-hub/config/adversarial-agents/finding-schema.json",
-  "title": "Adversarial Agent Finding Schema",
-  "description": "Strict structured result for an independently attributable pull-request review.",
-  "version": "1.0.0",
+  "$id": "https://github.com/jdylanmc/game-hub/config/adversarial-agents/shared-finding-schema.json",
+  "title": "Shared Adversarial Reviewer Result Schema",
+  "description": "Strict authoritative PASS, FAIL, and compute-only INCONCLUSIVE reviewer result.",
+  "version": "2.0.0",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "findingVersion", "attribution", "verdict", "findings"],
+  "required": [
+    "schemaVersion",
+    "findingVersion",
+    "attribution",
+    "provenance",
+    "artifactDigest",
+    "verdict",
+    "findings"
+  ],
   "properties": {
     "schemaVersion": {
-      "const": "1.0.0"
+      "const": "2.0.0"
     },
     "findingVersion": {
       "type": "string",
@@ -34,6 +42,41 @@
         "agentName": {
           "type": "string",
           "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "pullRequestNumber",
+            "sourceIssueNumber",
+            "baseCommit",
+            "headCommit",
+            "workflowRunId",
+            "workflowRunAttempt",
+            "contextSha256",
+            "configurationFingerprint"
+          ],
+          "properties": {
+            "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+            "pullRequestNumber": { "type": "integer", "minimum": 1 },
+            "sourceIssueNumber": { "type": "integer", "minimum": 1 },
+            "baseCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+            "headCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+            "workflowRunId": { "type": "integer", "minimum": 1 },
+            "workflowRunAttempt": { "type": "integer", "minimum": 1 },
+            "contextSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "configurationFingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "artifactDigest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "value"],
+          "properties": {
+            "algorithm": { "const": "sha256" },
+            "value": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
         },
         "agentVersion": {
           "$ref": "#/$defs/semanticVersion"
@@ -74,10 +117,10 @@
       "required": ["decision", "severity", "blockingFindingsCount", "advisoryFindingsCount", "policyDecisionRationale"],
       "properties": {
         "decision": {
-          "enum": ["PASS", "FAIL", "ERROR"]
+          "enum": ["PASS", "FAIL", "INCONCLUSIVE"]
         },
         "severity": {
-          "enum": ["INFO", "ADVISORY", "BLOCKING", "ERROR"]
+          "enum": ["INFO", "ADVISORY", "BLOCKING", "ERROR", "INCONCLUSIVE"]
         },
         "blockingFindingsCount": {
           "type": "integer",

@@ -42,7 +42,7 @@
         "Targeted validator tests prove critic REJECT downgrades a proposed blocker and critic INCONCLUSIVE follows the configured calibrated-confidence threshold."
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Public test seam: scripts/validate-adversarial-finding.ts command and exported validator behavior."
     },
     {
