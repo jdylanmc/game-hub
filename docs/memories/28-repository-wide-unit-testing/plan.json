@@ -192,8 +192,8 @@
         "Coverage artifacts identify untested files and exclusions are narrow and justified"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Expanded V8 coverage from three host files to explicit authored host, all game source, pure game simulation, shared-contract, and game-workspace generator surfaces. Enforced exact reviewed global and surface baselines: global 94.84% statements, 85.06% branches, 94.36% functions, and 95.27% lines; host 95.88/86.29/100/95.65; all game source 96.47/87.86/90.52/97.39; pure simulations 97.05/92/93.54/98.92; contract 97.43/94.73/100/97.43; generator 82.4/70.27/87.5/82.07. Added report-on-failure coverage artifacts and a focused baseline/ratchet document requiring manual upward updates, per-file review, and no exclusion-based escapes. No production code or tests were changed because the existing suites already met the truthful measured thresholds.",
       "dependencies": ["US-003", "US-004", "US-005", "US-006", "US-007", "US-008", "US-009", "US-010", "US-011"]
     },
     {

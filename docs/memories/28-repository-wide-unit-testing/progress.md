@@ -375,3 +375,36 @@
 - Coverage ratcheting, broader integrity probes, workflow publication, and
   final unit-test documentation remain intentionally deferred to US-012
   through US-015.
+
+## 2026-08-12 - US-012: Expand coverage and define ratcheting
+
+- Expanded V8 measurement from three selected host files to explicit authored
+  host, all game source, pure game simulation, shared-contract, and
+  game-workspace generator surfaces. New or untested files matching those
+  includes now appear at zero instead of disappearing from coverage.
+- Enforced the exact reviewed global baseline: 94.84% statements, 85.06%
+  branches, 94.36% functions, and 95.27% lines.
+- Added independent surface thresholds so stronger host or game coverage cannot
+  hide a regression in pure simulations, the shared contract, or the generator:
+  host 95.88/86.29/100/95.65; all game source
+  96.47/87.86/90.52/97.39; pure simulations 97.05/92/93.54/98.92; contract
+  97.43/94.73/100/97.43; and generator 82.4/70.27/87.5/82.07
+  (statements/branches/functions/lines).
+- Kept exclusions narrow and documented: tests and test infrastructure,
+  generated import-map source, Storybook catalogs, and the side-effect-only
+  browser bootstrap. The generator's lower branch baseline remains measured
+  and visible rather than excluded.
+- Added `docs/unit-test-coverage.md` with the baseline, per-file artifact review,
+  manual upward-ratchet procedure, and a rule forbidding lower thresholds,
+  weakened includes, or broader exclusions merely to regain a pass.
+- Enabled coverage reports on failure; existing text, JSON summary, and LCOV
+  artifacts identify uncovered files and lines.
+- No production code or tests changed because the US-001 through US-011 suites
+  already met the truthful expanded thresholds with all 353 tests passing.
+- Files changed: `vitest.config.ts`, `docs/unit-test-coverage.md`, `README.md`,
+  and this issue memory.
+- Checks passed: targeted Prettier and ESLint, the canonical coverage run with
+  44 test files and 353 tests, and the complete `yarn validate` contract.
+- Coverage-regression mutation proofs, workflow policy/evidence, and the
+  broader unit-test contract remain intentionally deferred to US-013 through
+  US-015.

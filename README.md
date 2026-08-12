@@ -24,6 +24,9 @@ The main site always runs at `http://localhost:1337`.
   reproducible local gates, retained evidence, and fail-closed merge contract.
 - [Repository Linting](docs/linting.md) defines lint and safe-fix usage, rule
   and environment choices, exclusions, suppressions, and acceptance evidence.
+- [Unit-Test Coverage Baseline](docs/unit-test-coverage.md) defines measured
+  source surfaces, justified exclusions, enforced thresholds, and the reviewed
+  ratchet procedure.
 - [Branch Protection](docs/branch-protection.md) records the required merge
   controls and live verification procedure.
 - [Ralph Loop](docs/ralph-loop.md) defines the fresh-context autonomous
