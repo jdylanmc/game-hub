@@ -1,0 +1,185 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 2,
+  "issueTitle": "User Login and Account Creation",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/2",
+  "branchName": "ralph/issue-2-user-login-and-account-creation",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 1,
+    "dependencies": [1],
+    "changeScopes": [
+      "docs/architecture.md",
+      "docs/authentication-architecture.md",
+      "docs/memories/2-user-login-and-account-creation",
+      "src",
+      "api",
+      "infra",
+      "public/staticwebapp.config.json",
+      ".github/workflows",
+      "config"
+    ]
+  },
+  "publication": {
+    "requiredStatusChecks": ["Continuous integration"],
+    "adversarialStatusChecks": ["Adversarial Review / unit-test-reviewer"]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Select the identity architecture and contracts",
+      "description": "Select and document the current Azure identity and session architecture, then add the smallest shared typed contract for later website and API stories.",
+      "acceptanceCriteria": [
+        "The decision supports local email/password accounts, Google, Facebook, anonymous browsing, secure managed sessions, and stable provider-independent Game Hub user IDs",
+        "The design preserves the existing Azure Front Door, Azure Static Web Apps, and linked Azure Container Apps boundaries and cites current official Microsoft service documentation",
+        "Secret values remain outside source, memory, logs, outputs, and browser bundles; unavoidable provider credentials use secure service storage or Azure Key Vault references and deployment automation uses keyless identity",
+        "A shared typed contract defines the supported credential methods, platform identity seam, internal user ID boundary, anonymous/authenticated session states, and non-secret same-origin endpoints",
+        "No authentication UI, provider registration, live Azure deployment, or completion claim for later issue requirements is introduced"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Selected Microsoft Entra External ID in an external tenant behind one Azure Static Web Apps custom Microsoft Entra provider. Documented local email/password, Google, Facebook, anonymous access, managed session, provider-independent Game Hub user ID, trusted linked-API principal, Key Vault certificate, keyless deployment, provider-secret, and deferred-policy boundaries. Added a framework-neutral typed contract in src/auth/contract.ts with deterministic tests. Full yarn validate passed with 260 tests, coverage, immutable install, formatting, lint, policy, fail-closed simulations, security audit, generated-state, type, build, bundle, and Storybook gates. No authentication UI, provider registration, Azure resource creation, deployment, or live flow verification was performed."
+    },
+    {
+      "id": "US-002",
+      "title": "Resolve internal identities and sessions",
+      "description": "Add the authenticated API boundary that validates the trusted platform principal, creates or resolves one provider-independent Game Hub user record, and returns the internal session contract.",
+      "acceptanceCriteria": [
+        "The API trusts identity context only through the Azure Static Web Apps linked-backend boundary",
+        "Repeated authentication for the same external identity resolves the same internal Game Hub user ID",
+        "Anonymous and authenticated session responses match the shared contract without exposing provider tokens or credentials"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-003",
+      "title": "Render anonymous and authenticated website state",
+      "description": "Load the application session and add responsive website state that keeps browsing and game play available anonymously while clearly representing signed-in users.",
+      "acceptanceCriteria": [
+        "Anonymous visitors can browse and play without an authentication redirect",
+        "The website exposes loading, anonymous, and authenticated session states through the shared contract",
+        "The site header and relevant navigation present an accessible sign-in or authenticated-state affordance"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "",
+      "dependencies": ["US-002"]
+    },
+    {
+      "id": "US-004",
+      "title": "Enable local account lifecycle",
+      "description": "Configure the selected identity service and website entry points for local registration, sign-in, email verification, forgotten-password, and password-reset flows.",
+      "acceptanceCriteria": [
+        "A user can register and sign in with an email and password through Microsoft Entra External ID",
+        "Email verification and self-service password reset are enabled through the identity service",
+        "Game Hub never receives or stores plaintext passwords"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "",
+      "dependencies": ["US-001", "US-003"]
+    },
+    {
+      "id": "US-005",
+      "title": "Enable Google and Facebook sign-in",
+      "description": "Configure Google and Facebook federation in the selected Microsoft Entra External ID user flow using secure provider credential handling.",
+      "acceptanceCriteria": [
+        "Configured Google accounts can authenticate through the shared customer user flow",
+        "Configured Facebook accounts can authenticate through the shared customer user flow",
+        "Provider credentials are absent from source, committed parameters, logs, artifacts, and pull-request content"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "",
+      "dependencies": ["US-004"]
+    },
+    {
+      "id": "US-006",
+      "title": "Preserve return paths and support sign-out",
+      "description": "Add validated same-origin return paths and sign-out behavior that clears website authentication state from any authenticated page.",
+      "acceptanceCriteria": [
+        "Successful sign-in can return users only to a validated same-origin website path",
+        "Canceled or completed authentication never redirects to an untrusted origin",
+        "A user can sign out from any authenticated page and the website immediately returns to anonymous state"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "",
+      "dependencies": ["US-003", "US-004", "US-005"]
+    },
+    {
+      "id": "US-007",
+      "title": "Handle authentication failures and duplicate identities",
+      "description": "Implement clear handling for authentication errors, canceled flows, duplicate accounts, unavailable providers, and identity-resolution conflicts without guessing the unresolved linking policy.",
+      "acceptanceCriteria": [
+        "Provider cancellation, provider outage, invalid or expired flow, and session-resolution failures produce clear recoverable states",
+        "Potential duplicate identities fail safely and do not merge accounts by email alone",
+        "The implementation preserves the issue's open multi-credential linking decision for explicit resolution"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "",
+      "dependencies": ["US-002", "US-006"]
+    },
+    {
+      "id": "US-008",
+      "title": "Harden accessibility and abuse protection",
+      "description": "Apply the issue-required accessibility, responsive behavior, secure credential handling, and automated registration and credential-attack protections.",
+      "acceptanceCriteria": [
+        "Login, registration, verification, reset, error, and signed-out states are keyboard accessible, screen-reader coherent, and responsive",
+        "Azure Front Door and identity-service protections cover authentication traffic with environment-aware controls",
+        "No password, provider credential, session token, or secret value is exposed to source control or browser-readable configuration"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "",
+      "dependencies": ["US-004", "US-005", "US-006", "US-007"]
+    },
+    {
+      "id": "US-009",
+      "title": "Complete authentication test coverage",
+      "description": "Add deterministic unit, integration, accessibility, and browser-flow coverage for the complete anonymous, local, social, session, return-path, sign-out, and failure behavior.",
+      "acceptanceCriteria": [
+        "Tests cover anonymous browsing and authenticated session persistence",
+        "Tests cover local, Google, Facebook, sign-out, return-path, cancellation, duplicate, and unavailable-provider behavior",
+        "Tests prove secret values and untrusted redirect targets cannot enter browser or committed configuration"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "",
+      "dependencies": ["US-008"]
+    },
+    {
+      "id": "US-010",
+      "title": "Configure Azure and verify deployment",
+      "description": "Complete environment-specific Azure identity configuration and verify the deployed development flow against the authorized subscription without persisting secrets in repository evidence.",
+      "acceptanceCriteria": [
+        "Deployment automation explicitly targets subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed and uses keyless workload identity",
+        "Development configuration verifies local, Google, Facebook, anonymous, session refresh, return-path, sign-out, and protected API behavior through the canonical Azure Front Door origin",
+        "Verification records only non-secret resource identities, endpoints, and outcomes and distinguishes repository proof from live Azure evidence"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "",
+      "dependencies": ["US-009"]
+    },
+    {
+      "id": "US-011",
+      "title": "Reconcile issue completion and exact-head checks",
+      "description": "Reconcile every issue requirement and open decision against implementation and live evidence, then require exact-head deterministic and adversarial checks while keeping the pull request draft.",
+      "acceptanceCriteria": [
+        "Every issue requirement and acceptance criterion maps to implementation and verification evidence or an explicit blocker",
+        "The exact pull-request head has one successful Continuous integration result and one successful Adversarial Review / unit-test-reviewer result",
+        "The pull request remains draft and is neither merged nor marked ready"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "",
+      "dependencies": ["US-010"]
+    }
+  ]
+}
