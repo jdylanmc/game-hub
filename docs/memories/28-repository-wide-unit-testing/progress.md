@@ -21,6 +21,9 @@
 - FloppyBird clamps elapsed gameplay frames to 50 milliseconds inside its pure
   simulation boundary, so rendering and direct test callers share bounded
   physics.
+- FloppyBird obstacle recycling anchors new gates to the post-movement
+  rightmost gate, preserving exact score-based spacing instead of accumulating
+  stale frame travel.
 - Generated game discovery has committed outputs under `public/generated/` and
   `src/generated/`, while generator implementation currently executes at module
   load and is not directly unit-testable.
@@ -133,3 +136,25 @@
   full `yarn validate`.
 - Obstacle generation, collision, scoring, difficulty, and lifecycle behavior
   remain intentionally deferred to later stories.
+
+## 2026-08-12 - US-004: Test FloppyBird obstacles and scoring
+
+- Added Node-environment tests for deterministic seeded obstacle recycling,
+  varied valid seeds with bounded gap and style output, and recycled scoring
+  reset without browser, WebGL, or Three.js construction.
+- Covered exact top and bottom playfield collision boundaries, nearby safe
+  flight, safe passage tangent to a gate opening, and collision immediately
+  outside the opening.
+- Verified that a passed gate increments the score once and retains its scored
+  marker on later frames.
+- Covered score-based speed, gap height, and obstacle spacing at scores 0, 12,
+  24, and 240, proving the base values, midpoint progression, score-24 caps,
+  and beyond-cap stability.
+- Corrected obstacle recycling to measure spacing from the current
+  post-movement rightmost gate rather than a stale prior-frame position.
+- Files changed: `games/floppy-bird/src/simulation.ts`,
+  `games/floppy-bird/src/simulation.test.ts`, and this issue memory.
+- Checks passed: targeted Prettier, ESLint, and all 13 FloppyBird simulation
+  tests; full `yarn validate`.
+- Pause, resume, lifecycle events, disposal, and idempotent final-score
+  submission remain intentionally deferred to US-005.

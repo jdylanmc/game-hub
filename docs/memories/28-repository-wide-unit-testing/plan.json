@@ -80,8 +80,8 @@
         "Each obstacle scores once and difficulty changes reach their documented caps"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added Node-environment tests for repeatable seeded obstacle recycling across valid seeds, bounded gap and style generation, exact playfield and gate collision edges, safe gate passage, one-time per-gate scoring, and score-based speed, gap, and spacing progression at the base, midpoint, cap, and beyond-cap scores. Corrected recycling to anchor new gates to the post-movement rightmost obstacle so configured spacing remains exact.",
       "dependencies": ["US-003"]
     },
     {

@@ -2,7 +2,106 @@
 
 import { createSeededRandomSource } from '@game-hub/game-contract';
 import { describe, expect, it } from 'vitest';
-import { createFloppyBirdSimulationState, stepFloppyBirdSimulation } from './simulation';
+import {
+  createFloppyBirdSimulationState,
+  flightSpeedForScore,
+  FLOPPY_BIRD_LAYOUT,
+  stepFloppyBirdSimulation,
+  type FloppyBirdObstacleState,
+  type FloppyBirdSimulationState,
+} from './simulation';
+
+const RUNNING_INPUT = { flap: false, phase: 'running' } as const;
+
+function stepRunning(
+  state: Readonly<FloppyBirdSimulationState>,
+  elapsedSeconds = 0,
+  seed = 28,
+): FloppyBirdSimulationState {
+  return stepFloppyBirdSimulation(state, RUNNING_INPUT, elapsedSeconds, createSeededRandomSource(seed));
+}
+
+function createCollisionState(birdY: number, obstacles: FloppyBirdObstacleState[]): FloppyBirdSimulationState {
+  const initialState = createFloppyBirdSimulationState();
+
+  return {
+    ...initialState,
+    birdY,
+    highestObstacleX: obstacles.length > 0 ? Math.max(...obstacles.map((obstacle) => obstacle.x)) : 0,
+    obstacles,
+  };
+}
+
+function createGate(overrides: Partial<FloppyBirdObstacleState> = {}): FloppyBirdObstacleState {
+  return {
+    colorIndex: 0,
+    gapHeight: 5.8,
+    gapY: 0,
+    scored: false,
+    x: FLOPPY_BIRD_LAYOUT.birdX,
+    ...overrides,
+  };
+}
+
+function collectRecycledObstacles(seed: number): FloppyBirdObstacleState[] {
+  const random = createSeededRandomSource(seed);
+  let state = createFloppyBirdSimulationState();
+  const sequence: FloppyBirdObstacleState[] = [];
+
+  for (let index = 0; index < 6; index += 1) {
+    const obstacles = state.obstacles.map((obstacle, obstacleIndex) => ({
+      ...obstacle,
+      scored: obstacleIndex === 0,
+      x: obstacleIndex === 0 ? -19 : 9 + obstacleIndex * 8.8,
+    }));
+
+    state = stepFloppyBirdSimulation(
+      {
+        ...state,
+        birdVelocity: 0,
+        birdY: 0,
+        highestObstacleX: Math.max(...obstacles.map((obstacle) => obstacle.x)),
+        obstacles,
+        score: 0,
+      },
+      RUNNING_INPUT,
+      0.05,
+      random,
+    );
+    sequence.push({ ...state.obstacles[0] });
+  }
+
+  return sequence;
+}
+
+function recycleAtScore(score: number): {
+  gapHeight: number;
+  spacing: number;
+} {
+  const initialState = createFloppyBirdSimulationState();
+  const obstacles = [
+    createGate({ scored: true, x: -19 }),
+    createGate({ x: 0 }),
+    createGate({ x: 8 }),
+    createGate({ x: 16 }),
+  ];
+  const nextState = stepRunning(
+    {
+      ...initialState,
+      highestObstacleX: 16,
+      obstacles,
+      score,
+    },
+    0.05,
+  );
+  const recycledObstacle = nextState.obstacles[0];
+  const highestUnrecycledX = Math.max(...nextState.obstacles.slice(1).map((obstacle) => obstacle.x));
+
+  return {
+    gapHeight: recycledObstacle.gapHeight,
+    spacing: recycledObstacle.x - highestUnrecycledX,
+  };
+}
 
 describe('FloppyBird flight physics', () => {
   it('uses explicit ready frames for deterministic idle motion', () => {
@@ -68,4 +167,73 @@ describe('FloppyBird flight physics', () => {
 
     expect(advance()).toEqual(advance());
   });
+});
+
+describe('FloppyBird obstacles and scoring', () => {
+  it('recycles obstacles into repeatable seeded sequences with bounded layouts', () => {
+    const firstSequence = collectRecycledObstacles(28);
+    const repeatedSequence = collectRecycledObstacles(28);
+    const seededSequences = [1, 28, 90210, Number.MAX_SAFE_INTEGER].map(collectRecycledObstacles);
+
+    expect(repeatedSequence).toEqual(firstSequence);
+    expect(new Set(seededSequences.map((sequence) => JSON.stringify(sequence))).size).toBeGreaterThan(1);
+
+    for (const sequence of seededSequences) {
+      for (const obstacle of sequence) {
+        expect(obstacle.colorIndex).toBeGreaterThanOrEqual(0);
+        expect(obstacle.colorIndex).toBeLessThan(5);
+        expect(obstacle.gapHeight).toBe(5.8);
+        expect(obstacle.gapY).toBeGreaterThanOrEqual(-3.8);
+        expect(obstacle.gapY).toBeLessThanOrEqual(3.8);
+        expect(obstacle.scored).toBe(false);
+        expect(obstacle.x).toBeGreaterThan(35);
+      }
+    }
+  });
+
+  it.each([
+    { collisionY: 8.65, safeY: 8.649 },
+    { collisionY: -8.65, safeY: -8.649 },
+  ])('collides at the playfield boundary while preserving nearby safe flight', ({ collisionY, safeY }) => {
+    expect(stepRunning(createCollisionState(safeY, [])).collisionReason).toBeNull();
+    expect(stepRunning(createCollisionState(collisionY, [])).collisionReason).toMatch(/boundary/i);
+  });
+
+  it('allows a gate-edge passage but collides immediately outside the opening', () => {
+    const gateEdgeY = 5.8 / 2 - FLOPPY_BIRD_LAYOUT.birdRadius;
+    const safePassage = stepRunning(createCollisionState(gateEdgeY, [createGate()]));
+    const gateCollision = stepRunning(createCollisionState(gateEdgeY + 0.001, [createGate()]));
+
+    expect(safePassage.collisionReason).toBeNull();
+    expect(gateCollision.collisionReason).toMatch(/gate/i);
+  });
+
+  it('scores a passed gate only once', () => {
+    const initialState = createCollisionState(0, [createGate({ x: -7.59 })]);
+    const scoredState = stepRunning(initialState, 0.01);
+    const laterState = stepRunning(scoredState, 0.05);
+
+    expect(scoredState.score).toBe(1);
+    expect(scoredState.obstacles[0].scored).toBe(true);
+    expect(laterState.score).toBe(1);
+    expect(laterState.obstacles[0].scored).toBe(true);
+    expect(initialState.score).toBe(0);
+    expect(initialState.obstacles[0].scored).toBe(false);
+  });
+
+  it.each([
+    { gapHeight: 5.8, score: 0, spacing: 8.8, speed: 7.2 },
+    { gapHeight: 5.075, score: 12, spacing: 7.95, speed: 8.9 },
+    { gapHeight: 4.35, score: 24, spacing: 7.1, speed: 10.6 },
+    { gapHeight: 4.35, score: 240, spacing: 7.1, speed: 10.6 },
+  ])(
+    'applies score $score difficulty through the speed, gap, and spacing caps',
+    ({ gapHeight, score, spacing, speed }) => {
+      const recycled = recycleAtScore(score);
+
+      expect(flightSpeedForScore(score)).toBeCloseTo(speed);
+      expect(recycled.gapHeight).toBeCloseTo(gapHeight);
+      expect(recycled.spacing).toBeCloseTo(spacing);
+    },
+  );
 });

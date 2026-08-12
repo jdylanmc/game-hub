@@ -172,13 +172,16 @@ export function stepFloppyBirdSimulation(
       birdVelocity -= GRAVITY * frameDeltaSeconds;
       birdY += birdVelocity * frameDeltaSeconds;
       const speed = flightSpeedForScore(score);
+      const movedObstacles = obstacles.map((obstacle) => ({
+        ...obstacle,
+        x: obstacle.x - speed * frameDeltaSeconds,
+      }));
 
-      obstacles = obstacles.map((obstacle) => {
-        const nextObstacle = {
-          ...obstacle,
-          x: obstacle.x - speed * frameDeltaSeconds,
-        };
+      if (movedObstacles.length > 0) {
+        highestObstacleX = Math.max(...movedObstacles.map((obstacle) => obstacle.x));
+      }
 
+      obstacles = movedObstacles.map((nextObstacle) => {
         if (!nextObstacle.scored && nextObstacle.x + OBSTACLE_WIDTH / 2 < BIRD_X) {
           nextObstacle.scored = true;
           score += 1;
@@ -196,8 +199,6 @@ export function stepFloppyBirdSimulation(
           nextObstacle.gapY = GAP_PATTERN_Y[gapIndex] * lerp(1, 0.84, difficultyForScore(score));
           nextObstacle.scored = false;
           nextObstacle.colorIndex = styleIndex;
-        } else {
-          highestObstacleX = Math.max(highestObstacleX, nextObstacle.x);
         }
 
         return nextObstacle;
