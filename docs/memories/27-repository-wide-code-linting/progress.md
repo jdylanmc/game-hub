@@ -226,5 +226,12 @@ Current inspection found these issue #27 gaps:
   integration. The expanded policy, fail-closed, Ralph, adversarial-tool, and
   application test suites all passed with the promoted calibration fingerprint
   still current.
+- Exact-head `Continuous integration` passed for post-merge commit `b01443a`
+  in run `31556875242`. The newly required adversarial check could not publish:
+  protected-main workflow run `31556897184` failed before pull-request
+  resolution because `yarn install:check` was invoked without the Yarn
+  node-modules state file. The workflow intentionally executes protected
+  `main`, so this issue branch cannot repair that external required-check
+  blocker; the draft remains incomplete.
 - US-005 is next. It should require narrow inline suppressions with exact rules
   and durable reasons, plus accepted and rejected policy cases.
