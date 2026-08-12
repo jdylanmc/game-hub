@@ -27,3 +27,20 @@
   scripts/validate-adversarial-finding.test.mjs
   scripts/validate-adversarial-agent-registry.test.mjs
   --coverage.enabled=false`; `yarn agents:validate`.
+
+### US-002 — Add bounded compute outage, critic, and persona execution
+
+- **Confirmed seam:** `review-adversarial-context.ts` with injected model
+  transports, clocks, critic result, and persona renderer.
+- **Red:** `yarn vitest run scripts/review-adversarial-context.test.mjs
+  --coverage.enabled=false` showed that exhausted retryable compute returned
+  the retired `ERROR` decision rather than compute-only INCONCLUSIVE.
+- **Green:** Retryable compute makes exactly three attempts with bounded
+  exponential backoff and then returns INCONCLUSIVE. Other failures return a
+  platform FAIL. Proposed blockers alone receive a critic pass; CONFIRM,
+  REJECT, and calibrated-high-confidence INCONCLUSIVE produce the required
+  severities. Persona failures produce a neutral validated presentation.
+- **Broader checks:** `yarn vitest run
+  scripts/review-adversarial-context.test.mjs
+  scripts/validate-adversarial-finding.test.mjs
+  --coverage.enabled=false`; `yarn typecheck`; `yarn agents:validate`.

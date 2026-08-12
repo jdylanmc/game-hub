@@ -210,7 +210,7 @@ class AdversarialFindingValidator {
     const errors: ValidationError[] = [];
     const warnings: ValidationError[] = [];
     const required = ['schemaVersion', 'findingVersion', 'attribution', 'provenance', 'artifactDigest', 'verdict', 'findings'];
-    this.rejectUnknownProperties(root, required, '', errors);
+    this.rejectUnknownProperties(root, [...required, 'summary', 'presentation'], '', errors);
     this.requireFields(root, required, '', errors);
     if (root.schemaVersion !== '2.0.0') {
       this.addError(errors, 2, 'schemaVersion', 'schemaVersion must be 2.0.0');
@@ -231,6 +231,8 @@ class AdversarialFindingValidator {
     const agent = this.validateSharedAttribution(attribution, errors);
     this.validateSharedProvenance(provenance, attribution, errors);
     this.validateSharedDigest(digest, errors);
+    if (root.summary !== undefined) this.validateSummary(root.summary, errors);
+    if (root.presentation !== undefined) this.validateSharedPresentation(root.presentation, errors);
 
     let blockingCount = 0;
     let advisoryCount = 0;
@@ -241,6 +243,20 @@ class AdversarialFindingValidator {
     }
     this.validateSharedVerdict(root.verdict, findings.length, blockingCount, advisoryCount, errors);
     return this.result(errors, warnings, attribution, findings, blockingCount, advisoryCount);
+  }
+
+  private validateSharedPresentation(value: unknown, errors: ValidationError[]): void {
+    const presentation = this.requireObject(value, 'presentation', errors);
+    if (!presentation) return;
+    this.rejectUnknownProperties(presentation, ['title', 'summary', 'mode'], 'presentation', errors);
+    this.requireFields(presentation, ['title', 'summary', 'mode'], 'presentation', errors);
+    if (
+      !isNonEmptyString(presentation.title) ||
+      !isNonEmptyString(presentation.summary) ||
+      !['PERSONA', 'NEUTRAL_FALLBACK'].includes(String(presentation.mode))
+    ) {
+      this.addError(errors, 3, 'presentation', 'presentation must be a validated persona or neutral fallback');
+    }
   }
 
   private validateSharedAttribution(
@@ -384,9 +400,8 @@ class AdversarialFindingValidator {
       'impact',
       'remediation',
       'verificationGuidance',
-      'critic',
     ];
-    this.rejectUnknownProperties(finding, required, field, errors);
+    this.rejectUnknownProperties(finding, [...required, 'critic'], field, errors);
     this.requireFields(finding, required, field, errors);
     if (typeof finding.id !== 'string' || !/^[A-Z0-9]+-\d+$/.test(finding.id)) {
       this.addError(errors, 2, `${field}.id`, 'id must match CATEGORY-001');
@@ -407,8 +422,14 @@ class AdversarialFindingValidator {
       this.addError(errors, 3, `${field}.remediation`, 'remediation must contain actionable non-empty steps');
     }
     this.validateCitations(finding.citations, field, errors);
+    if (finding.proposedSeverity === 'ADVISORY' && finding.critic === undefined) return 'ADVISORY';
     const critic = this.requireObject(finding.critic, `${field}.critic`, errors);
-    if (!critic) return undefined;
+    if (!critic) {
+      if (finding.proposedSeverity === 'BLOCKING') {
+        this.addError(errors, 1, `${field}.critic`, 'every proposed blocker requires separate critic evidence');
+      }
+      return undefined;
+    }
     this.rejectUnknownProperties(critic, ['decision', 'rationale', 'citations'], `${field}.critic`, errors);
     this.requireFields(critic, ['decision', 'rationale', 'citations'], `${field}.critic`, errors);
     if (!['CONFIRM', 'REJECT', 'INCONCLUSIVE'].includes(String(critic.decision))) {

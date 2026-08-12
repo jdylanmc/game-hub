@@ -55,7 +55,7 @@
         "Targeted engine tests prove persona rendering cannot alter the authoritative verdict and a failed persona render publishes the validated neutral presentation."
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Public test seam: scripts/review-adversarial-context.ts command with injected transports and clocks."
     },
     {

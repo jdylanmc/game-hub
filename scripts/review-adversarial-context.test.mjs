@@ -26,6 +26,8 @@ function packet(extra = {}) {
       pullRequestNumber: 35,
       baseSha: 'b'.repeat(40),
       headSha,
+      workflowRunId: 900,
+      workflowRunAttempt: 1,
       inputSha256: 'c'.repeat(64),
       configVersion: '1.0.0',
       configSha256: 'd'.repeat(64),
@@ -47,6 +49,7 @@ function finding(id = 'TAUTOLOGY-1') {
     title: 'Assertion cannot fail',
     category: 'tautology',
     severity: 'BLOCKING',
+    proposedSeverity: 'BLOCKING',
     confidence: 'HIGH',
     description: 'The assertion is independent of production behavior.',
     citations: {
@@ -60,9 +63,26 @@ function finding(id = 'TAUTOLOGY-1') {
         },
       ],
     },
-    missingScenario: 'A production regression must make the test fail.',
-    expectedFailureSignal: 'The assertion fails when production output changes.',
-    suggestedTest: 'Assert the result returned by the production function.',
+    policyRule: 'High-confidence blockers require a policy failure.',
+    failureScenario: 'A production regression must make the test fail.',
+    impact: 'The regression can merge without a failing test.',
+    remediation: ['Assert production behavior.'],
+    verificationGuidance: 'Show the regression causes this test to fail.',
+    critic: {
+      decision: 'CONFIRM',
+      rationale: 'The primary evidence is sufficient to confirm this blocker.',
+      citations: {
+        productionFiles: [],
+        testFiles: [
+          {
+            path: 'src/example.test.ts',
+            startLine: 4,
+            endLine: 4,
+            snippet: 'expect(true).toBe(true);',
+          },
+        ],
+      },
+    },
   };
 }
 
@@ -76,6 +96,7 @@ function modelResult({ findings = [], decision, severity, blockingCount, advisor
     attribution: {},
     verdict: {
       decision: decision ?? (resolvedBlocking > 0 ? 'FAIL' : 'PASS'),
+      kind: 'POLICY',
       severity: severity ?? (resolvedBlocking > 0 ? 'BLOCKING' : resolvedAdvisory > 0 ? 'ADVISORY' : 'INFO'),
       blockingFindingsCount: resolvedBlocking,
       advisoryFindingsCount: resolvedAdvisory,
@@ -87,6 +108,21 @@ function modelResult({ findings = [], decision, severity, blockingCount, advisor
 
 class FakeTransport {
   requests = [];
+  criticResult = {
+    decision: 'CONFIRM',
+    rationale: 'The cited evidence confirms the proposed blocker.',
+    citations: {
+      productionFiles: [],
+      testFiles: [
+        {
+          path: 'src/example.test.ts',
+          startLine: 4,
+          endLine: 4,
+          snippet: 'expect(true).toBe(true);',
+        },
+      ],
+    },
+  };
 
   constructor(handler) {
     this.handler = handler;
@@ -94,6 +130,9 @@ class FakeTransport {
 
   async complete(request, signal) {
     this.requests.push(request);
+    if (request.messages[1]?.content.startsWith('Critic review:')) {
+      return response(this.criticResult);
+    }
     return this.handler(request, signal, this.requests.length);
   }
 }
@@ -120,6 +159,8 @@ function engine(transport, options = {}) {
     transport,
     clock,
     limitsOverride: options.limitsOverride,
+    criticTransport: options.criticTransport,
+    personaRenderer: options.personaRenderer,
   });
 }
 
@@ -160,10 +201,10 @@ describe('AdversarialReviewerEngine', () => {
     }));
 
     await expect(engine(malformed).review(packet())).resolves.toMatchObject({
-      verdict: { decision: 'ERROR', errorMessage: expect.stringContaining('INVALID_JSON') },
+      verdict: { decision: 'FAIL', kind: 'PLATFORM', platformError: { code: 'INVALID_JSON' } },
     });
     await expect(engine(missing).review(packet())).resolves.toMatchObject({
-      verdict: { decision: 'ERROR', errorMessage: expect.stringContaining('MISSING_OUTPUT') },
+      verdict: { decision: 'FAIL', kind: 'PLATFORM', platformError: { code: 'MISSING_OUTPUT' } },
     });
   });
 
@@ -174,8 +215,9 @@ describe('AdversarialReviewerEngine', () => {
 
     await expect(engine(transport).review(packet())).resolves.toMatchObject({
       verdict: {
-        decision: 'ERROR',
-        errorMessage: expect.stringContaining('SCHEMA_VALIDATION_FAILED'),
+        decision: 'FAIL',
+        kind: 'PLATFORM',
+        platformError: { code: 'SCHEMA_VALIDATION_FAILED' },
       },
     });
   });
@@ -195,20 +237,21 @@ describe('AdversarialReviewerEngine', () => {
 
     await expect(engine(transport).review(packet())).resolves.toMatchObject({
       verdict: {
-        decision: 'ERROR',
-        errorMessage: expect.stringContaining('POLICY_VALIDATION_FAILED'),
+        decision: 'FAIL',
+        kind: 'PLATFORM',
+        platformError: { code: 'POLICY_VALIDATION_FAILED' },
       },
     });
   });
 
-  it('times out and returns a blocking ERROR result', async () => {
+  it('times out and returns a platform FAIL result', async () => {
     const transport = new FakeTransport(async () => new Promise(() => {}));
 
     const result = await engine(transport, {
       limitsOverride: { timeoutMs: 20 },
     }).review(packet());
     expect(result).toMatchObject({
-      verdict: { decision: 'ERROR', errorMessage: expect.stringContaining('TIMEOUT') },
+      verdict: { decision: 'FAIL', kind: 'PLATFORM', platformError: { code: 'TIMEOUT' } },
     });
     expect(new AdversarialFindingValidator(repoRoot).validate(result).valid).toBe(true);
     expect(transport.requests).toHaveLength(1);
@@ -238,31 +281,51 @@ describe('AdversarialReviewerEngine', () => {
 
     expect(result).toMatchObject({
       verdict: {
-        decision: 'ERROR',
-        errorMessage: expect.stringContaining('MODEL_HTTP_400'),
+        decision: 'FAIL',
+        kind: 'PLATFORM',
+        platformError: { code: 'MODEL_HTTP_400' },
       },
     });
     expect(transport.requests).toHaveLength(1);
   });
 
-  it('fails closed after the bounded transient network retry budget', async () => {
+  it('returns INCONCLUSIVE after the bounded transient network retry budget', async () => {
     const { clock, sleeps } = fixedClock();
     const transport = new FakeTransport(async () => {
       throw new ReviewerTransportError('NETWORK_FAILURE', 'connection reset', true);
     });
+
     const result = await engine(transport, { clock }).review(packet());
 
     expect(result).toMatchObject({
       verdict: {
-        decision: 'ERROR',
-        errorMessage: expect.stringContaining('NETWORK_FAILURE'),
+        decision: 'INCONCLUSIVE',
+        kind: 'COMPUTE',
       },
     });
     expect(transport.requests).toHaveLength(3);
     expect(sleeps).toEqual([250, 500]);
   });
 
-  it('keeps a model-reported ERROR blocking', async () => {
+  it('returns compute-only INCONCLUSIVE after exactly three unavailable-compute attempts', async () => {
+    const { clock, sleeps } = fixedClock();
+    const transport = new FakeTransport(async () => {
+      throw new ReviewerTransportError('MODEL_HTTP_503', 'temporarily unavailable', true);
+    });
+
+    const result = await engine(transport, { clock }).review(packet());
+
+    expect(result.verdict).toMatchObject({
+      decision: 'INCONCLUSIVE',
+      kind: 'COMPUTE',
+      severity: 'INCONCLUSIVE',
+      compute: { attempts: 3, retryDelaysMs: [250, 500] },
+    });
+    expect(transport.requests).toHaveLength(3);
+    expect(sleeps).toEqual([250, 500]);
+  });
+
+  it('converts a model-reported legacy ERROR into a platform FAIL', async () => {
     const transport = new FakeTransport(async () =>
       response({
         ...modelResult(),
@@ -279,8 +342,8 @@ describe('AdversarialReviewerEngine', () => {
 
     await expect(engine(transport).review(packet())).resolves.toMatchObject({
       verdict: {
-        decision: 'ERROR',
-        errorMessage: expect.stringContaining('MODEL_REPORTED_ERROR'),
+        decision: 'FAIL',
+        kind: 'PLATFORM',
       },
     });
   });
@@ -301,14 +364,67 @@ describe('AdversarialReviewerEngine', () => {
     });
   });
 
+  it('uses critic capacity only for proposed blockers and applies REJECT and INCONCLUSIVE semantics', async () => {
+      const advisoryTransport = new FakeTransport(async () =>
+        response(
+          modelResult({
+            findings: [{ ...finding('ADVISORY-1'), proposedSeverity: 'ADVISORY', severity: 'ADVISORY', confidence: 'LOW' }],
+          }),
+        ),
+      );
+      const advisory = await engine(advisoryTransport).review(packet());
+      expect(advisory.verdict.decision).toBe('PASS');
+      expect(advisoryTransport.requests).toHaveLength(1);
+
+      const rejectingTransport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
+      rejectingTransport.criticResult = {
+        ...rejectingTransport.criticResult,
+        decision: 'REJECT',
+      };
+      const rejected = await engine(rejectingTransport).review(packet());
+      expect(rejected).toMatchObject({
+        verdict: { decision: 'PASS', advisoryFindingsCount: 1 },
+        findings: [expect.objectContaining({ severity: 'ADVISORY', critic: expect.objectContaining({ decision: 'REJECT' }) })],
+      });
+
+      const inconclusiveTransport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
+      inconclusiveTransport.criticResult = {
+        ...inconclusiveTransport.criticResult,
+        decision: 'INCONCLUSIVE',
+      };
+      const inconclusive = await engine(inconclusiveTransport).review(packet());
+      expect(inconclusive.verdict.decision).toBe('FAIL');
+      expect(inconclusive.findings[0]).toMatchObject({
+        severity: 'BLOCKING',
+        critic: expect.objectContaining({ decision: 'INCONCLUSIVE' }),
+      });
+  });
+
+  it('uses a neutral validated presentation fallback without changing the authoritative verdict', async () => {
+      const transport = new FakeTransport(async () => response(modelResult({ findings: [finding()] })));
+      const result = await engine(transport, {
+        personaRenderer: async () => {
+          throw new Error('persona unavailable');
+        },
+      }).review(packet());
+
+      expect(result.verdict.decision).toBe('FAIL');
+      expect(result.presentation).toMatchObject({
+        mode: 'NEUTRAL_FALLBACK',
+        summary: 'Authoritative decision: FAIL.',
+      });
+      expect(new AdversarialFindingValidator(repoRoot).validate(result).valid).toBe(true);
+  });
+
   it('enforces preflight context and postresponse token/cost budgets', async () => {
     const unused = new FakeTransport(async () => response(modelResult()));
     const oversized = await engine(unused, {
       limitsOverride: { maxContextBytes: 100 },
     }).review(packet({ evidence: 'x'.repeat(500) }));
     expect(oversized.verdict).toMatchObject({
-      decision: 'ERROR',
-      errorMessage: expect.stringContaining('CONTEXT_LIMIT_EXCEEDED'),
+      decision: 'FAIL',
+      kind: 'PLATFORM',
+      platformError: { code: 'CONTEXT_LIMIT_EXCEEDED' },
     });
     expect(unused.requests).toHaveLength(0);
 
@@ -317,8 +433,9 @@ describe('AdversarialReviewerEngine', () => {
     );
     const result = await engine(expensive).review(packet());
     expect(result.verdict).toMatchObject({
-      decision: 'ERROR',
-      errorMessage: expect.stringContaining('MODEL_BUDGET_EXCEEDED'),
+      decision: 'FAIL',
+      kind: 'PLATFORM',
+      platformError: { code: 'MODEL_BUDGET_EXCEEDED' },
     });
   });
 
@@ -351,13 +468,13 @@ describe('AdversarialReviewerEngine', () => {
     const validation = new AdversarialFindingValidator(repoRoot).validate(result);
 
     expect(validation.valid).toBe(true);
-    expect(result.attribution).toEqual({
+    expect(result.attribution).toMatchObject({
       agentName: 'unit-test-reviewer',
       agentVersion: '1.0.0',
       modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
       promptVersion: '1.0.3',
       promptContentHash: '9d5667c8233da813b06adc93eba7daf832339653b44c617a006df51b21697c68',
-      policyVersion: '1.0.0',
+      policyVersion: '2.0.0',
       toolsVersion: '1.0.1',
       subscriptionId: '11213dbd-39fe-46ba-87db-5f5e8c449aed',
       repositoryCommit: headSha,

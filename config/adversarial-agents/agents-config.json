@@ -18,7 +18,7 @@
       "policyFile": "config/adversarial-agents/policy.json",
       "policyContentHash": "ed7e5906234a69d282c2102490fc3227703c049c97e63170ffb968c34b478286",
       "engineConfigFile": "config/adversarial-agents/reviewer-engine.json",
-      "engineConfigContentHash": "e3eb9f8dc97cc24ac1990de9526a1cb6f72a0d1a8c285a590a99b7aeb3bd5059",
+      "engineConfigContentHash": "298a9eb95c8f20f5038505867ab6030add6432ea5ea8eeb430c8cc1c42672d3e",
       "benchmarkCorpusFile": "config/adversarial-agents/benchmarks.json",
       "benchmarkCorpusContentHash": "f065d4fb3f684815955fd522f34e5317305a0789c62c51f4da33b917a0c88531",
       "promotionPolicyFile": "config/adversarial-agents/promotion-policy.json",
