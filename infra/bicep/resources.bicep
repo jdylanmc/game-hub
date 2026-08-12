@@ -42,7 +42,7 @@ resource deployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01
   name: modelDeploymentId
   sku: {
     name: modelSku
-    capacity: 10
+    capacity: 500
   }
   properties: {
     model: {

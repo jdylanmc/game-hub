@@ -14,4 +14,5 @@ test-results
 docs/memories/**/iterations/*.log
 .ralph-test-work/
 .adversarial-context-test-work/
+.live-review/
 .ralph-orchestration*.json

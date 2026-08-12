@@ -73,6 +73,12 @@ AZURE_REVIEWER_PRINCIPAL_ID=<object-id> ./infra/deploy.sh test
 The script always performs a subscription-scoped what-if before deployment and
 never configures GitHub secrets.
 
+The `GlobalStandard` deployment provisions 500 capacity units (500,000 tokens
+per minute) so one bounded worst-case review can fit without weakening the
+two-megabyte context limit. Runtime concurrency remains capped at three and
+each request still fails before inference above the configured `$0.25` cost
+ceiling; throughput capacity is not treated as a cost control.
+
 ## Official references
 
 - [Azure OpenAI models and versions](https://learn.microsoft.com/azure/ai-foundry/openai/concepts/models)
