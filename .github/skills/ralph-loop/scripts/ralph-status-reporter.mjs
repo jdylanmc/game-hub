@@ -16,6 +16,16 @@ function signature(value) {
   return JSON.stringify(stable(value));
 }
 
+function runtimeSnapshot(snapshot) {
+  return {
+    nextAction: snapshot.nextAction ?? null,
+    outcomeReason: snapshot.outcomeReason ?? null,
+    phase: snapshot.phase ?? null,
+    status: snapshot.status ?? null,
+    worktreeDirty: snapshot.worktreeDirty ?? false,
+  };
+}
+
 export class RalphStatusReporter {
   constructor({
     emit = (report) => console.log(`RALPH STATUS ${JSON.stringify(report)}`),
@@ -76,10 +86,22 @@ export class RalphStatusReporter {
     if (previous.ciState !== snapshot.ciState) {
       transitions.push({ type: 'ci-change', from: previous.ciState, to: snapshot.ciState });
     }
+    if (previous.adversarialState !== snapshot.adversarialState) {
+      transitions.push({
+        type: 'adversarial-change',
+        from: previous.adversarialState,
+        to: snapshot.adversarialState,
+      });
+    }
     if (previous.monitorError !== snapshot.monitorError && snapshot.monitorError) {
       transitions.push({ type: 'status-monitor-warning', message: snapshot.monitorError });
     } else if (previous.monitorError && !snapshot.monitorError) {
       transitions.push({ type: 'status-monitor-recovered' });
+    }
+    const previousRuntime = runtimeSnapshot(previous);
+    const runtime = runtimeSnapshot(snapshot);
+    if (signature(previousRuntime) !== signature(runtime)) {
+      transitions.push({ type: 'runner-state-change', ...runtime });
     }
 
     state.snapshot = snapshot;

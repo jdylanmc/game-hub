@@ -35,7 +35,7 @@ plus one statically analyzable Vite import map.
 | Component grounding | `.storybook/`, `src/stories/`, `src/storybook/` | Shared component and composition development |
 | Static hosting config | `public/staticwebapp.config.json` | Azure Static Web Apps routing and security headers |
 | Azure infrastructure | `infra/` when introduced | Idempotent Bicep resources and environment parameter files |
-| Autonomous development | `.github/skills/ralph-loop/`, `docs/memories/`, sibling issue worktrees | Fresh-context issue execution, parallel-safe orchestration, and persistent state |
+| Autonomous development | `.github/skills/ralph-loop/`, `docs/memories/`, sibling issue worktrees, and git-local Ralph runtime state | Fresh-context issue execution, parallel-safe orchestration, durable memory, and truthful runtime recovery |
 
 The planned containerized application programming interface (API) remains
 outside the current runtime. Introduce its workspace, container boundary, and
@@ -167,7 +167,11 @@ must select the subscription explicitly before previewing or applying changes.
     loop, story, publication, continuous-integration, blocker, and completion
     transitions emit coalesced reports; unchanged polling is silent except for
     a longer periodic heartbeat.
-11. **Concurrent GitHub identity is process-local.** Ralph resolves the
+11. **Ralph runtime recovery is git-local and authoritative.** The runner owns
+    an atomic lease, heartbeat, checkpoint, and lock set under the shared git
+    common directory. Status and recovery derive from that state plus live git
+    and pull-request checks, not from todo rows or shell history.
+12. **Concurrent GitHub identity is process-local.** Ralph resolves the
     repository owner's credential without changing GitHub CLI global state and
     binds each orchestrator and child runner through its own `GH_TOKEN`
     environment.

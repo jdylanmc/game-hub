@@ -1,0 +1,284 @@
+#!/usr/bin/env node
+
+import assert from 'node:assert/strict';
+import os from 'node:os';
+import { spawn } from 'node:child_process';
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+import { processAlive, stableLockKey } from '../scripts/ralph-runtime-state.mjs';
+import {
+  collectOutput,
+  createRalphFixture,
+  readCheckpoint,
+  readLease,
+  resetScratchRoot,
+  setScratchRoot,
+  scratchRoot,
+  spawnRunner,
+  waitForFile,
+  waitForLease,
+} from './fixture-helpers.mjs';
+
+setScratchRoot('.ralph-test-work/runner-flow');
+
+async function waitFor(predicate, timeoutMs = 10_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const result = await predicate();
+    if (result) return result;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error('Timed out waiting for a test condition.');
+}
+
+test.beforeEach(() => {
+  resetScratchRoot();
+});
+
+test.after(() => rmSync(scratchRoot, { force: true, recursive: true }));
+
+test('heartbeat advances while the child stays silent', async () => {
+  const fixture = createRalphFixture('heartbeat');
+  const runner = spawnRunner(fixture, ['--max-iterations', '1'], {
+    FAKE_COPILOT_SCENARIO: 'silent-sleep',
+    FAKE_COPILOT_SLEEP_MS: '6000',
+    RALPH_HEARTBEAT_SECONDS: '1',
+  });
+
+  await waitForLease(fixture);
+  await waitFor(() => readLease(fixture)?.phase === 'agent-execution');
+  const initialLease = readLease(fixture);
+  const firstHeartbeat = initialLease.lastHeartbeatAt;
+  assert.ok(Number.isInteger(initialLease.childPid));
+  await waitFor(() => {
+    const lease = readLease(fixture);
+    return lease?.lastHeartbeatAt !== firstHeartbeat ? lease.lastHeartbeatAt : false;
+  });
+  assert.equal(readLease(fixture).childPid, initialLease.childPid);
+
+  runner.kill('SIGTERM');
+  const result = await collectOutput(runner);
+  assert.equal(result.code, 130);
+  assert.equal(readLease(fixture).stop.outcome, 'cancelled');
+});
+
+test('timeout kills only the owned child tree', async () => {
+  const fixture = createRalphFixture('timeout');
+  const descendantPath = path.join(scratchRoot, 'descendant.pid');
+  const sentinel = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+    stdio: 'ignore',
+  });
+
+  try {
+    const runner = spawnRunner(fixture, ['--max-iterations', '1', '--iteration-deadline-minutes', '0.02'], {
+      FAKE_CHILD_PID_PATH: descendantPath,
+      FAKE_COPILOT_SCENARIO: 'spawn-descendant-and-sleep',
+      FAKE_COPILOT_SLEEP_MS: '60000',
+      RALPH_HEARTBEAT_SECONDS: '1',
+    });
+
+    const result = await collectOutput(runner);
+    assert.equal(result.code, 124);
+    await waitForFile(descendantPath);
+    const descendantPid = Number(readFileSync(descendantPath, 'utf8').trim());
+    assert.equal(processAlive(descendantPid), false);
+    assert.equal(processAlive(sentinel.pid), true);
+    assert.equal(readLease(fixture).stop.outcome, 'timed-out');
+  } finally {
+    try {
+      sentinel.kill('SIGKILL');
+    } catch {
+      // Ignore already-exited sentinel processes.
+    }
+  }
+});
+
+test('cancellation records the stop state and preserves the checkpoint', async () => {
+  const fixture = createRalphFixture('cancel');
+  const runner = spawnRunner(fixture, ['--max-iterations', '1'], {
+    FAKE_COPILOT_SCENARIO: 'silent-sleep',
+    FAKE_COPILOT_SLEEP_MS: '6000',
+    RALPH_HEARTBEAT_SECONDS: '1',
+  });
+
+  await waitForLease(fixture);
+  await waitFor(() => readLease(fixture)?.phase === 'agent-execution');
+  runner.kill('SIGTERM');
+  const result = await collectOutput(runner);
+  assert.ok(result.code === 130 || result.signal === 'SIGTERM');
+  const lease = readLease(fixture);
+  const checkpoint = readCheckpoint(fixture);
+  assert.equal(lease.stop.outcome, 'cancelled');
+  assert.match(lease.stop.reason, /SIGTERM/);
+  assert.ok(['preflight', 'iteration-launch', 'agent-execution'].includes(checkpoint.phase));
+  assert.ok(checkpoint.lastVerifiedHead);
+});
+
+test('stale lease and abandoned locks recover by archiving prior state', async () => {
+  const fixture = createRalphFixture('recovery');
+  const staleLease = {
+    version: 1,
+    repoNameWithOwner: 'jdylanmc/game-hub',
+    issueNumber: fixture.issueNumber,
+    memoryDir: fixture.memoryDir,
+    branchName: fixture.branchName,
+    worktreePath: fixture.worktreePath,
+    runId: 'stale-run',
+    pid: 999999,
+    host: os.hostname(),
+    iteration: 1,
+    phase: 'agent-execution',
+    startedAt: '2026-08-11T00:00:00.000Z',
+    lastHeartbeatAt: '2026-08-11T00:00:00.000Z',
+    lastKnownHead: 'deadbeef',
+    childPid: 999998,
+    stop: null,
+  };
+  const staleCheckpoint = {
+    version: 1,
+    repoNameWithOwner: 'jdylanmc/game-hub',
+    issueNumber: fixture.issueNumber,
+    memoryDir: fixture.memoryDir,
+    branchName: fixture.branchName,
+    worktreePath: fixture.worktreePath,
+    runId: 'stale-run',
+    updatedAt: '2026-08-11T00:00:00.000Z',
+    lastVerifiedHead: 'deadbeef',
+    nextResumableAction: 'Recover the stale run.',
+  };
+  mkdirSync(path.dirname(fixture.leasePath), { recursive: true });
+  mkdirSync(path.dirname(fixture.checkpointPath), { recursive: true });
+  writeFileSync(fixture.leasePath, `${JSON.stringify(staleLease, null, 2)}\n`);
+  writeFileSync(fixture.checkpointPath, `${JSON.stringify(staleCheckpoint, null, 2)}\n`);
+  const locksRoot = path.join(fixture.commonDir, 'ralph-locks');
+  mkdirSync(locksRoot, { recursive: true });
+  const lockTargets = [
+    `issue-${fixture.issueNumber}`,
+    `branch-${stableLockKey(fixture.branchName)}`,
+    `worktree-${stableLockKey(fixture.worktreePath)}`,
+  ];
+  for (const lockTarget of lockTargets) {
+    const lockDir = path.join(locksRoot, `${lockTarget}.lock`);
+    mkdirSync(lockDir, { recursive: true });
+    writeFileSync(
+      path.join(lockDir, 'metadata.json'),
+      `${JSON.stringify(
+        {
+          host: os.hostname(),
+          identity: lockTarget,
+          leasePath: fixture.leasePath,
+          lockName: lockTarget,
+          pid: 999999,
+          runId: 'stale-run',
+          startedAt: '2026-08-11T00:00:00.000Z',
+          version: 1,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+  }
+
+  const runner = spawnRunner(fixture, ['--max-iterations', '1'], {
+    FAKE_COPILOT_SCENARIO: 'complete',
+    RALPH_HEARTBEAT_SECONDS: '1',
+  });
+
+  const result = await collectOutput(runner);
+  assert.equal(result.code, 0);
+  const archiveDirectory = path.join(fixture.commonDir, 'ralph-state', `issue-${fixture.issueNumber}`, 'archives');
+  const archivedFiles = readdirSync(archiveDirectory);
+  assert.ok(archivedFiles.length >= 1);
+  assert.notEqual(readLease(fixture).runId, 'stale-run');
+});
+
+test('active leases are refused without takeover', async () => {
+  const fixture = createRalphFixture('active');
+  mkdirSync(path.dirname(fixture.leasePath), { recursive: true });
+  writeFileSync(
+    fixture.leasePath,
+    `${JSON.stringify(
+      {
+        version: 1,
+        repoNameWithOwner: 'jdylanmc/game-hub',
+        issueNumber: fixture.issueNumber,
+        memoryDir: fixture.memoryDir,
+        branchName: fixture.branchName,
+        worktreePath: fixture.worktreePath,
+        runId: 'active-run',
+        pid: process.pid,
+        host: os.hostname(),
+        iteration: 1,
+        phase: 'agent-execution',
+        startedAt: new Date().toISOString(),
+        lastHeartbeatAt: new Date().toISOString(),
+        lastKnownHead: 'current',
+        childPid: null,
+        stop: null,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  const runner = spawnRunner(fixture, ['--dry-run'], { RALPH_HEARTBEAT_SECONDS: '1' });
+  const result = await collectOutput(runner);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /owns issue/);
+});
+
+test('dirty worktrees block deterministic recovery', async () => {
+  const fixture = createRalphFixture('dirty-recovery');
+  mkdirSync(path.dirname(fixture.leasePath), { recursive: true });
+  writeFileSync(
+    fixture.leasePath,
+    `${JSON.stringify(
+      {
+        version: 1,
+        repoNameWithOwner: 'jdylanmc/game-hub',
+        issueNumber: fixture.issueNumber,
+        memoryDir: fixture.memoryDir,
+        branchName: fixture.branchName,
+        worktreePath: fixture.worktreePath,
+        runId: 'stale-run',
+        pid: 999999,
+        host: os.hostname(),
+        iteration: 1,
+        phase: 'agent-execution',
+        startedAt: '2026-08-11T00:00:00.000Z',
+        lastHeartbeatAt: '2026-08-11T00:00:00.000Z',
+        lastKnownHead: 'deadbeef',
+        childPid: null,
+        stop: null,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(path.join(fixture.worktreePath, 'dirty.txt'), 'preserve me\n');
+
+  const runner = spawnRunner(fixture, ['--dry-run'], { RALPH_HEARTBEAT_SECONDS: '1' });
+  const result = await collectOutput(runner);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /dirty files/i);
+});
+
+test('checkpoints persist the published exact head and completion metadata', async () => {
+  const fixture = createRalphFixture('checkpoint');
+  const runner = spawnRunner(fixture, ['--max-iterations', '1'], {
+    FAKE_COPILOT_SCENARIO: 'complete',
+    RALPH_HEARTBEAT_SECONDS: '1',
+  });
+
+  const result = await collectOutput(runner);
+  assert.equal(result.code, 0);
+  const checkpoint = readCheckpoint(fixture);
+  const lease = readLease(fixture);
+  assert.equal(checkpoint.plan.allStoriesPassed, true);
+  assert.equal(checkpoint.checkState.required, 'success');
+  assert.equal(checkpoint.pullRequest.headSha, checkpoint.lastPublishedCommit);
+  assert.match(checkpoint.nextResumableAction, /human review and merge/i);
+  assert.ok(checkpoint.lastVerifiedHead);
+  assert.equal(lease.stop.outcome, 'complete');
+});
