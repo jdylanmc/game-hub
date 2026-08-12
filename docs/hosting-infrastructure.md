@@ -213,10 +213,13 @@ objectives justify its replication and egress costs.
 ### Secrets and management boundary
 
 Azure Key Vault Standard stores runtime secrets that cannot be replaced by
-managed identity. Container Apps accesses only named secrets through managed
-identity and least-privilege Key Vault roles. Secret values are supplied by a
-trusted deployment identity and are never committed, emitted as Bicep outputs,
-or passed as plain command-line parameters.
+managed identity. The API uses a dedicated user-assigned identity with only Key
+Vault Secrets User on its environment vault. Container Apps accepts only a
+secret alias plus versionless Key Vault URI, resolves it with that identity,
+and injects the value only at runtime. A separate publication-only identity has
+Key Vault Secrets Officer and OpenID Connect federation to the matching
+protected GitHub environment. Secret values are never committed, emitted as
+Bicep outputs, or passed as plain command-line parameters.
 
 GitHub Actions deployment later uses OpenID Connect federation to Azure rather
 than a long-lived client secret. Separate deployment identities and resource
@@ -237,12 +240,18 @@ capacity, retention, resilience, WAF rollout mode, and resource names.
 | Container Apps | Scale to zero, bounded at 2 | One warm replica, bounded initially at 5 |
 | Container Registry | Basic | Basic; upgrade on measured need |
 | Blob redundancy | Locally redundant | Zone redundant |
-| Log retention | 30 days | 30 days initially; increase only for an approved need |
+| Log retention and cap | 30 days, 1 GB/day | 30 days, 5 GB/day initially |
+| Application sampling | 100% for short-lived debugging | 25% baseline |
+| Key Vault recovery | 7 days, purge protection off | 90 days, purge protection on |
 | WAF thresholds | Higher tolerance for test traffic | Calibrated from production telemetry |
 | Resource sharing | None with production | None with development |
 
-Each deployment carries environment, application, owner, and cost-center tags.
-Azure Cost Management budgets and alerts are environment scoped. Deleting the
+Each deployment carries environment, application, owner, cost-center,
+repository, lifecycle, data-classification, and cost-profile tags. Replica
+ceilings, recovery windows, sampling, and a Log Analytics daily ingestion cap
+are enforceable environment cost guardrails. Cost Management notification
+recipients and alert binding remain deployment-time operational configuration;
+budgets report spend but do not stop resource consumption. Deleting the
 development resource group is the supported cleanup operation; shared
 cross-environment data must not be placed in it.
 
@@ -260,7 +269,7 @@ rather than commit a misleading dollar total.
 | Azure Container Registry Basic | Daily registry charge plus excess storage and transfer | Basic tier, image cleanup policy in deployment automation |
 | Blob Storage | Stored bytes, operations, and transfer | LRS in development, ZRS in production, bounded soft-delete retention, and no versioning or automatic tier movement without measured need |
 | Key Vault Standard | Operations and optional premium key features | Store only required secrets; prefer managed identity |
-| Log Analytics and Application Insights | Ingested data and retention | Sampling, 30-day baseline retention, explicit daily caps and alerts |
+| Log Analytics and Application Insights | Ingested data and retention | Sampling, 30-day baseline retention, a Log Analytics daily cap, and stable diagnostic outputs for later alerts |
 
 Front Door Premium is intentionally the largest baseline commitment. Replacing
 it with Standard would remove managed bot protection, while separate edge
@@ -275,20 +284,24 @@ availability and cost and requires an explicit recovery objective first.
 ## Operations and Observability
 
 The baseline includes a Log Analytics workspace and workspace-based Application
-Insights resource per environment. Diagnostic settings collect:
+Insights resource per environment. The Container Apps environment selects the
+Azure Monitor destination, avoiding any Log Analytics workspace key.
+Diagnostic settings collect:
 
-- Azure Front Door access, health probe, and WAF logs;
-- Container Apps system and application console logs;
-- blob transaction and authentication diagnostics;
-- Key Vault audit events.
+- Azure Front Door access, health probe, WAF logs, and metrics;
+- Static Web Apps logs and metrics;
+- Container Registry repository/login logs and metrics;
+- Container Apps system and application console logs plus app metrics;
+- blob transaction/authentication logs and metrics; and
+- Key Vault audit events and metrics.
 
 Azure activity logs and continuous deployment logs retain control-plane
 deployment evidence separately from resource diagnostics.
 
-Alerts cover repeated WAF blocks, API error rate and latency, zero healthy API
-replicas, failed container revisions, storage authorization failures, and
-budget thresholds. Alert recipients are deployment parameters, not hard-coded
-personal addresses.
+The non-secret monitoring output identifies every diagnostic setting so later
+alert automation can bind repeated WAF blocks, API error rate and latency, zero
+healthy API replicas, failed revisions, storage authorization failures, and
+budget thresholds without discovery or hard-coded personal addresses.
 
 Immutable assets use content-hashed names. Deployments purge only changed
 mutable Front Door paths. Health probes use a lightweight unauthenticated API
@@ -318,9 +331,14 @@ Deployment outputs expose non-secret application and automation contracts:
 - Container App diagnostic fully qualified domain name;
 - registry resource ID and login server;
 - storage account resource ID, blob endpoint, and container names;
-- Key Vault URI, never secret values;
-- managed identity resource IDs and principal IDs;
-- Log Analytics workspace and Application Insights resource IDs; and
+- Key Vault resource identity, URI, recovery policy, and unresolved references,
+  never secret values;
+- managed identity resource, client, principal, federation, and role-assignment
+  identifiers;
+- Log Analytics workspace, Application Insights, diagnostic-setting, retention,
+  sampling, and ingestion-cap metadata;
+- API scaling, storage and vault recovery, tag, and monitoring cost controls;
+  and
 - authentication mode, provider login paths, and non-secret client identifiers
   when custom authentication is enabled.
 

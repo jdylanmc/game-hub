@@ -13,9 +13,10 @@ consumption environment and application boundary for the future application
 programming interface (API), private Blob Storage asset containers, and Azure
 Front Door Premium as the canonical frontend, API, authentication, and asset
 ingress. The Front Door endpoint has a web application firewall (WAF), managed
-bot protection, and environment-aware rate limits. Later issue #1 stories
-complete secure runtime references, observability, publication automation, and
-live verification.
+bot protection, and environment-aware rate limits. Azure Key Vault,
+least-privilege managed identities, Log Analytics, Application Insights, and
+platform diagnostic settings complete the operational baseline. Later issue #1
+work adds publication automation and end-to-end verification.
 
 ## Layout
 
@@ -27,6 +28,8 @@ live verification.
 | `modules/static-web-app.bicep` | Azure Static Web Apps Standard frontend and Vite artifact publication contract |
 | `modules/container-registry.bicep` | Azure Container Registry Basic, pull-only managed identity, and scoped `AcrPull` assignment |
 | `modules/container-app-api.bicep` | Azure Container Apps environment, API revision, ingress, scaling, settings, and runtime identity |
+| `modules/secure-configuration.bicep` | Azure Key Vault, runtime and publication identities, OpenID Connect federation, and least-privilege vault roles |
+| `modules/observability.bicep` | Log Analytics, workspace-based Application Insights, diagnostic settings, retention, sampling, and ingestion cap |
 | `modules/authentication-readiness.bicep` | Keyless Microsoft Entra authentication contract and Static Web Apps linked API boundary |
 | `modules/asset-storage.bicep` | Private Blob Storage containers, recovery policy, and OpenID Connect-federated asset publisher identity |
 | `modules/asset-content-delivery.bicep` | Azure Front Door Premium profile, managed origin authentication, category routes, and explicit edge caching |
@@ -109,9 +112,10 @@ deployment name's location immutable.
 
 The outputs contain only the selected subscription and region, resource group
 identity, required tags, deterministic resource names, and the frontend, API,
-registry, asset, content delivery, and identity deployment contracts. They must
-never contain storage keys, registry credentials, deployment credentials,
-provider secrets, connection strings, or resolved secret values.
+registry, asset, content delivery, managed identity, secure-reference,
+monitoring, and cost-control contracts. They must never contain storage keys,
+registry credentials, deployment credentials, provider secrets, connection
+strings, or resolved secret values.
 
 ## Frontend hosting
 
@@ -165,9 +169,10 @@ The resulting trust boundaries are stable:
 3. The linked backend is the only trusted browser-to-API path. API code reads
    the platform-generated `x-ms-client-principal` context and never trusts a
    client-supplied copy received outside that boundary.
-4. The frontend and API retain separate system-assigned managed identities for
-   future least-privilege service access. The registry pull identity remains a
-   third, pull-only identity.
+4. The frontend retains a system-assigned identity. The API attaches a
+   dedicated user-assigned runtime identity for Key Vault access, a separate
+   pull-only identity for Azure Container Registry, and its platform
+   system-assigned identity; those identities are not interchangeable.
 
 The preconfigured Microsoft Entra provider permits Microsoft accounts accepted
 by the managed provider. Tenant-, group-, and operation-level authorization
@@ -232,10 +237,12 @@ registry, and the Container App uses that identity only for image retrieval.
 No registry password, access key, or connection string is accepted or emitted.
 
 `modules/container-app-api.bicep` declares a consumption-only Azure Container
-Apps environment and one Container App in single-revision mode. The app has a
-separate system-assigned runtime identity with no data-plane role assignments
-in this story. Later modules can grant that principal narrowly scoped access to
-named resources without widening the image-pull identity.
+Apps environment and one Container App in single-revision mode. The environment
+uses the Azure Monitor log destination, so diagnostic settings route platform
+logs without retrieving or supplying a Log Analytics workspace key. The app
+keeps its platform system-assigned identity, attaches the pull-only registry
+identity, and attaches a separate user-assigned runtime identity whose only
+data-plane grant is Key Vault Secrets User on this environment's vault.
 
 The committed environment files make the following API settings explicit:
 
@@ -250,10 +257,10 @@ The committed environment files make the following API settings explicit:
 
 Image reference, private repository name, ingress exposure, target port,
 transport, replica limits, allocation, HTTP concurrency, and non-secret
-environment variables are Bicep parameters. `apiSecretEnvironmentReferences`
-accepts only Container Apps secret reference names; it never carries secret
-values. The secure configuration story will create those named references
-through managed identity and an approved secret store before any are used.
+environment variables are Bicep parameters. `apiKeyVaultSecretReferences`
+accepts only a Container Apps secret alias and a versionless Key Vault secret
+URI. `apiSecretEnvironmentReferences` maps an application environment variable
+to one of those aliases. Neither parameter accepts or resolves a secret value.
 
 The initial image is the digest-pinned Microsoft Container Apps hello-world
 image. It is a deterministic bootstrap revision only, not the Game Hub API and
@@ -274,7 +281,7 @@ The subscription deployment returns these non-secret API and registry outputs:
 | `apiEnvironmentResourceId`, `apiEnvironmentName` | Container Apps environment operations |
 | `apiResourceId`, `apiResourceName` | Container App deployment target |
 | `apiDefaultHostname`, `apiEndpoint` | Stable revision-independent direct diagnostic endpoint |
-| `apiRuntimePrincipalId` | Future least-privilege runtime role assignments |
+| `apiRuntimeIdentity` | Audit the dedicated runtime identity, platform identity, and Key Vault Secrets User assignment |
 | `apiDeployment` | Non-secret image, ingress, scaling, registry, identity, resource group, and subscription contract |
 
 The direct Container App endpoint is diagnostic. Azure Front Door is the
@@ -283,6 +290,77 @@ the Static Web Apps linked backend. These outputs do not prove that the
 registry, environment, app, image, or endpoint exists. They are available only
 after an actual Azure deployment, which this repository change does not
 perform.
+
+## Secure runtime configuration
+
+`modules/secure-configuration.bicep` creates one Standard Key Vault per
+environment with Azure role-based access control, soft delete, and no access
+policies. Development retains deleted objects for seven days and permits normal
+resource-group cleanup. Production retains them for 90 days and enables
+irreversible purge protection.
+
+The API runtime identity receives only Key Vault Secrets User on that dedicated
+vault. A separate publication-only identity receives Key Vault Secrets Officer
+and trusts only the matching protected GitHub environment through the immutable
+subject `repo:jdylanmc@6954990/game-hub@1330993568:environment:<environment>`.
+The same immutable subject format is used by the asset publisher. No client
+credential is created.
+
+A future publication workflow supplies each resolved value from an approved
+external secret source directly to Key Vault while authenticated as the
+publication identity. Infrastructure deployment receives only versionless
+vault references. Container Apps resolves those references through the runtime
+identity and injects the resulting value only into the named container
+environment variable. Do not put a resolved value in a parameter file, command
+argument, output, log, artifact, issue, or pull request.
+
+The secure outputs are intentionally non-secret:
+
+| Output | Use |
+| --- | --- |
+| `apiRuntimeIdentity` | Runtime identity resource, client and principal identifiers plus its vault role assignment |
+| `secretPublisherIdentity` | Publication identity identifiers, federated credential, and vault role assignment |
+| `secureConfiguration` | Vault resource identity, URI, recovery policy, and unresolved reference mapping |
+
+The committed development and production files use empty reference arrays
+until an application requirement names a specific runtime setting. No secret
+resource or secret value is declared by this baseline.
+
+## Observability and cost guardrails
+
+`modules/observability.bicep` creates one PerGB2018 Log Analytics workspace and
+one workspace-based Application Insights resource per environment. Platform
+diagnostic settings send Static Web Apps logs and metrics, Container Registry
+logs and metrics, Container Apps environment system and console logs, Container
+App metrics, Blob service logs and metrics, Front Door access/health/WAF logs
+and metrics, and Key Vault audit logs and metrics to that workspace.
+
+Both environments retain analytics data for 30 days. Development caps workspace
+ingestion at 1 GB per day and keeps Application Insights sampling at 100% for
+short-lived debugging. Production caps ingestion at 5 GB per day and starts at
+25% sampling. These are budget-conscious safety limits, not service-level
+objectives; a reached ingestion cap can create an observability gap and requires
+an operational review before being raised.
+
+Cost controls remain environment aware:
+
+| Control | Development | Production |
+| --- | --- | --- |
+| API replicas | Scale to zero, maximum 2 | Minimum 1, maximum 5 |
+| API allocation | 0.25 vCPU, 0.5 GiB | 0.5 vCPU, 1 GiB |
+| Blob recovery | 7 days, locally redundant | 14 days, zone redundant |
+| Key Vault recovery | 7 days, purge protection off | 90 days, purge protection on |
+| Monitoring | 30 days, 1 GB/day, 100% sampling | 30 days, 5 GB/day, 25% sampling |
+| Lifecycle tag | On demand | Persistent |
+| Cost profile tag | Constrained | Production baseline |
+
+Every resource that supports tags receives application, environment, owner,
+cost center, repository, lifecycle, data classification, and cost-profile
+metadata. `monitoringConfiguration` exposes monitoring resource identifiers,
+diagnostic setting identifiers, retention, sampling, and ingestion limits.
+`costControlConfiguration` exposes the effective replica, recovery, monitoring,
+and tag guardrails. Neither output contains telemetry credentials or application
+data.
 
 ## Blob assets and content delivery
 
@@ -337,9 +415,9 @@ workflow is deferred to US-009.
 The storage module creates a publication-only user-assigned managed identity,
 grants it `Storage Blob Data Contributor` on the dedicated asset account, and
 adds a GitHub OpenID Connect federated credential with subject
-`repo:jdylanmc/game-hub:environment:<environment>`. A later workflow must run in
-the matching protected GitHub environment and use this identity; it must not
-create a client secret.
+`repo:jdylanmc@6954990/game-hub@1330993568:environment:<environment>`. A later
+workflow must run in the matching protected GitHub environment and use this
+identity; it must not create a client credential.
 
 After an actual infrastructure deployment and Microsoft Entra login, the
 non-secret `assetUploadTargets` output supplies the account and container

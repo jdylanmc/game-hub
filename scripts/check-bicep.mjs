@@ -10,6 +10,10 @@ import {
   loadPublicIngressInfrastructure,
   validatePublicIngressInfrastructure,
 } from './check-public-ingress-infrastructure.mjs';
+import {
+  loadOperationalInfrastructure,
+  validateOperationalInfrastructure,
+} from './check-operational-infrastructure.mjs';
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const infraDirectory = path.join(rootDirectory, 'infra');
@@ -48,6 +52,11 @@ if (authenticationViolations.length > 0) {
 const publicIngressViolations = validatePublicIngressInfrastructure(loadPublicIngressInfrastructure(rootDirectory));
 if (publicIngressViolations.length > 0) {
   throw new Error(`Public ingress infrastructure policy failed:\n- ${publicIngressViolations.join('\n- ')}`);
+}
+
+const operationalViolations = validateOperationalInfrastructure(loadOperationalInfrastructure(rootDirectory));
+if (operationalViolations.length > 0) {
+  throw new Error(`Operational infrastructure policy failed:\n- ${operationalViolations.join('\n- ')}`);
 }
 
 console.log(

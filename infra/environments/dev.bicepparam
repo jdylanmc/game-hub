@@ -36,6 +36,13 @@ param apiEnvironmentVariables = [
     value: 'authenticated'
   }
 ]
+param apiKeyVaultSecretReferences = []
+param apiSecretEnvironmentReferences = []
+param keyVaultSoftDeleteRetentionDays = 7
+param keyVaultPurgeProtectionEnabled = false
+param monitoringRetentionDays = 30
+param monitoringDailyIngestionCapGb = 1
+param applicationInsightsSamplingPercentage = 100
 param assetStorageSkuName = 'Standard_LRS'
 param assetDeleteRetentionDays = 7
 param gameAssetsCacheDuration = '1.00:00:00'
@@ -47,5 +54,7 @@ param authenticationRateLimitThreshold = 1000
 param generalRateLimitThreshold = 10000
 param rateLimitDurationInMinutes = 5
 param additionalTags = {
+  costProfile: 'constrained'
+  dataClassification: 'non-sensitive'
   lifecycle: 'on-demand'
 }

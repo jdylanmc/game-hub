@@ -12,6 +12,11 @@ type SecretEnvironmentReference = {
   secretRef: string
 }
 
+type KeyVaultSecretReference = {
+  name: string
+  keyVaultSecretUri: string
+}
+
 @description('Azure subscription that owns every Game Hub environment.')
 @allowed([
   '11213dbd-39fe-46ba-87db-5f5e8c449aed'
@@ -101,6 +106,31 @@ param apiEnvironmentVariables NonSecretEnvironmentVariable[] = []
 @description('Environment variable names mapped to secure Container Apps secret references.')
 param apiSecretEnvironmentReferences SecretEnvironmentReference[] = []
 
+@description('Container Apps secret names mapped to versionless Azure Key Vault secret URIs.')
+param apiKeyVaultSecretReferences KeyVaultSecretReference[] = []
+
+@description('Days that deleted Key Vault objects remain recoverable.')
+@minValue(7)
+@maxValue(90)
+param keyVaultSoftDeleteRetentionDays int
+
+@description('Whether the environment prevents Key Vault objects from being purged during retention.')
+param keyVaultPurgeProtectionEnabled bool
+
+@description('Log Analytics and Application Insights retention in days.')
+@minValue(30)
+@maxValue(730)
+param monitoringRetentionDays int
+
+@description('Maximum Log Analytics ingestion in gigabytes per day.')
+@minValue(1)
+param monitoringDailyIngestionCapGb int
+
+@description('Application Insights sampling percentage.')
+@minValue(1)
+@maxValue(100)
+param applicationInsightsSamplingPercentage int
+
 @description('Storage redundancy selected for asset blobs.')
 @allowed([
   'Standard_LRS'
@@ -149,7 +179,7 @@ param generalRateLimitThreshold int
 param rateLimitDurationInMinutes int
 
 var resourceGroupName = 'rg-${applicationName}-${environmentName}-${locationCode}'
-var assetPublisherFederatedSubject = 'repo:jdylanmc/game-hub:environment:${environmentName}'
+var githubEnvironmentFederatedSubject = 'repo:jdylanmc@6954990/game-hub@1330993568:environment:${environmentName}'
 var requiredTags = {
   application: applicationName
   costCenter: costCenter
@@ -209,6 +239,22 @@ module containerRegistry './modules/container-registry.bicep' = {
   }
 }
 
+module secureConfigurationModule './modules/secure-configuration.bicep' = {
+  name: '${applicationName}-${environmentName}-secure-configuration'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    apiRuntimeIdentityName: foundation.outputs.resourceNames.apiRuntimeManagedIdentity
+    environmentName: environmentName
+    keyVaultName: foundation.outputs.resourceNames.keyVault
+    location: location
+    purgeProtectionEnabled: keyVaultPurgeProtectionEnabled
+    configurationPublisherFederatedSubject: githubEnvironmentFederatedSubject
+    configurationPublisherIdentityName: foundation.outputs.resourceNames.secretPublisherManagedIdentity
+    softDeleteRetentionDays: keyVaultSoftDeleteRetentionDays
+    tags: tags
+  }
+}
+
 module containerAppApi './modules/container-app-api.bicep' = {
   name: '${applicationName}-${environmentName}-container-app-api'
   scope: resourceGroup(targetSubscriptionId, resourceGroupName)
@@ -227,7 +273,9 @@ module containerAppApi './modules/container-app-api.bicep' = {
     maxReplicas: apiMaxReplicas
     memory: apiMemory
     minReplicas: apiMinReplicas
+    keyVaultSecretReferences: apiKeyVaultSecretReferences
     registryLoginServer: containerRegistry.outputs.loginServer
+    runtimeIdentityId: secureConfigurationModule.outputs.apiRuntimeIdentityId
     secretEnvironmentReferences: apiSecretEnvironmentReferences
     tags: tags
   }
@@ -240,7 +288,7 @@ module assetStorage './modules/asset-storage.bicep' = {
     deleteRetentionDays: assetDeleteRetentionDays
     environmentName: environmentName
     location: location
-    publisherFederatedSubject: assetPublisherFederatedSubject
+    publisherFederatedSubject: githubEnvironmentFederatedSubject
     publisherIdentityName: foundation.outputs.resourceNames.assetPublisherManagedIdentity
     storageAccountName: foundation.outputs.resourceNames.storageAccount
     storageSkuName: assetStorageSkuName
@@ -288,12 +336,33 @@ module authenticationReadiness './modules/authentication-readiness.bicep' = {
   scope: resourceGroup(targetSubscriptionId, resourceGroupName)
   params: {
     apiResourceId: containerAppApi.outputs.appId
-    apiRuntimePrincipalId: containerAppApi.outputs.runtimePrincipalId
+    apiRuntimePrincipalId: secureConfigurationModule.outputs.apiRuntimeIdentityPrincipalId
     backendRegion: location
     publicIngressHostName: publicIngress.outputs.endpointHostName
     staticWebAppHostName: staticWebApp.outputs.defaultHostname
     staticWebAppName: staticWebApp.outputs.name
     staticWebAppPrincipalId: staticWebApp.outputs.managedIdentityPrincipalId
+  }
+}
+
+module observability './modules/observability.bicep' = {
+  name: '${applicationName}-${environmentName}-observability'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    applicationInsightsName: foundation.outputs.resourceNames.applicationInsights
+    applicationInsightsSamplingPercentage: applicationInsightsSamplingPercentage
+    containerAppName: containerAppApi.outputs.appName
+    containerAppsEnvironmentName: containerAppApi.outputs.environmentName
+    containerRegistryName: containerRegistry.outputs.registryName
+    dailyIngestionCapGb: monitoringDailyIngestionCapGb
+    frontDoorProfileName: assetContentDelivery.outputs.profileName
+    keyVaultName: secureConfigurationModule.outputs.keyVaultName
+    location: location
+    logAnalyticsWorkspaceName: foundation.outputs.resourceNames.logAnalyticsWorkspace
+    retentionInDays: monitoringRetentionDays
+    staticWebAppName: staticWebApp.outputs.name
+    storageAccountName: assetStorage.outputs.storageAccountName
+    tags: tags
   }
 }
 
@@ -405,8 +474,14 @@ output apiDefaultHostname string = containerAppApi.outputs.fqdn
 @description('Stable HTTPS endpoint for direct API diagnostics.')
 output apiEndpoint string = containerAppApi.outputs.endpoint
 
-@description('System-assigned API runtime identity principal identifier.')
-output apiRuntimePrincipalId string = containerAppApi.outputs.runtimePrincipalId
+@description('Non-secret API runtime managed identity and least-privilege role contract.')
+output apiRuntimeIdentity object = {
+  clientId: secureConfigurationModule.outputs.apiRuntimeIdentityClientId
+  id: secureConfigurationModule.outputs.apiRuntimeIdentityId
+  keyVaultSecretsUserRoleAssignmentId: secureConfigurationModule.outputs.apiRuntimeRoleAssignmentId
+  principalId: secureConfigurationModule.outputs.apiRuntimeIdentityPrincipalId
+  systemAssignedPrincipalId: containerAppApi.outputs.systemAssignedPrincipalId
+}
 
 @description('Non-secret API image, ingress, scaling, and publication contract.')
 output apiDeployment object = union(containerAppApi.outputs.deploymentConfiguration, {
@@ -416,7 +491,23 @@ output apiDeployment object = union(containerAppApi.outputs.deploymentConfigurat
   registryLoginServer: containerRegistry.outputs.loginServer
   registryName: containerRegistry.outputs.registryName
   resourceGroupName: resourceGroupModule.outputs.name
+  runtimeIdentityId: secureConfigurationModule.outputs.apiRuntimeIdentityId
   subscriptionId: targetSubscriptionId
+})
+
+@description('Non-secret secret-publication managed identity and least-privilege role contract.')
+output secretPublisherIdentity object = {
+  clientId: secureConfigurationModule.outputs.secretPublisherIdentityClientId
+  federatedCredentialId: secureConfigurationModule.outputs.secretPublisherFederatedCredentialId
+  id: secureConfigurationModule.outputs.secretPublisherIdentityId
+  keyVaultSecretsOfficerRoleAssignmentId: secureConfigurationModule.outputs.secretPublisherRoleAssignmentId
+  principalId: secureConfigurationModule.outputs.secretPublisherIdentityPrincipalId
+}
+
+@description('Non-secret Key Vault reference and managed-identity contract.')
+output secureConfiguration object = union(secureConfigurationModule.outputs.configuration, {
+  keyVaultReferences: apiKeyVaultSecretReferences
+  secretEnvironmentReferences: apiSecretEnvironmentReferences
 })
 
 @description('Asset storage account resource identifier.')
@@ -472,3 +563,31 @@ output frontDoorPrincipalId string = assetContentDelivery.outputs.profilePrincip
 
 @description('Storage Blob Data Reader assignment for Azure Front Door.')
 output frontDoorStorageReaderRoleAssignmentId string = assetContentDelivery.outputs.storageReaderRoleAssignmentId
+
+@description('Non-secret monitoring retention, sampling, destinations, and ingestion-cap contract.')
+output monitoringConfiguration object = observability.outputs.configuration
+
+@description('Environment-aware cost and lifecycle guardrails.')
+output costControlConfiguration object = {
+  apiScaling: {
+    cpuCores: apiCpuCores
+    httpConcurrentRequests: apiHttpConcurrentRequests
+    maxReplicas: apiMaxReplicas
+    memory: apiMemory
+    minReplicas: apiMinReplicas
+  }
+  assetRecovery: {
+    deleteRetentionDays: assetDeleteRetentionDays
+    storageSkuName: assetStorageSkuName
+  }
+  keyVaultRecovery: {
+    purgeProtectionEnabled: keyVaultPurgeProtectionEnabled
+    softDeleteRetentionDays: keyVaultSoftDeleteRetentionDays
+  }
+  monitoring: {
+    applicationInsightsSamplingPercentage: applicationInsightsSamplingPercentage
+    dailyIngestionCapGb: monitoringDailyIngestionCapGb
+    retentionInDays: monitoringRetentionDays
+  }
+  tags: tags
+}

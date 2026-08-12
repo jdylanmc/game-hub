@@ -12,6 +12,11 @@ type SecretEnvironmentReference = {
   secretRef: string
 }
 
+type KeyVaultSecretReference = {
+  name: string
+  keyVaultSecretUri: string
+}
+
 @description('Azure Container Apps managed environment name.')
 param environmentName string
 
@@ -32,6 +37,9 @@ param registryLoginServer string
 
 @description('User-assigned managed identity resource identifier used only for registry image pulls.')
 param imagePullIdentityId string
+
+@description('User-assigned managed identity resource identifier used for API runtime access.')
+param runtimeIdentityId string
 
 @description('Whether the Container App ingress is externally reachable.')
 param ingressExternal bool
@@ -93,6 +101,9 @@ param environmentVariables NonSecretEnvironmentVariable[] = []
 @description('Environment variable names mapped to Container Apps secret references created by a later secure-configuration deployment.')
 param secretEnvironmentReferences SecretEnvironmentReference[] = []
 
+@description('Container Apps secret names mapped to versionless Azure Key Vault secret URIs.')
+param keyVaultSecretReferences KeyVaultSecretReference[] = []
+
 var secretReferenceEnvironmentVariables = [
   for environmentVariable in secretEnvironmentReferences: {
     name: environmentVariable.name
@@ -100,11 +111,23 @@ var secretReferenceEnvironmentVariables = [
   }
 ]
 
+var keyVaultReferences = [
+  for secretReference in keyVaultSecretReferences: {
+    identity: runtimeIdentityId
+    keyVaultUrl: secretReference.keyVaultSecretUri
+    name: secretReference.name
+  }
+]
+
 resource managedEnvironment 'Microsoft.App/managedEnvironments@2025-01-01' = {
   name: environmentName
   location: location
   tags: tags
-  properties: {}
+  properties: {
+    appLogsConfiguration: {
+      destination: 'azure-monitor'
+    }
+  }
 }
 
 resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
@@ -115,6 +138,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
     type: 'SystemAssigned,UserAssigned'
     userAssignedIdentities: {
       '${imagePullIdentityId}': {}
+      '${runtimeIdentityId}': {}
     }
   }
   properties: {
@@ -133,6 +157,7 @@ resource containerApp 'Microsoft.App/containerApps@2025-01-01' = {
           server: registryLoginServer
         }
       ]
+      secrets: keyVaultReferences
     }
     template: {
       containers: [
@@ -183,7 +208,10 @@ output fqdn string = containerApp.properties.configuration.ingress.fqdn
 output endpoint string = 'https://${containerApp.properties.configuration.ingress.fqdn}'
 
 @description('System-assigned runtime identity principal identifier. No data-plane roles are granted by this module.')
-output runtimePrincipalId string = containerApp.identity.principalId
+output systemAssignedPrincipalId string = containerApp.identity.principalId
+
+@description('User-assigned runtime identity resource identifier used for outbound workload access.')
+output runtimeIdentityId string = runtimeIdentityId
 
 @description('Non-secret API deployment configuration.')
 output deploymentConfiguration object = {
@@ -199,5 +227,10 @@ output deploymentConfiguration object = {
     httpConcurrentRequests: httpConcurrentRequests
     maxReplicas: maxReplicas
     minReplicas: minReplicas
+  }
+  secureConfiguration: {
+    keyVaultReferenceCount: length(keyVaultSecretReferences)
+    runtimeIdentityId: runtimeIdentityId
+    secretEnvironmentReferenceCount: length(secretEnvironmentReferences)
   }
 }

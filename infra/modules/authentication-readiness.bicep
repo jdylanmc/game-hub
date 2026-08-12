@@ -17,7 +17,7 @@ param staticWebAppPrincipalId string
 @description('Azure Container App resource identifier linked as the production API backend.')
 param apiResourceId string
 
-@description('System-assigned API runtime managed identity principal identifier.')
+@description('User-assigned API runtime managed identity principal identifier.')
 param apiRuntimePrincipalId string
 
 @description('Azure region that contains the linked Container App.')
@@ -87,6 +87,6 @@ output configuration object = {
   trustBoundaries: {
     apiIngress: 'Azure Static Web Apps linked backend'
     browserAuthenticationTerminus: 'Azure Static Web Apps'
-    containerOutboundAccess: 'API system-assigned managed identity'
+    containerOutboundAccess: 'API user-assigned managed identity'
   }
 }

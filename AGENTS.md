@@ -61,6 +61,13 @@ environment parameters. Static Web Apps publication must merge the
 `frontendDeployment.forwardingGatewayConfiguration` output so the generated
 origin cannot bypass Front Door.
 
+Container Apps runtime configuration accepts only Azure Key Vault references
+resolved by the dedicated user-assigned managed identity. Keep secret values
+out of Bicep, parameters, outputs, logs, and artifacts. Route platform logs
+through Azure Monitor diagnostic settings rather than a Log Analytics workspace
+key, and preserve environment retention, sampling, ingestion caps, replica
+ceilings, and required cost-allocation tags.
+
 Run `yarn generate:check` after changing game workspace metadata or discovery
 logic. It fails when generation changes Git state or the committed catalog
 outputs are dirty.

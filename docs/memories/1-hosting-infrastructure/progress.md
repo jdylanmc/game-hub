@@ -22,11 +22,13 @@
   anonymous pull remain disabled.
 - The future application programming interface boundary is declared in
   `infra/modules/container-app-api.bicep`; the Container App uses a separate
-  system-assigned runtime identity and exposes revision-independent endpoint
-  outputs.
+  user-assigned runtime identity for workload access, a pull-only identity for
+  the registry, and its platform system-assigned identity. It exposes
+  revision-independent endpoint outputs.
 - API image, ingress, scaling, allocation, HTTP concurrency, and non-secret
   settings are environment parameters. Secret values remain outside committed
-  parameter files; only names of future secure references may be configured.
+  parameter files; only Container Apps aliases and versionless Key Vault URIs
+  may be configured.
 - Asset storage is declared in `infra/modules/asset-storage.bicep`; the
   dedicated account separates `game-assets`, `media`, and `static-assets`
   through private containers and disables anonymous and Shared Key access.
@@ -47,9 +49,10 @@
   the keyless Microsoft Entra OpenID Connect flow, `/api/*` requires the
   `authenticated` role, and the linked Container App is the only trusted
   browser API path.
-- The Static Web App and Container App have separate system-assigned managed
-  identities. Keep those runtime identities separate from the registry
-  pull-only and asset publication identities.
+- The Static Web App has a system-assigned identity. The Container App has a
+  dedicated user-assigned runtime identity plus a platform system-assigned
+  identity. Keep them separate from registry pull, asset publication, and
+  secure-configuration publication identities.
 - `scripts/check-authentication-infrastructure.mjs` is part of
   `yarn infra:check` and fails closed if the managed identity, keyless provider,
   linked backend, route roles, trust boundary, outputs, or credential
@@ -72,6 +75,28 @@
   association, managed rules, rate limits, environment modes, protected path
   mapping, forwarding-gateway contract, canonical authentication hostname, or
   credential prohibition regresses.
+- `infra/modules/secure-configuration.bicep` owns the environment Key Vault,
+  API runtime identity, publication-only identity, immutable GitHub federation,
+  and the scoped Key Vault Secrets User and Key Vault Secrets Officer role
+  assignments. It declares no vault secret resources.
+- `infra/modules/observability.bicep` routes platform diagnostics to a
+  per-environment Log Analytics workspace through Azure Monitor and creates
+  workspace-based Application Insights without retrieving a workspace key.
+  Retention, sampling, and the workspace daily ingestion cap are environment
+  parameters.
+- Hosting workflow federation uses the immutable subject
+  `repo:jdylanmc@6954990/game-hub@1330993568:environment:<environment>`.
+- Keep `infra/main.bicep` outputs grouped when possible; Azure Resource Manager
+  limits a template to 64 outputs.
+- A hardened fresh-worktree install can expose normalized executable metadata
+  that a populated worktree misses. Refresh only lock metadata with
+  `YARN_ENABLE_GLOBAL_CACHE=0 YARN_ENABLE_HARDENED_MODE=1 yarn install
+  --mode=update-lockfile`, review the lock-only diff, and rerun the complete
+  fail-closed validation.
+- `scripts/check-operational-infrastructure.mjs` is part of `yarn infra:check`
+  and fails closed if managed identities, vault roles, unresolved runtime
+  references, diagnostics, environment guardrails, immutable federation,
+  non-secret outputs, or credential prohibitions regress.
 - Format Bicep and Bicep parameter files with the pinned
   `az bicep format --file <path>` command; repository Prettier does not parse
   those file types.
@@ -335,3 +360,50 @@
   Static Web Apps forwarding restriction, WAF enforcement, bot
   classification, rate-limit event, asset upload, or endpoint reachability was
   performed or claimed. US-008 remains incomplete.
+
+## 2026-08-12 — US-008 Add identities, secrets, observability, and cost controls
+
+- Added one Standard Key Vault per environment with Azure role-based access
+  control, soft delete, development cleanup-friendly retention, and production
+  purge protection.
+- Added a user-assigned API runtime identity with only Key Vault Secrets User
+  on its environment vault. Kept the registry pull identity, asset publisher,
+  frontend identity, Container Apps platform identity, and runtime identity as
+  separate least-privilege boundaries.
+- Added a publication-only identity with Key Vault Secrets Officer and an
+  immutable GitHub OpenID Connect subject scoped to the matching protected
+  environment. Updated asset publication to the same immutable subject format.
+- Added Container Apps alias-to-versionless-Key-Vault references and runtime
+  environment-variable mappings. Committed environment files keep both arrays
+  empty; no secret resource or resolved value is committed or emitted.
+- Configured the Container Apps environment to use Azure Monitor rather than a
+  Log Analytics workspace key. Added Log Analytics, workspace-based Application
+  Insights, and diagnostic settings for Static Web Apps, Container Registry,
+  Container Apps system/application boundaries, Blob Storage, Front Door, and
+  Key Vault.
+- Made the operational defaults explicit: 30-day monitoring retention,
+  development/production workspace caps of 1/5 GB per day, Application Insights
+  sampling of 100/25 percent, existing API replica ceilings of 2/5, environment
+  vault and asset recovery windows, lifecycle, data-classification, and
+  cost-profile tags.
+- Grouped the Key Vault, managed identity, diagnostic, monitoring, and cost
+  guardrail outputs so deployment and application automation receive
+  non-secret resource contracts while the subscription template remains below
+  Azure Resource Manager's 64-output limit.
+- Added `scripts/check-operational-infrastructure.mjs` to `yarn infra:check`
+  plus ten fail-closed tests. The complete suite now reports 187 tests.
+- Live validation explicitly selected subscription
+  `11213dbd-39fe-46ba-87db-5f5e8c449aed`; both development and production
+  `az deployment sub validate` commands passed.
+- The first full validation exposed stale executable-path metadata only during
+  the hardened fresh-worktree bootstrap. Refreshed lock metadata without
+  changing package versions, reviewed the 19 path normalizations, and reran the
+  full validation successfully.
+- Validation passed: pinned Bicep lint/build/parameter compilation and
+  infrastructure policies; immutable install; formatting; lint; policy;
+  fail-closed continuous integration simulation; security audit; 187 tests with
+  coverage; generated-state check; type check; production build; bundle budget;
+  Storybook build; and `git diff --check`.
+- No Azure resource deployment, secret publication, frontend or application
+  publication, asset upload, endpoint verification, or live telemetry
+  collection was performed or claimed. US-009 remains incomplete.
