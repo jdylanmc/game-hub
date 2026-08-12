@@ -84,3 +84,37 @@ Repository policy, Ralph runtime status, prioritization, and deterministic tests
 enforce the same names through `config/ralph-required-checks.json`. Missing,
 stale, duplicated, pending, canceled, timed-out, malformed, neutral, or failed
 required results cannot complete the issue loop.
+
+## Post-merge regression evidence
+
+The preceding evidence remains the historical record for PR #35 and its
+pre-merge head. It did not prove that the newly protected `workflow_run`
+bootstrap worked on a fresh runner after merge.
+
+Protected-main adversarial run
+[`31556974503`](https://github.com/jdylanmc/game-hub/actions/runs/31556974503)
+failed in `Install protected base dependencies` before pull-request resolution.
+Yarn reported that `node_modules/.yarn-state.yml` was absent because the job
+invoked the `install:check` package script before direct installation. Review of
+the merged Continuous Integration workflow also found that its evidence
+pipelines used `tee` without `pipefail`, so identical Yarn failures could be
+masked by a successful `tee` exit.
+
+Issue #30 was reopened for bounded story US-010. Protected main remains affected
+until that remediation is merged and a fresh protected-main run verifies
+pull-request resolution and exact-head check publication.
+
+## Remediation pre-merge evidence
+
+The first exact-head Continuous Integration run for remediation PR #40,
+[`31557874975`](https://github.com/jdylanmc/game-hub/actions/runs/31557874975),
+failed twice at direct immutable installation because the public registry no
+longer served locked transitive dependency `uri-js@4.4.2`. This failure is
+additional evidence that `pipefail` now exposes the originating Yarn result
+rather than accepting `tee`.
+
+The second and final remediation attempt constrains that `^4.2.2` transitive
+dependency to registry-available `4.4.1`. The isolated proof installs with Yarn
+hardened mode enabled and global cache disabled before running all 14 failure
+probes. The complete local validation gate passed again. Exact-head GitHub
+checks after this correction remain the publication authority.

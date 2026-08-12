@@ -57,7 +57,7 @@ jobs:
         run: corepack enable
 
       - name: Install protected base dependencies
-        run: yarn install:check
+        run: yarn install --immutable
 
       - name: Resolve exact pull request and issue metadata
         id: resolve
@@ -117,7 +117,7 @@ jobs:
         run: corepack enable
 
       - name: Install protected base dependencies
-        run: yarn install:check
+        run: yarn install --immutable
 
       - name: Revalidate exact current pull request head
         id: verify

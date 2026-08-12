@@ -37,6 +37,7 @@ const requiredFragments = [
   ['required check name', /^\s{4}name: Continuous integration\s*$/m],
   ['pinned runner', /^\s{4}runs-on: ubuntu-24\.04\s*$/m],
   ['job timeout', /^\s{4}timeout-minutes: 30\s*$/m],
+  ['fail-closed run shell', /^ {4}defaults:\s*\n {6}run:\s*\n {8}shell: bash -eo pipefail \{0\}\s*$/m],
   ['fork-safe checkout', /^\s{10}persist-credentials: false\s*$/m],
   ['evidence directory creation', /^\s{8}run: mkdir -p continuous-integration-evidence\s*$/m],
   ['unconditional evidence upload', /^\s{8}if: always\(\)\s*$/m],
@@ -59,7 +60,7 @@ for (const [label, pattern] of requiredFragments) {
 }
 
 const requiredCommands = [
-  'yarn install:check 2>&1 | tee continuous-integration-evidence/install.log',
+  'yarn install --immutable 2>&1 | tee continuous-integration-evidence/install.log',
   'yarn format:check 2>&1 | tee continuous-integration-evidence/format.log',
   'yarn lint 2>&1 | tee continuous-integration-evidence/lint.log',
   'yarn policy:check 2>&1 | tee continuous-integration-evidence/policy.log',
@@ -77,16 +78,18 @@ for (const command of requiredCommands) {
   if (!workflow.includes(`run: ${command}`)) {
     violations.push(`Missing mandatory command: ${command}`);
   }
+}
 
-  const commandPositions = requiredCommands.map((command) => workflow.indexOf(`run: ${command}`));
-  for (let index = 1; index < commandPositions.length; index += 1) {
-    if (commandPositions[index] <= commandPositions[index - 1]) {
-      violations.push(
-        `Mandatory deterministic commands are not ordered cheapest-to-most-expensive near: ${requiredCommands[index]}`,
-      );
-    }
+const commandPositions = requiredCommands.map((command) => workflow.indexOf(`run: ${command}`));
+for (let index = 1; index < commandPositions.length; index += 1) {
+  if (commandPositions[index] <= commandPositions[index - 1]) {
+    violations.push(
+      `Mandatory deterministic commands are not ordered cheapest-to-most-expensive near: ${requiredCommands[index]}`,
+    );
   }
 }
+
+violations.push(...validateContinuousIntegrationBootstrapPolicy(workflow));
 
 for (const artifactPath of requiredArtifactPaths) {
   if (!workflow.includes(`            ${artifactPath}`)) {
@@ -159,3 +162,28 @@ if (violations.length > 0) {
 }
 
 console.log('Continuous integration workflow policy passed.');
+
+function validateContinuousIntegrationBootstrapPolicy(workflowSource) {
+  const bootstrapViolations = [];
+  const shellLines = workflowSource.match(/^ {8}shell:.*$/gm) ?? [];
+  const pipedEvidenceCommands = workflowSource
+    .split('\n')
+    .filter((line) => /^ {8}run: .* 2>&1 \| tee continuous-integration-evidence\/.+\.log\s*$/.test(line));
+
+  if (shellLines.length !== 1 || shellLines[0] !== '        shell: bash -eo pipefail {0}') {
+    bootstrapViolations.push('Every piped evidence command must inherit the sole bash -eo pipefail run shell.');
+  }
+  if (pipedEvidenceCommands.length !== requiredCommands.length) {
+    bootstrapViolations.push('Every mandatory deterministic command must retain piped evidence.');
+  }
+  if (
+    !workflowSource.includes('run: yarn install --immutable 2>&1 | tee continuous-integration-evidence/install.log') ||
+    workflowSource.includes('yarn install:check')
+  ) {
+    bootstrapViolations.push('Fresh runners must bootstrap dependencies with direct yarn install --immutable.');
+  }
+
+  return bootstrapViolations;
+}
+
+export { validateContinuousIntegrationBootstrapPolicy };

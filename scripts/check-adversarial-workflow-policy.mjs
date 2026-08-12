@@ -23,6 +23,7 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson) {
     'persist-credentials: false',
     'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"',
     'test "$GITHUB_REF" = \'refs/heads/main\'',
+    'yarn install --immutable',
     'contents: read',
     'issues: read',
     'pull-requests: read',
@@ -116,8 +117,11 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson) {
   }
 
   const installCommands = workflow.match(/\byarn install[^\n]*/g) ?? [];
-  if (installCommands.length !== 2 || installCommands.some((command) => command.trim() !== 'yarn install:check')) {
-    violations.push('Only protected-base immutable dependency installation is allowed.');
+  if (
+    installCommands.length !== 2 ||
+    installCommands.some((command) => command.trim() !== 'yarn install --immutable')
+  ) {
+    violations.push('Both protected-base jobs must bootstrap with direct yarn install --immutable.');
   }
 
   if (

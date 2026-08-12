@@ -54,7 +54,9 @@ outputs are dirty.
 commands as local development. Keep action references pinned to full commit
 SHAs, preserve least-privilege permissions and fork safety, and retain the
 workflow's logs, test results, coverage, production build, and Storybook
-evidence.
+evidence. Fresh `node-modules` runners must bootstrap with direct
+`yarn install --immutable` before invoking package scripts. Every command piped
+to an evidence log must run with Bash `pipefail` semantics.
 
 Order deterministic gates from cheapest to most expensive so formatting,
 linting, policy, generation, type, and test failures stop work before builds,
