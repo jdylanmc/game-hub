@@ -54,6 +54,13 @@ provider in Azure Static Web Apps. Keep `/api/*` behind the `authenticated`
 role and the declarative Static Web Apps linked Container Apps backend; do not
 introduce a browser-facing direct API origin or provider credential.
 
+Azure Front Door Premium is the canonical public origin. Keep its web
+application firewall associated with `/*`, retain the managed default and bot
+rule sets, and express API, authentication, and general rate limits through
+environment parameters. Static Web Apps publication must merge the
+`frontendDeployment.forwardingGatewayConfiguration` output so the generated
+origin cannot bypass Front Door.
+
 Run `yarn generate:check` after changing game workspace metadata or discovery
 logic. It fails when generation changes Git state or the committed catalog
 outputs are dirty.

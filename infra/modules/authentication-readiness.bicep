@@ -8,6 +8,9 @@ param staticWebAppName string
 @description('Generated Azure Static Web Apps hostname.')
 param staticWebAppHostName string
 
+@description('Canonical Azure Front Door public ingress hostname.')
+param publicIngressHostName string
+
 @description('System-assigned Static Web Apps managed identity principal identifier.')
 param staticWebAppPrincipalId string
 
@@ -34,7 +37,8 @@ resource productionApiBackend 'Microsoft.Web/staticSites/linkedBackends@2025-03-
   }
 }
 
-var frontendEndpoint = 'https://${staticWebAppHostName}'
+var frontendDiagnosticEndpoint = 'https://${staticWebAppHostName}'
+var frontendEndpoint = 'https://${publicIngressHostName}'
 var apiBasePath = '/api'
 var authenticationProvider = 'azureActiveDirectory'
 var authenticationProviderRoute = 'aad'
@@ -60,6 +64,7 @@ output configuration object = {
     }
     browserBasePath: apiBasePath
     browserEndpoint: '${frontendEndpoint}${apiBasePath}'
+    diagnosticFrontendEndpoint: frontendDiagnosticEndpoint
     directEndpointPurpose: 'diagnostics-only'
     linkedBackendId: productionApiBackend.id
     principalHeaderName: principalHeaderName

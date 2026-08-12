@@ -122,6 +122,32 @@ param mediaCacheDuration string
 @description('Azure Front Door edge cache duration for other static assets.')
 param staticAssetsCacheDuration string
 
+@description('Azure Front Door web application firewall enforcement mode.')
+@allowed([
+  'Detection'
+  'Prevention'
+])
+param webApplicationFirewallMode string
+
+@description('API requests allowed per socket IP address during the Azure Front Door rate-limit window.')
+@minValue(1)
+param apiRateLimitThreshold int
+
+@description('Authentication requests allowed per socket IP address during the Azure Front Door rate-limit window.')
+@minValue(1)
+param authenticationRateLimitThreshold int
+
+@description('All requests allowed per socket IP address during the Azure Front Door rate-limit window.')
+@minValue(1)
+param generalRateLimitThreshold int
+
+@description('Fixed Azure Front Door rate-limit window in minutes.')
+@allowed([
+  1
+  5
+])
+param rateLimitDurationInMinutes int
+
 var resourceGroupName = 'rg-${applicationName}-${environmentName}-${locationCode}'
 var assetPublisherFederatedSubject = 'repo:jdylanmc/game-hub:environment:${environmentName}'
 var requiredTags = {
@@ -237,6 +263,26 @@ module assetContentDelivery './modules/asset-content-delivery.bicep' = {
   }
 }
 
+module publicIngress './modules/public-ingress.bicep' = {
+  name: '${applicationName}-${environmentName}-public-ingress'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    apiRateLimitThreshold: apiRateLimitThreshold
+    authenticationRateLimitThreshold: authenticationRateLimitThreshold
+    endpointName: foundation.outputs.resourceNames.frontDoorEndpoint
+    generalRateLimitThreshold: generalRateLimitThreshold
+    profileName: foundation.outputs.resourceNames.frontDoorProfile
+    rateLimitDurationInMinutes: rateLimitDurationInMinutes
+    staticWebAppHostName: staticWebApp.outputs.defaultHostname
+    tags: tags
+    webApplicationFirewallMode: webApplicationFirewallMode
+    webApplicationFirewallPolicyName: foundation.outputs.resourceNames.webApplicationFirewallPolicy
+  }
+  dependsOn: [
+    assetContentDelivery
+  ]
+}
+
 module authenticationReadiness './modules/authentication-readiness.bicep' = {
   name: '${applicationName}-${environmentName}-authentication-readiness'
   scope: resourceGroup(targetSubscriptionId, resourceGroupName)
@@ -244,6 +290,7 @@ module authenticationReadiness './modules/authentication-readiness.bicep' = {
     apiResourceId: containerAppApi.outputs.appId
     apiRuntimePrincipalId: containerAppApi.outputs.runtimePrincipalId
     backendRegion: location
+    publicIngressHostName: publicIngress.outputs.endpointHostName
     staticWebAppHostName: staticWebApp.outputs.defaultHostname
     staticWebAppName: staticWebApp.outputs.name
     staticWebAppPrincipalId: staticWebApp.outputs.managedIdentityPrincipalId
@@ -280,8 +327,13 @@ output frontendDefaultHostname string = staticWebApp.outputs.defaultHostname
 @description('Public HTTPS endpoint for direct frontend diagnostics.')
 output frontendEndpoint string = staticWebApp.outputs.endpoint
 
+@description('Canonical Azure Front Door endpoint protected by the web application firewall.')
+output publicEndpoint string = publicIngress.outputs.endpointUrl
+
 @description('Non-secret frontend artifact publication contract.')
 output frontendDeployment object = union(staticWebApp.outputs.deploymentConfiguration, {
+  canonicalEndpoint: publicIngress.outputs.endpointUrl
+  forwardingGatewayConfiguration: publicIngress.outputs.staticWebAppForwardingGatewayConfiguration
   resourceGroupName: resourceGroupModule.outputs.name
   staticWebAppName: staticWebApp.outputs.name
   subscriptionId: targetSubscriptionId
@@ -298,6 +350,18 @@ output authenticatedApiEndpoint string = authenticationReadiness.outputs.authent
 
 @description('Non-secret frontend and API authentication configuration contract.')
 output authenticationConfiguration object = authenticationReadiness.outputs.configuration
+
+@description('Non-secret public ingress path, origin, managed-rule, and rate-limit contract.')
+output publicIngressConfiguration object = publicIngress.outputs.configuration
+
+@description('Azure Front Door web application firewall policy resource identifier.')
+output webApplicationFirewallPolicyId string = publicIngress.outputs.webApplicationFirewallPolicyId
+
+@description('Azure Front Door security policy resource identifier.')
+output frontDoorSecurityPolicyId string = publicIngress.outputs.securityPolicyId
+
+@description('Azure Front Door identifier required by Static Web Apps forwarding-gateway restrictions.')
+output frontDoorId string = publicIngress.outputs.frontDoorId
 
 @description('Azure Container Registry resource identifier.')
 output registryResourceId string = containerRegistry.outputs.id

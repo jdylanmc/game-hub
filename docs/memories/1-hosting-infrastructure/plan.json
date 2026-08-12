@@ -119,8 +119,8 @@
         "Protection settings are explicit, environment-aware, and documented with cost and operational tradeoffs"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Extended the existing Azure Front Door Premium endpoint into the canonical frontend, authentication, API, and asset ingress. Added one all-path WAF security policy with Default Rule Set 2.1, Bot Manager Rule Set 1.1, and explicit five-minute API, authentication, and general socket-IP rate limits. Development uses detection mode with higher tuning thresholds; production uses prevention mode with lower starting thresholds. Added non-secret protected-path, WAF, security-policy, Front Door ID, and Static Web Apps forwarding-gateway outputs plus fail-closed policy tests and cost/operations documentation. Local validation and a live Azure subscription-scope validation against 11213dbd-39fe-46ba-87db-5f5e8c449aed passed. No Azure resources, application content, forwarding-gateway configuration, WAF enforcement, bot classification, rate-limit event, or endpoint was deployed or verified.",
       "dependencies": ["US-003", "US-004", "US-005"]
     },
     {

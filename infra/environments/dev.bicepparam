@@ -41,6 +41,11 @@ param assetDeleteRetentionDays = 7
 param gameAssetsCacheDuration = '1.00:00:00'
 param mediaCacheDuration = '00:05:00'
 param staticAssetsCacheDuration = '01:00:00'
+param webApplicationFirewallMode = 'Detection'
+param apiRateLimitThreshold = 2000
+param authenticationRateLimitThreshold = 1000
+param generalRateLimitThreshold = 10000
+param rateLimitDurationInMinutes = 5
 param additionalTags = {
   lifecycle: 'on-demand'
 }

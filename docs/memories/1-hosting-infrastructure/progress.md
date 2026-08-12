@@ -54,6 +54,24 @@
   `yarn infra:check` and fails closed if the managed identity, keyless provider,
   linked backend, route roles, trust boundary, outputs, or credential
   prohibition regress.
+- `infra/modules/public-ingress.bicep` extends the existing Azure Front Door
+  Premium profile rather than creating another edge. Its security policy
+  associates one WAF with `/*` so frontend, authentication, API, and asset
+  routes receive the same managed default and bot rules.
+- Development starts with WAF detection mode and higher tuning thresholds;
+  production uses prevention mode. API, authentication, and general rate
+  limits use explicit environment parameters and a five-minute socket-IP
+  window.
+- `frontendDeployment.forwardingGatewayConfiguration` supplies the generated
+  Front Door hostname, Front Door ID, and `AzureFrontDoor.Backend` restriction
+  that frontend publication must merge into `staticwebapp.config.json`. Until
+  that post-deployment publication occurs, the Static Web Apps hostname is a
+  diagnostic WAF bypass and is not production-ready.
+- `scripts/check-public-ingress-infrastructure.mjs` is part of
+  `yarn infra:check` and fails closed if the Premium profile, all-path WAF
+  association, managed rules, rate limits, environment modes, protected path
+  mapping, forwarding-gateway contract, canonical authentication hostname, or
+  credential prohibition regresses.
 - Format Bicep and Bicep parameter files with the pinned
   `az bicep format --file <path>` command; repository Prettier does not parse
   those file types.
@@ -277,3 +295,43 @@
   linked-backend reachability test, or live authentication-flow verification
   was performed or claimed. US-007 is the next eligible story and was not
   advanced.
+
+## 2026-08-12 — US-007 Protect public ingress from bots and abuse
+
+- Extended the existing Azure Front Door Premium endpoint with an HTTPS-only
+  Azure Static Web Apps origin and catch-all frontend route. More-specific
+  game asset, media, and static asset routes continue to use the existing
+  Microsoft Entra-authenticated Blob Storage origin.
+- Added one Azure Front Door WAF policy and one all-path security-policy
+  association. Default Rule Set `2.1` and Bot Manager Rule Set `1.1` protect
+  `/*`, including the frontend, `/.auth/*`, `/login`, `/logout`, `/api`,
+  `/api/*`, `/game-assets/*`, `/media/*`, and `/static-assets/*`.
+- Added explicit five-minute custom rate limits per socket IP. Development uses
+  detection mode with API/authentication/general thresholds of
+  `2000`/`1000`/`10000`; production uses prevention mode with
+  `1000`/`500`/`5000`.
+- Changed authentication and same-origin API outputs to the canonical Front
+  Door hostname while retaining Static Web Apps and Container Apps direct
+  endpoints as diagnostic-only contracts.
+- Exposed non-secret public endpoint, protected-path mapping, WAF and security
+  policy identifiers, Front Door ID, rate-limit contract, and a Static Web Apps
+  forwarding-gateway publication object. The latter must be merged into the
+  deployed frontend configuration before the origin is considered
+  production-ready.
+- Documented Premium-profile cost, request and diagnostic cost drivers,
+  detection-to-prevention operations, distributed rate-limit behavior,
+  shared-IP false-positive risk, threshold calibration, caching boundaries, and
+  direct-origin limitations.
+- Added fail-closed ingress infrastructure policy validation and seven tests.
+- Validation: pinned Bicep formatting and `yarn infra:check`; targeted ingress
+  and authentication policy tests; compiled-template inspection; explicit
+  Azure subscription selection followed by successful
+  `az deployment sub validate` for development; `yarn format:check`,
+  `yarn lint`, `yarn policy:check`, `yarn test:coverage` (177 tests),
+  `yarn generate:check`, `yarn typecheck`, `yarn build`,
+  `yarn bundle:check`, `yarn build-storybook`, `yarn security:audit`, and
+  `git diff --check`.
+- No Azure resource deployment, frontend publication, application deployment,
+  Static Web Apps forwarding restriction, WAF enforcement, bot
+  classification, rate-limit event, asset upload, or endpoint reachability was
+  performed or claimed. US-008 remains incomplete.

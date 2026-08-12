@@ -6,9 +6,10 @@ design input for the Bicep implementation tracked by GitHub issue #1.
 The implementation entry point, environment parameters, pinned tooling, and
 preview commands are documented in [Game Hub Azure Infrastructure](../infra/README.md).
 
-> **Evidence boundary:** This is an architecture decision, not deployment
-> evidence. No Azure resources, frontend, container image, asset, authentication
-> flow, or public endpoint were deployed or verified by this story.
+> **Evidence boundary:** The architecture and Bicep declarations are not
+> deployment evidence. No Azure resources, frontend, container image, asset,
+> authentication flow, web application firewall rule, or public endpoint was
+> deployed or verified by these stories.
 
 ## Deployment Scope
 
@@ -79,24 +80,37 @@ Azure Front Door Premium is selected instead of Standard because the baseline
 requires the managed bot protection rule set. One WAF security policy covers
 the canonical frontend, authentication, API, and content routes.
 
-The WAF starts in detection mode during a new environment's tuning window and
-must move to prevention mode before that environment is considered
-production-ready. The policy includes:
+The development WAF uses detection mode during its tuning window. Production
+is explicitly parameterized in prevention mode. The policy includes:
 
-- the current supported Azure-managed default rule set;
-- the current supported managed bot rule set;
+- Azure-managed default rule set `2.1`;
+- managed bot rule set `1.1`;
 - separate rate-limit rules for `/api/*`, `/.auth/*`, and general traffic; and
-- diagnostics for managed-rule and custom-rule matches.
+- one security-policy association covering `/*` on the canonical endpoint.
+
+The protected mapping is explicit:
+
+| Canonical Front Door path | Origin | Rate-limit layers |
+| --- | --- | --- |
+| `/*` | Azure Static Web Apps frontend | General |
+| `/.auth/*`, `/login`, `/logout` | Static Web Apps authentication | Authentication and general |
+| `/api`, `/api/*` | Static Web Apps linked Container App | API and general |
+| `/game-assets/*`, `/media/*`, `/static-assets/*` | Microsoft Entra-protected Blob Storage | General |
+
+Both environments use a five-minute rate-limit window. Development starts at
+`2000` API, `1000` authentication, and `10000` general requests per socket IP.
+Production starts at `1000`, `500`, and `5000`, respectively.
 
 Rate-limit thresholds remain environment parameters because they require
 traffic evidence. Azure Front Door rate limits are per socket IP address and
 can admit some traffic above very low thresholds, so production values must be
 calibrated rather than presented as exact security boundaries.
 
-Azure Front Door must not cache `/.auth/*`, `/api/*`, or any route marked
-authenticated. Hashed frontend files and immutable game assets receive long
-cache lifetimes. Mutable media and non-hashed files receive shorter,
-environment-aware lifetimes.
+The catch-all frontend route does not enable Front Door caching, so
+`/.auth/*`, `/api/*`, and authenticated content pass through uncached. The
+three Blob Storage routes retain their explicit environment-aware cache
+durations. A later measured optimization can add a distinct cache rule for
+hashed Vite assets without widening caching to authentication or API paths.
 
 ### Frontend and authentication boundary
 
@@ -141,7 +155,10 @@ origin. Instead, the static web app is restricted to the
 `AzureFrontDoor.Backend` service tag and requires the deployment's
 `X-Azure-FDID` forwarding header and allowed Front Door hosts. This prevents the
 generated `*.azurestaticapps.net` hostname from bypassing the canonical WAF
-path.
+path after the frontend publisher merges the deployment's non-secret
+forwarding-gateway output into `staticwebapp.config.json`. Until that
+post-deployment artifact publication occurs, the generated hostname remains a
+diagnostic bypass and the environment is not production-ready.
 
 ### API and container registry boundary
 
@@ -237,7 +254,7 @@ rather than commit a misleading dollar total.
 
 | Service | Cost shape | Baseline control |
 | --- | --- | --- |
-| Azure Front Door Premium and WAF | Dominant fixed profile charge plus requests and data transfer | Deploy development on demand; use one profile per environment for isolation |
+| Azure Front Door Premium and WAF | Dominant fixed profile charge plus requests, WAF processing, data transfer, and diagnostic ingestion | Reuse one protected profile per environment; deploy development on demand |
 | Azure Static Web Apps Standard | Fixed plan charge plus plan limits and overages | One app per environment; use staging environments for frontend-only review |
 | Azure Container Apps | vCPU, memory, requests, and log volume | Scale development to zero; cap replicas in every environment |
 | Azure Container Registry Basic | Daily registry charge plus excess storage and transfer | Basic tier, image cleanup policy in deployment automation |
@@ -292,6 +309,8 @@ deployment with the same parameters must converge. The expected order is:
 Deployment outputs expose non-secret application and automation contracts:
 
 - canonical Front Door endpoint and resource ID;
+- WAF policy, Front Door security policy, and Front Door instance identifiers;
+- protected path, managed rule, rate-limit, origin, and Static Web Apps forwarding-gateway contracts;
 - frontend resource name and generated hostname for diagnostics;
 - stable public API base URL ending in `/api`;
 - public content base URLs for all three blob categories;

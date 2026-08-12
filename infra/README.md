@@ -11,10 +11,11 @@ The current stack creates the environment resource group, an Azure Static Web
 Apps Standard frontend, Azure Container Registry Basic, an Azure Container Apps
 consumption environment and application boundary for the future application
 programming interface (API), private Blob Storage asset containers, and Azure
-Front Door Premium content delivery routes. Later issue #1 stories extend the
-existing Front Door endpoint into the canonical frontend and API ingress, add
-authentication configuration and web application firewall protection, and
-complete secure runtime references and observability.
+Front Door Premium as the canonical frontend, API, authentication, and asset
+ingress. The Front Door endpoint has a web application firewall (WAF), managed
+bot protection, and environment-aware rate limits. Later issue #1 stories
+complete secure runtime references, observability, publication automation, and
+live verification.
 
 ## Layout
 
@@ -29,6 +30,7 @@ complete secure runtime references and observability.
 | `modules/authentication-readiness.bicep` | Keyless Microsoft Entra authentication contract and Static Web Apps linked API boundary |
 | `modules/asset-storage.bicep` | Private Blob Storage containers, recovery policy, and OpenID Connect-federated asset publisher identity |
 | `modules/asset-content-delivery.bicep` | Azure Front Door Premium profile, managed origin authentication, category routes, and explicit edge caching |
+| `modules/public-ingress.bicep` | Canonical frontend route, WAF security policy, managed default and bot rules, per-path rate limits, and Static Web Apps forwarding-gateway contract |
 | `environments/dev.bicepparam` | On-demand development values |
 | `environments/prod.bicepparam` | Persistent production-ready values |
 | `.bicep-version` | Exact Bicep command-line interface (CLI) version used locally and by future automation |
@@ -118,8 +120,9 @@ repository token or generated workflow. The deterministic resource name comes
 from the foundation module. Both environments accept application configuration
 updates from the committed `staticwebapp.config.json`; development enables
 preview staging environments, while production disables them until a reviewed
-release process needs them. The separate Azure Front Door and web application
-firewall story will later establish the canonical protected public endpoint.
+release process needs them. Azure Front Door is the canonical protected public
+endpoint. The generated Static Web Apps hostname remains a diagnostic origin,
+not a browser contract.
 
 The subscription deployment returns these non-secret frontend outputs:
 
@@ -129,7 +132,8 @@ The subscription deployment returns these non-secret frontend outputs:
 | `frontendResourceName` | Content publication target |
 | `frontendDefaultHostname` | Generated hostname without a scheme |
 | `frontendEndpoint` | Direct HTTPS diagnostic endpoint |
-| `frontendDeployment` | Subscription, resource group, app name, build command, artifact path, configuration path, and production environment |
+| `publicEndpoint` | Canonical Azure Front Door endpoint protected by the WAF |
+| `frontendDeployment` | Subscription, resource group, app name, build command, artifact path, canonical endpoint, forwarding-gateway configuration, and production environment |
 
 These outputs do not prove that the resource or content exists. They are
 available only after an actual Azure deployment, which this repository change
@@ -180,7 +184,7 @@ The deployment returns only non-secret authentication metadata:
 | --- | --- |
 | `frontendManagedIdentityPrincipalId` | Future least-privilege role assignments for the frontend |
 | `apiLinkedBackendId` | Audit the production Static Web Apps-to-Container Apps link |
-| `authenticatedApiEndpoint` | Same-origin API endpoint under the generated frontend hostname |
+| `authenticatedApiEndpoint` | Same-origin API endpoint under the canonical protected Front Door hostname |
 | `authenticationConfiguration` | Provider, protocol, login/logout/current-user paths, role, principal-header, managed-identity, and trust-boundary contract |
 
 The development and production parameter files also supply the API with the
@@ -273,12 +277,12 @@ The subscription deployment returns these non-secret API and registry outputs:
 | `apiRuntimePrincipalId` | Future least-privilege runtime role assignments |
 | `apiDeployment` | Non-secret image, ingress, scaling, registry, identity, resource group, and subscription contract |
 
-The direct Container App endpoint is diagnostic. Azure Front Door and the
-later protected-ingress story will establish the canonical browser hostname;
-the browser API path is already fixed at `/api` through the Static Web Apps
-linked backend. These outputs do not prove that the registry, environment,
-app, image, or endpoint exists. They are available only after an actual Azure
-deployment, which this repository change does not perform.
+The direct Container App endpoint is diagnostic. Azure Front Door is the
+canonical browser hostname, and the browser API path is fixed at `/api` through
+the Static Web Apps linked backend. These outputs do not prove that the
+registry, environment, app, image, or endpoint exists. They are available only
+after an actual Azure deployment, which this repository change does not
+perform.
 
 ## Blob assets and content delivery
 
@@ -388,6 +392,73 @@ URLs and `assetCaching` for the effective edge policy. These contracts do not
 prove that Azure resources exist, that any asset was uploaded, or that any
 endpoint is reachable. This story performs and claims no live deployment,
 upload, purge, or endpoint verification.
+
+## Protected public ingress
+
+`modules/public-ingress.bicep` extends the existing Azure Front Door Premium
+profile and endpoint instead of creating a second edge. It adds the Azure
+Static Web Apps origin and catch-all route, creates one WAF policy, and
+associates that policy with `/*` on the endpoint. More-specific asset routes
+continue to use the managed-identity Blob Storage origin; the catch-all route
+forwards frontend, authentication, and API traffic to Static Web Apps over
+HTTPS without Front Door caching.
+
+The security policy protects the canonical paths below:
+
+| Public path | Origin path | WAF coverage | Rate-limit layers |
+| --- | --- | --- | --- |
+| `/*` | Azure Static Web Apps frontend | Managed default rules `2.1`, managed bot rules `1.1` | General |
+| `/.auth/*`, `/login`, `/logout` | Static Web Apps authentication | Same all-path managed rules | Authentication and general |
+| `/api`, `/api/*` | Static Web Apps linked Container App | Same all-path managed rules | API and general |
+| `/game-assets/*`, `/media/*`, `/static-assets/*` | Private Blob Storage containers | Same all-path managed rules | General |
+
+All rate limits use Azure Front Door WAF custom `RateLimitRule` rules, a fixed
+five-minute window, and the client socket IP address:
+
+| Setting | Development | Production |
+| --- | ---: | ---: |
+| WAF mode | `Detection` | `Prevention` |
+| API requests per five minutes | `2000` | `1000` |
+| Authentication requests per five minutes | `1000` | `500` |
+| General requests per five minutes | `10000` | `5000` |
+
+Development detection mode records rule matches but intentionally does not
+block them while the policy is tuned. Production prevention mode enforces
+managed-rule and rate-limit actions. The committed values are bounded starting
+points, not measured capacity or a denial-of-service guarantee. Front Door
+counters are distributed, low thresholds can admit some excess traffic, and a
+shared proxy or carrier network can put legitimate users behind one socket IP.
+Review WAF logs before changing thresholds or adding narrowly scoped managed
+rule exclusions.
+
+Azure Front Door Premium remains the dominant fixed edge cost. This story
+reuses the profile already required for managed bot rules and Microsoft
+Entra-authenticated Blob Storage delivery rather than adding another edge.
+Processed requests, data transfer, WAF evaluation, and diagnostic ingestion
+remain variable costs. Development should keep the full profile on demand;
+production keeps an isolated persistent profile. Use the Azure pricing
+calculator and measured WAF log volume before production approval.
+
+Direct service hostnames are not equivalent to the canonical WAF boundary.
+Blob Storage rejects anonymous and Shared Key reads, and the Container App uses
+the linked-backend identity provider. Static Web Apps forwarding restrictions
+must be published with the frontend artifact after infrastructure deployment.
+The non-secret `frontendDeployment.forwardingGatewayConfiguration` output
+supplies the generated Front Door hostname, `X-Azure-FDID` value, and
+`AzureFrontDoor.Backend` service-tag restriction that publication automation
+must merge into `staticwebapp.config.json`. Until that artifact is published,
+the generated Static Web Apps hostname remains diagnostic and can bypass the
+WAF; it must not be treated as production-ready.
+
+The subscription deployment exposes `publicEndpoint`,
+`publicIngressConfiguration`, `webApplicationFirewallPolicyId`,
+`frontDoorSecurityPolicyId`, and `frontDoorId` without emitting credentials.
+`scripts/check-public-ingress-infrastructure.mjs` fails closed if the protected
+path mapping, Premium profile, managed rules, environment modes, rate limits,
+forwarding-gateway contract, or canonical authentication hostname regresses.
+No Azure resource deployment, WAF enforcement, bot classification, rate-limit
+event, origin restriction, or endpoint reachability was performed or verified
+by US-007.
 ---
 
 # Adversarial review infrastructure

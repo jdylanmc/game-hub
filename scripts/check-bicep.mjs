@@ -6,6 +6,10 @@ import {
   loadAuthenticationInfrastructure,
   validateAuthenticationInfrastructure,
 } from './check-authentication-infrastructure.mjs';
+import {
+  loadPublicIngressInfrastructure,
+  validatePublicIngressInfrastructure,
+} from './check-public-ingress-infrastructure.mjs';
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const infraDirectory = path.join(rootDirectory, 'infra');
@@ -39,6 +43,11 @@ for (const parameterPath of parameters) {
 const authenticationViolations = validateAuthenticationInfrastructure(loadAuthenticationInfrastructure(rootDirectory));
 if (authenticationViolations.length > 0) {
   throw new Error(`Authentication infrastructure policy failed:\n- ${authenticationViolations.join('\n- ')}`);
+}
+
+const publicIngressViolations = validatePublicIngressInfrastructure(loadPublicIngressInfrastructure(rootDirectory));
+if (publicIngressViolations.length > 0) {
+  throw new Error(`Public ingress infrastructure policy failed:\n- ${publicIngressViolations.join('\n- ')}`);
 }
 
 console.log(
