@@ -8,6 +8,7 @@ export function run(command, args, options = {}) {
   return execFileSync(command, args, {
     cwd: options.cwd,
     encoding: 'utf8',
+    env: options.env,
     stdio: options.stdio ?? ['ignore', 'pipe', 'pipe'],
   }).trim();
 }

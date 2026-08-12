@@ -131,6 +131,10 @@ worktree.
        "dependencies": [],
        "changeScopes": ["games/example-game"]
      },
+     "publication": {
+       "requiredStatusChecks": ["Continuous integration"],
+       "adversarialStatusChecks": []
+     },
      "stories": [
        {
          "id": "US-001",
@@ -151,11 +155,21 @@ worktree.
    delegates unattended continuation for this issue.
 
 5. Make each story small enough for one Copilot context and independently
-   verifiable. Put dependency stories first.
-6. Write `progress.md` with a `# Progress` heading and a `## Codebase Patterns`
+   verifiable. Target about 45 minutes of implementation plus verification
+   time; the runner stops any one iteration after 90 minutes by default. Put
+   dependency stories first.
+6. When live or external work is required, split it into separate stories or
+   checkpoints instead of one multi-hour story. Live deployment, calibration,
+   exact-head publication, and enforcement or adversarial review are separate
+   checkpoints when applicable.
+7. Record publication requirements in `plan.json.publication`. Keep
+   `requiredStatusChecks` aligned with the exact pull-request checks that must
+   pass on the published head. Add `adversarialStatusChecks` only when an
+   additional exact-head external check is required.
+8. Write `progress.md` with a `# Progress` heading and a `## Codebase Patterns`
    section.
-7. Create an empty `iterations/` directory.
-8. Show the exact issue identity, repository, branch, story list, acceptance
+9. Create an empty `iterations/` directory.
+10. Show the exact issue identity, repository, branch, story list, acceptance
    criteria, and continuous-mode choice. Require confirmation before committing
    memory or launching the runner.
 
@@ -179,7 +193,8 @@ Use the bundled runner:
 ```bash
 .github/skills/ralph-loop/scripts/run-ralph-loop.sh \
   --memory-dir docs/memories/<issue>-<slug> \
-  --max-iterations 10
+  --max-iterations 10 \
+  --iteration-deadline-minutes 90
 ```
 
 When the user explicitly delegated unattended continuation for the selected
@@ -187,7 +202,9 @@ issue, replace `--max-iterations 10` with `--continuous`.
 
 The script uses
 `references/iteration-prompt.md` as the contract for each fresh Copilot
-invocation. Do not resume prior Copilot sessions.
+invocation. It also writes a git-local lease, heartbeat, and checkpoint under
+the repository's shared git common directory so status and recovery do not rely
+on todo rows or shell history. Do not resume prior Copilot sessions.
 
 For multiple confirmed loops, create a local orchestration manifest based on
 `references/orchestration-manifest.example.json` and run:
@@ -204,6 +221,12 @@ worktree, and emits coalesced status reports for loop launch, story completion,
 publication or continuous-integration state changes, blockers, and completion.
 Unchanged short-interval polls are silent; a longer rate-limited heartbeat
 reports continued work without flooding output.
+
+Use the status command to inspect truthful runtime state for one loop:
+
+```bash
+yarn ralph:status -- --memory-dir docs/memories/<issue>-<slug>
+```
 
 ## Phase 6: Report the Run
 
@@ -232,6 +255,15 @@ Do not describe an incomplete or failing pull request as ready.
 - Preserve the changes and report the files. Do not reset or discard them.
 - Never remove the worktree automatically, even when its pull request is
   merged; cleanup is an explicit human lifecycle action.
+
+### Lease is stale or cancelled
+
+- The runner writes an atomic `lease.json` heartbeat and `checkpoint.json`
+  under the git common directory for the issue.
+- A fresh runner refuses an active healthy lease, archives stale or stopped
+  state before recovery, and stops when dirty files block deterministic resume.
+- Recovery resumes from the last verified checkpoint; it never auto-commits
+  unvalidated dirty files.
 
 ### Copilot exits unsuccessfully
 

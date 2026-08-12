@@ -157,6 +157,11 @@ publication or continuous-integration changes, blocker, and completion;
 coalesce changes found in one observation, suppress unchanged polls, and use a
 longer heartbeat for periodic unchanged status.
 
+Use `yarn ralph:status -- --memory-dir docs/memories/<issue>-<slug>` when you
+need a truthful Ralph status. The runner's live lease, heartbeat, and
+checkpoint state live under the repository's shared git common directory and
+must not be committed.
+
 Before ranking an unassigned issue, run `yarn ralph:prioritize`. A blocking open
 Ralph pull request must map to exactly one matching issue memory; missing or
 ambiguous identity stops selection rather than falling through to new work.
