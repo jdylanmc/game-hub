@@ -140,21 +140,24 @@ Run `yarn agents:validate` after updating
 registration. Shared paths, checks, calibration, or state namespaces are
 rejected so one reviewer cannot suppress, rewrite, or impersonate another.
 
-## Live setup deferred to US-009
+## Live protected identity
 
-Before the workflow can invoke Azure, protected `main` must contain:
+The workflow invokes Azure only when protected `main` contains:
 
 - `config/adversarial-agents/active-calibration-unit-test-reviewer.json`,
   produced by a real Azure run and passing `yarn calibration:check`;
 - the protected `adversarial-review` GitHub environment;
 - `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_OPENAI_ENDPOINT` environment
   variables;
-- an environment-scoped OpenID Connect federated credential; and
+- an environment-scoped OpenID Connect federated credential using GitHub's
+  immutable owner and repository IDs; and
 - the narrow model-invocation role assignment.
 
 The infrastructure deployment workflow remains manually dispatched from
-protected `main` through the protected `test` or `prod` environment. US-007
-does not modify those controls.
+protected `main` through the protected `test` or `prod` environment. Federated
+credentials are independently reconciled through
+`infra/deploy-federated-identity.sh` because the deployment identities do not
+have Microsoft Graph application-write permission.
 
 References:
 

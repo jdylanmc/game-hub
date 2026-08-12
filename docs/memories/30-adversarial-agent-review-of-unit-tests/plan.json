@@ -178,6 +178,22 @@
       "passes": true,
       "notes": "Completed on fix/issue-30-protected-workflow-bootstrap from origin/main. Direct fresh-worktree installation created Yarn state; workflow policy and 18 focused mutation tests passed; 14 isolated fail-closed probes reproduced the original package-script bootstrap failure and proved pipefail behavior. The first exact-head CI attempt then failed closed on the registry-unavailable uri-js 4.4.2 lock entry that prior tee semantics could mask, so the second and final remediation attempt constrained that transitive dependency to available 4.4.1 and strengthened the fresh proof with hardened mode plus an empty project-local cache. The full yarn validate gate passed again with 151 Vitest tests and 26 Ralph tests. Exact-head pull-request checks remain a publication gate and issue #30 remains open until merge plus protected-main verification.",
       "dependencies": ["US-009"]
+    },
+    {
+      "id": "US-011",
+      "title": "Reconcile immutable GitHub OpenID Connect subjects",
+      "description": "Repair the post-merge Microsoft Entra ID federation mismatch without weakening protected environments, workflow identity, or exact-head publication.",
+      "acceptanceCriteria": [
+        "Microsoft Graph Bicep declares the existing inference, test deployment, and production deployment federated credentials with immutable GitHub owner and repository IDs",
+        "Deployment selects subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed explicitly and reapplication converges without duplicate credentials",
+        "Repository policy and focused mutation tests reject mutable subjects, incorrect immutable IDs, wrong environment mappings, unpinned Graph extensions, and missing subscription guards",
+        "Fresh protected-main Azure login presents the deployed issuer, immutable subject, and audience",
+        "An affected pull request receives a successful genuine Adversarial Review / unit-test-reviewer check bound to its exact head"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Completed on fix/issue-30-adversarial-oidc from origin/main. Read-only inspection proved the failed token used immutable subject repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review while Azure trusted the legacy name-only subject. Existing applications were onboarded once with immutable Graph uniqueName values, then the pinned Microsoft Graph Bicep extension reconciled all three exact environment credentials in subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed. Repeat inference deployment retained one credential. Policy, lint, seven focused mutation tests, Bicep builds, and shell validation passed. Full yarn validate reached the isolated hardened bootstrap proof but stopped on unrelated public-registry bin-path metadata drift that would rewrite unchanged lock entries. Fresh protected run 31561212543 authenticated with the immutable subject and published successful check 94003877768 on PR #39 exact head 49240626b04f5a85828edb2bfcdaf16366309a5e.",
+      "dependencies": ["US-010"]
     }
   ]
 }

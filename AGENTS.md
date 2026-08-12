@@ -89,6 +89,12 @@ workflow. Preserve its three deterministic capacity lanes, two exact-head
 revalidations, least-privilege job permissions, promoted-calibration gate, and
 90-day evidence retention.
 
+Microsoft Entra ID federated credentials for repository workflows must use
+GitHub's immutable subject format with both owner and repository numeric IDs.
+Keep the exact protected-environment mappings in
+`infra/federated-identity-*.bicepparam` and deploy them through the pinned,
+subscription-guarded Bicep path; never restore name-only repository subjects.
+
 `yarn policy:check` rejects unapproved lint suppressions and weakened workflow
 invariants. Record an exceptional suppression with a specific rationale in
 `config/lint-suppressions.json`. `yarn bundle:check` enforces the reviewed
