@@ -65,16 +65,25 @@ describe('AuthSessionProvider', () => {
     expect(screen.queryByRole('link', { name: 'Sign in or create account' })).not.toBeInTheDocument();
   });
 
-  it('falls back to anonymous when a session loader rejects', async () => {
-    const loadSession = vi.fn().mockRejectedValue(new Error('session unavailable'));
+  it('exposes a recoverable error and retries a failed session resolution', async () => {
+    const loadSession = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('session unavailable'))
+      .mockResolvedValueOnce({ state: 'anonymous' } as const);
 
     render(
       <AuthSessionProvider loadSession={loadSession}>
         <SessionProbe />
+        <SiteHeader />
       </AuthSessionProvider>,
     );
 
+    await waitFor(() => expect(screen.getByLabelText('Session state')).toHaveTextContent('error'));
+    expect(screen.getByRole('status', { name: 'Account session unavailable' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
     await waitFor(() => expect(screen.getByLabelText('Session state')).toHaveTextContent('anonymous'));
+    expect(loadSession).toHaveBeenCalledTimes(2);
   });
 
   it('clears the website session immediately when signing out from an authenticated page', async () => {
@@ -103,6 +112,26 @@ describe('AuthSessionProvider', () => {
 
     expect(screen.getByLabelText('Session state')).toHaveTextContent('anonymous');
     expect(screen.getByRole('link', { name: 'Sign in or create account' })).toBeVisible();
+  });
+
+  it('routes identity conflicts to the account recovery state without retrying blindly', async () => {
+    window.history.replaceState({}, '', '/games/neon-drift?mode=daily');
+    const loadSession = vi.fn().mockResolvedValue({
+      error: 'identity_resolution_conflict',
+      state: 'error',
+    } as const);
+
+    render(
+      <AuthSessionProvider loadSession={loadSession}>
+        <SiteHeader />
+      </AuthSessionProvider>,
+    );
+
+    expect(await screen.findByRole('link', { name: 'Resolve sign-in' })).toHaveAttribute(
+      'href',
+      '/account?returnTo=%2Fgames%2Fneon-drift%3Fmode%3Ddaily',
+    );
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
   });
 });
 

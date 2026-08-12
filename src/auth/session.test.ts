@@ -64,30 +64,70 @@ describe('loadAuthSession', () => {
     },
     { applicationSession: { state: 'unexpected' }, name: 'unknown state' },
     { applicationSession: null, name: 'non-object response' },
-  ])('fails safely to anonymous for $name', async ({ applicationSession }) => {
+  ])('reports a recoverable session failure for $name', async ({ applicationSession }) => {
     const sessionFetch = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(authenticatedPlatformSession))
       .mockResolvedValueOnce(jsonResponse(applicationSession));
 
     await expect(loadAuthSession(sessionFetch)).resolves.toEqual({
-      state: 'anonymous',
+      error: 'session_resolution_failed',
+      state: 'error',
     });
   });
 
-  it('fails safely when either session endpoint is unavailable or malformed', async () => {
+  it('reports a recoverable failure when either session endpoint is unavailable or malformed', async () => {
     const unavailableFetch = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 503 }));
     const malformedFetch = vi.fn<typeof fetch>().mockResolvedValue(new Response('{', { status: 200 }));
     const rejectedFetch = vi.fn<typeof fetch>().mockRejectedValue(new Error('network unavailable'));
 
-    await expect(loadAuthSession(unavailableFetch)).resolves.toEqual({
-      state: 'anonymous',
+    const expectedFailure = {
+      error: 'session_resolution_failed',
+      state: 'error',
+    };
+
+    await expect(loadAuthSession(unavailableFetch)).resolves.toEqual(expectedFailure);
+    await expect(loadAuthSession(malformedFetch)).resolves.toEqual(expectedFailure);
+    await expect(loadAuthSession(rejectedFetch)).resolves.toEqual(expectedFailure);
+  });
+
+  it('preserves an explicit identity-resolution conflict without exposing identity details', async () => {
+    const sessionFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(authenticatedPlatformSession))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            error: 'identity_resolution_conflict',
+            state: 'error',
+          },
+          409,
+        ),
+      );
+
+    await expect(loadAuthSession(sessionFetch)).resolves.toEqual({
+      error: 'identity_resolution_conflict',
+      state: 'error',
     });
-    await expect(loadAuthSession(malformedFetch)).resolves.toEqual({
-      state: 'anonymous',
-    });
-    await expect(loadAuthSession(rejectedFetch)).resolves.toEqual({
-      state: 'anonymous',
+  });
+
+  it('preserves an explicit application-session outage as a recoverable failure', async () => {
+    const sessionFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(authenticatedPlatformSession))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            error: 'session_resolution_failed',
+            state: 'error',
+          },
+          503,
+        ),
+      );
+
+    await expect(loadAuthSession(sessionFetch)).resolves.toEqual({
+      error: 'session_resolution_failed',
+      state: 'error',
     });
   });
 });

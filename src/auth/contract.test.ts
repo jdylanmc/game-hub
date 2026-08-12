@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AUTHENTICATION_CONFIGURATION,
   AUTHENTICATION_METHODS,
+  AUTHENTICATION_SESSION_FAILURES,
   type AuthSession,
   type PlatformIdentityReference,
 } from './contract';
@@ -42,5 +43,9 @@ describe('authentication contract', () => {
 
     expect(platformIdentity.subject).toBe('platform-subject');
     expect(session).toEqual({ state: 'anonymous' });
+  });
+
+  it('limits application session failures to non-sensitive recoverable codes', () => {
+    expect(AUTHENTICATION_SESSION_FAILURES).toEqual(['identity_resolution_conflict', 'session_resolution_failed']);
   });
 });

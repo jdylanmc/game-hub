@@ -1,6 +1,12 @@
-import { AUTHENTICATION_CONFIGURATION, type AnonymousAuthSession, type AuthSession } from '@game-hub/auth-contract';
+import {
+  AUTHENTICATION_CONFIGURATION,
+  type AnonymousAuthSession,
+  type ApplicationSessionResponse,
+  type AuthSession,
+  type AuthenticationSessionFailureCode,
+} from '@game-hub/auth-contract';
 import type { ApiConfiguration } from './config.js';
-import type { UserIdentityStore } from './identity-store.js';
+import { IdentityResolutionConflictError, type UserIdentityStore } from './identity-store.js';
 import { parseTrustedPlatformIdentity, PlatformPrincipalValidationError } from './platform-principal.js';
 
 const ANONYMOUS_SESSION: AnonymousAuthSession = { state: 'anonymous' };
@@ -12,9 +18,9 @@ export interface ApiRequest {
 }
 
 export interface ApiResponse {
-  body: AuthSession | { error: 'method_not_allowed' | 'not_found' };
+  body: ApplicationSessionResponse | { error: 'method_not_allowed' | 'not_found' };
   headers: Readonly<Record<string, string>>;
-  status: 200 | 401 | 404 | 405 | 503;
+  status: 200 | 401 | 404 | 405 | 409 | 503;
 }
 
 export async function handleApiRequest(
@@ -44,6 +50,10 @@ export async function handleApiRequest(
       return sessionResponse(401, ANONYMOUS_SESSION);
     }
 
+    if (error instanceof IdentityResolutionConflictError) {
+      return sessionFailureResponse(409, 'identity_resolution_conflict');
+    }
+
     throw error;
   }
 }
@@ -51,6 +61,18 @@ export async function handleApiRequest(
 function sessionResponse(status: 200 | 401, body: AuthSession): ApiResponse {
   return {
     body,
+    headers: {
+      'Cache-Control': 'no-store',
+      'Content-Type': 'application/json; charset=utf-8',
+      Vary: 'x-ms-client-principal',
+    },
+    status,
+  };
+}
+
+export function sessionFailureResponse(status: 409 | 503, error: AuthenticationSessionFailureCode): ApiResponse {
+  return {
+    body: { error, state: 'error' },
     headers: {
       'Cache-Control': 'no-store',
       'Content-Type': 'application/json; charset=utf-8',

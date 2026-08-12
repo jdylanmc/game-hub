@@ -7,7 +7,7 @@ import {
 } from 'node:http';
 import type { ApiConfiguration } from './config.js';
 import type { UserIdentityStore } from './identity-store.js';
-import { handleApiRequest, type ApiResponse } from './session-handler.js';
+import { handleApiRequest, sessionFailureResponse, type ApiResponse } from './session-handler.js';
 
 export function createGameHubApiServer(configuration: ApiConfiguration, identityStore: UserIdentityStore): Server {
   return createServer((request, response) => {
@@ -24,14 +24,7 @@ export function createGameHubApiServer(configuration: ApiConfiguration, identity
         );
         writeResponse(response, result);
       } catch {
-        writeResponse(response, {
-          body: { state: 'anonymous' },
-          headers: {
-            'Cache-Control': 'no-store',
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-          status: 503,
-        });
+        writeResponse(response, sessionFailureResponse(503, 'session_resolution_failed'));
       }
     })();
   });

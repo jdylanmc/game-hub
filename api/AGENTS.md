@@ -16,6 +16,9 @@ editing this workspace.
 - Never use email, display name, claims, or provider labels to merge users.
 - Store only a one-way hash of the platform identity key, the opaque Game Hub
   user ID, and creation metadata.
+- Return a typed conflict when identity storage cannot resolve exactly one
+  mapping. Return a typed service failure when storage is unavailable; never
+  disguise either state as an anonymous session.
 - Access Azure Tables with the API runtime managed identity. Do not add storage
   keys, connection strings, provider credentials, or browser-readable secrets.
 

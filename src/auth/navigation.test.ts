@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   createAccountPath,
+  createAuthenticationCompletionPath,
   createSignInPath,
   createSignOutPath,
   getCurrentWebsiteReturnPath,
+  isAuthenticationCompletion,
   validateWebsiteReturnPath,
 } from './navigation';
 
@@ -17,8 +19,11 @@ describe('authentication navigation', () => {
     expect(createAccountPath(returnPath, origin)).toBe(
       '/account?returnTo=%2Fgames%2Fneon-drift%3Fmode%3Ddaily%23score',
     );
+    expect(createAuthenticationCompletionPath(returnPath, origin)).toBe(
+      '/account?authentication=complete&returnTo=%2Fgames%2Fneon-drift%3Fmode%3Ddaily%23score',
+    );
     expect(createSignInPath(returnPath, origin)).toBe(
-      '/.auth/login/aad?post_login_redirect_uri=%2Fgames%2Fneon-drift%3Fmode%3Ddaily%23score',
+      '/.auth/login/aad?post_login_redirect_uri=%2Faccount%3Fauthentication%3Dcomplete%26returnTo%3D%252Fgames%252Fneon-drift%253Fmode%253Ddaily%2523score',
     );
     expect(createSignOutPath(returnPath, origin)).toBe(
       '/.auth/logout?post_logout_redirect_uri=%2Fgames%2Fneon-drift%3Fmode%3Ddaily%23score',
@@ -38,7 +43,9 @@ describe('authentication navigation', () => {
     ['control-character path', '/games/neon-drift\n//attacker.example'],
   ])('replaces an unsafe %s with the website root', (_name, candidate) => {
     expect(validateWebsiteReturnPath(candidate, origin)).toBe('/');
-    expect(createSignInPath(candidate, origin)).toBe('/.auth/login/aad?post_login_redirect_uri=%2F');
+    expect(createSignInPath(candidate, origin)).toBe(
+      '/.auth/login/aad?post_login_redirect_uri=%2Faccount%3Fauthentication%3Dcomplete%26returnTo%3D%252F',
+    );
     expect(createSignOutPath(candidate, origin)).toBe('/.auth/logout?post_logout_redirect_uri=%2F');
   });
 
@@ -70,5 +77,26 @@ describe('authentication navigation', () => {
         search: '',
       }),
     ).toBe('/');
+  });
+
+  it('recognizes only the account completion marker', () => {
+    expect(
+      isAuthenticationCompletion({
+        pathname: '/account',
+        search: '?authentication=complete&returnTo=%2Fgames%2Ffloppy-bird',
+      }),
+    ).toBe(true);
+    expect(
+      isAuthenticationCompletion({
+        pathname: '/account',
+        search: '?authentication=failed',
+      }),
+    ).toBe(false);
+    expect(
+      isAuthenticationCompletion({
+        pathname: '/games/floppy-bird',
+        search: '?authentication=complete',
+      }),
+    ).toBe(false);
   });
 });

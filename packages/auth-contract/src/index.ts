@@ -40,3 +40,14 @@ export interface AuthenticatedAuthSession {
 }
 
 export type AuthSession = AnonymousAuthSession | AuthenticatedAuthSession;
+
+export const AUTHENTICATION_SESSION_FAILURES = ['identity_resolution_conflict', 'session_resolution_failed'] as const;
+
+export type AuthenticationSessionFailureCode = (typeof AUTHENTICATION_SESSION_FAILURES)[number];
+
+export interface AuthenticationSessionFailure {
+  error: AuthenticationSessionFailureCode;
+  state: 'error';
+}
+
+export type ApplicationSessionResponse = AuthSession | AuthenticationSessionFailure;

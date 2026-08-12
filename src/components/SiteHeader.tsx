@@ -2,11 +2,11 @@ import { useAuthSession, useAuthSessionActions } from '../auth/AuthSessionContex
 import { createAccountPath, createSignOutPath, getCurrentWebsiteReturnPath } from '../auth/navigation';
 import { Brand } from './Brand';
 import { Link } from './Link';
-import { buttonStyles } from './ui/Button';
+import { Button, buttonStyles } from './ui/Button';
 
 export function SiteHeader() {
   const session = useAuthSession();
-  const { clearSession } = useAuthSessionActions();
+  const { clearSession, retrySession } = useAuthSessionActions();
   const returnPath = getCurrentWebsiteReturnPath();
 
   return (
@@ -29,6 +29,25 @@ export function SiteHeader() {
             <Link className={buttonStyles()} href={createAccountPath(returnPath)}>
               Sign in or create account
             </Link>
+          ) : null}
+
+          {session.state === 'error' ? (
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <span
+                aria-label="Account session unavailable"
+                className="text-right text-sm font-medium text-amber-200"
+                role="status"
+              >
+                We could not verify your account session.
+              </span>
+              {session.error === 'identity_resolution_conflict' ? (
+                <Link className={buttonStyles()} href={createAccountPath(returnPath)}>
+                  Resolve sign-in
+                </Link>
+              ) : (
+                <Button onClick={retrySession}>Try again</Button>
+              )}
+            </div>
           ) : null}
 
           {session.state === 'authenticated' ? (

@@ -26,6 +26,13 @@ export interface UserIdentityStore {
   getOrCreate(identity: PlatformIdentityReference): Promise<GameHubUserId>;
 }
 
+export class IdentityResolutionConflictError extends Error {
+  constructor() {
+    super('The platform identity could not be resolved safely.');
+    this.name = 'IdentityResolutionConflictError';
+  }
+}
+
 interface TableUserIdentityStoreOptions {
   createUserId?: () => string;
   now?: () => Date;
@@ -68,7 +75,16 @@ export class TableUserIdentityStore implements UserIdentityStore {
       return gameHubUserId as GameHubUserId;
     } catch (error) {
       if (!hasStatusCode(error, 409)) throw error;
-      return readGameHubUserId(await this.#table.get(IDENTITY_PARTITION_KEY, rowKey));
+
+      try {
+        return readGameHubUserId(await this.#table.get(IDENTITY_PARTITION_KEY, rowKey));
+      } catch (conflictError) {
+        if (hasStatusCode(conflictError, 404) || conflictError instanceof IdentityResolutionConflictError) {
+          throw new IdentityResolutionConflictError();
+        }
+
+        throw conflictError;
+      }
     }
   }
 }
@@ -93,7 +109,7 @@ export function createTableUserIdentityStore(
         typeof entity.createdAtUtc !== 'string' ||
         typeof entity.gameHubUserId !== 'string'
       ) {
-        throw new Error('The stored identity entity is invalid.');
+        throw new IdentityResolutionConflictError();
       }
 
       return {
@@ -112,7 +128,7 @@ export function createIdentityRowKey(identity: PlatformIdentityReference): strin
 
 function readGameHubUserId(entity: StoredUserIdentityEntity): GameHubUserId {
   if (!GAME_HUB_USER_ID_PATTERN.test(entity.gameHubUserId)) {
-    throw new Error('The stored Game Hub user ID is invalid.');
+    throw new IdentityResolutionConflictError();
   }
 
   return entity.gameHubUserId as GameHubUserId;

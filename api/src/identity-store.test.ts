@@ -98,6 +98,20 @@ describe('table-backed internal identity resolution', () => {
     await expect(store.getOrCreate(identity)).resolves.toBe('usr_99999999-8888-4777-8666-555555555555');
   });
 
+  it('fails safely when a conflicting create has no valid winning identity', async () => {
+    const store = new TableUserIdentityStore(
+      {
+        create: () => Promise.reject(statusError(409)),
+        get: () => Promise.reject(statusError(404)),
+      },
+      {
+        createUserId: () => 'usr_11111111-2222-4333-8444-555555555555',
+      },
+    );
+
+    await expect(store.getOrCreate(identity)).rejects.toThrow('could not be resolved safely');
+  });
+
   it('does not merge distinct platform subjects', () => {
     expect(createIdentityRowKey(identity)).not.toBe(
       createIdentityRowKey({ provider: 'aad', subject: 'another-subject' }),

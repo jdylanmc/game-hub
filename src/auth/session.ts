@@ -1,18 +1,38 @@
-import { AUTHENTICATION_CONFIGURATION, type AuthSession, type GameHubUserId } from './contract';
+import {
+  AUTHENTICATION_CONFIGURATION,
+  type ApplicationSessionResponse,
+  type AuthSession,
+  type AuthenticationSessionFailure,
+  type GameHubUserId,
+} from './contract';
 
 const anonymousSession: AuthSession = { state: 'anonymous' };
+const sessionResolutionFailure: AuthenticationSessionFailure = {
+  error: 'session_resolution_failed',
+  state: 'error',
+};
+
+export type WebsiteAuthSessionResult = AuthSession | AuthenticationSessionFailure;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function hasPlatformSession(value: unknown): boolean {
-  return isRecord(value) && isRecord(value.clientPrincipal);
+function parsePlatformSession(value: unknown): 'anonymous' | 'authenticated' | 'invalid' {
+  if (!isRecord(value) || !('clientPrincipal' in value)) {
+    return 'invalid';
+  }
+
+  if (value.clientPrincipal === null) {
+    return 'anonymous';
+  }
+
+  return isRecord(value.clientPrincipal) ? 'authenticated' : 'invalid';
 }
 
-function parseApplicationSession(value: unknown): AuthSession {
+function parseApplicationSession(value: unknown): ApplicationSessionResponse | undefined {
   if (!isRecord(value)) {
-    return anonymousSession;
+    return undefined;
   }
 
   if (value.state === 'anonymous') {
@@ -26,14 +46,20 @@ function parseApplicationSession(value: unknown): AuthSession {
     };
   }
 
-  return anonymousSession;
+  if (
+    value.state === 'error' &&
+    (value.error === 'identity_resolution_conflict' || value.error === 'session_resolution_failed')
+  ) {
+    return {
+      error: value.error,
+      state: 'error',
+    };
+  }
+
+  return undefined;
 }
 
 async function readJson(response: Response): Promise<unknown> {
-  if (!response.ok) {
-    return undefined;
-  }
-
   try {
     return await response.json();
   } catch {
@@ -41,25 +67,47 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-export async function loadAuthSession(sessionFetch: typeof fetch = fetch): Promise<AuthSession> {
+export async function loadAuthSession(sessionFetch: typeof fetch = fetch): Promise<WebsiteAuthSessionResult> {
   try {
     const platformResponse = await sessionFetch(AUTHENTICATION_CONFIGURATION.platformSessionPath, {
       credentials: 'same-origin',
       headers: { Accept: 'application/json' },
     });
-    const platformSession = await readJson(platformResponse);
+    if (!platformResponse.ok) {
+      return sessionResolutionFailure;
+    }
 
-    if (!hasPlatformSession(platformSession)) {
+    const platformSession = await readJson(platformResponse);
+    const platformState = parsePlatformSession(platformSession);
+
+    if (platformState === 'anonymous') {
       return anonymousSession;
+    }
+
+    if (platformState === 'invalid') {
+      return sessionResolutionFailure;
     }
 
     const applicationResponse = await sessionFetch(AUTHENTICATION_CONFIGURATION.applicationSessionPath, {
       credentials: 'same-origin',
       headers: { Accept: 'application/json' },
     });
+    const applicationSession = parseApplicationSession(await readJson(applicationResponse));
 
-    return parseApplicationSession(await readJson(applicationResponse));
+    if (applicationResponse.ok && applicationSession?.state === 'authenticated') {
+      return applicationSession;
+    }
+
+    if (
+      applicationSession?.state === 'error' &&
+      ((applicationResponse.status === 409 && applicationSession.error === 'identity_resolution_conflict') ||
+        (applicationResponse.status === 503 && applicationSession.error === 'session_resolution_failed'))
+    ) {
+      return applicationSession;
+    }
+
+    return sessionResolutionFailure;
   } catch {
-    return anonymousSession;
+    return sessionResolutionFailure;
   }
 }

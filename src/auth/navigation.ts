@@ -1,6 +1,8 @@
 import { AUTHENTICATION_CONFIGURATION } from './contract';
 
 const fallbackReturnPath = '/';
+const authenticationAttemptParameter = 'authentication';
+const authenticationAttemptValue = 'complete';
 const returnPathParameter = 'returnTo';
 const signInRedirectParameter = 'post_login_redirect_uri';
 const signOutRedirectParameter = 'post_logout_redirect_uri';
@@ -101,6 +103,15 @@ export function getCurrentWebsiteReturnPath(location: WebsiteLocation = window.l
   return validateWebsiteReturnPath(new URLSearchParams(location.search).get(returnPathParameter), location.origin);
 }
 
+export function isAuthenticationCompletion(location: Pick<WebsiteLocation, 'pathname' | 'search'> = window.location) {
+  const normalizedPathname = location.pathname.replace(/\/+$/, '') || '/';
+
+  return (
+    normalizedPathname === AUTHENTICATION_CONFIGURATION.accountPath &&
+    new URLSearchParams(location.search).get(authenticationAttemptParameter) === authenticationAttemptValue
+  );
+}
+
 function createAuthRedirectPath(basePath: string, parameter: string, returnPath: string, origin?: string): string {
   const safeReturnPath = validateWebsiteReturnPath(returnPath, origin);
 
@@ -117,8 +128,23 @@ export function createAccountPath(returnPath: string, origin?: string): string {
   return `${AUTHENTICATION_CONFIGURATION.accountPath}?${returnPathParameter}=${encodeURIComponent(safeReturnPath)}`;
 }
 
+export function createAuthenticationCompletionPath(returnPath: string, origin?: string): string {
+  const safeReturnPath = validateWebsiteReturnPath(returnPath, origin);
+  const parameters = new URLSearchParams({
+    [authenticationAttemptParameter]: authenticationAttemptValue,
+    [returnPathParameter]: safeReturnPath,
+  });
+
+  return `${AUTHENTICATION_CONFIGURATION.accountPath}?${parameters.toString()}`;
+}
+
 export function createSignInPath(returnPath: string, origin?: string): string {
-  return createAuthRedirectPath(AUTHENTICATION_CONFIGURATION.signInPath, signInRedirectParameter, returnPath, origin);
+  return createAuthRedirectPath(
+    AUTHENTICATION_CONFIGURATION.signInPath,
+    signInRedirectParameter,
+    createAuthenticationCompletionPath(returnPath, origin),
+    origin,
+  );
 }
 
 export function createSignOutPath(returnPath: string, origin?: string): string {

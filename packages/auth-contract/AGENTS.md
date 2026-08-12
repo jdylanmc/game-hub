@@ -12,6 +12,8 @@ before editing this workspace.
   provider-independent Game Hub user ID.
 - Keep platform subjects, provider tokens, credentials, claims, and profile
   details outside browser session responses.
+- Keep application-session failures limited to reviewed non-sensitive codes so
+  the website can recover without receiving provider or storage details.
 - Keep endpoint paths same-origin and non-secret.
 - Update both website and API tests when changing an exported contract.
 

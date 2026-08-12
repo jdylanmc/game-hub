@@ -173,6 +173,38 @@ navigates through `/.auth/logout` with the same validated website path as
 before returning to that path. The website immediately renders its anonymous
 state while the browser begins that managed sign-out navigation.
 
+## Failure and Identity-Conflict Handling
+
+The hosted flow returns through `/account` with a non-secret completion marker
+and the validated website return path. The website resolves the managed
+session before continuing to that path. If the visitor returns without a
+session, the account page presents one recoverable state that clearly covers a
+canceled flow, an unavailable provider, and an invalid or expired request. It
+offers a fresh hosted sign-in attempt and never treats the failed attempt as an
+account change.
+
+An authenticated platform session is not silently downgraded to anonymous when
+the application session cannot be resolved. The shared application response
+allows only two non-sensitive failure codes:
+
+- `session_resolution_failed` for an unavailable or invalid session
+  resolution; and
+- `identity_resolution_conflict` when the identity store cannot safely select
+  exactly one durable mapping.
+
+The website keeps public browsing and game play rendered, identifies the
+session problem in the shared header, and offers an explicit retry. An identity
+conflict instead directs the visitor through managed sign-out before another
+attempt. No response exposes a provider subject, email address, claim, token,
+credential, storage detail, or exception text.
+
+Potentially matching email addresses never link records. The linked API
+continues to key only on the trusted platform provider and subject, so separate
+subjects remain separate identities even when the provider supplies the same
+user-details value. The conflict state does not guess whether two credentials
+belong to one person, and it does not create an account-linking policy. The
+issue's multi-credential linking decision remains deferred.
+
 ## Social Provider Federation
 
 `config/authentication/external-id-social-providers.json` declares Google and

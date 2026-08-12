@@ -121,8 +121,8 @@
         "The implementation preserves the issue's open multi-credential linking decision for explicit resolution"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added a non-secret hosted-authentication completion callback that resolves the managed session before continuing to the validated website return path. Anonymous callback results now present one recoverable state covering cancellation, provider outage, and invalid or expired attempts. Authenticated platform sessions no longer silently downgrade to anonymous when application identity resolution fails: the shared contract exposes only typed session-resolution or identity-conflict codes, the API returns 503 or 409 without provider details, and the website offers retry or managed sign-out recovery while public content remains available. Identity mapping continues to use only provider plus subject; tests prove matching email details never merge accounts, and the UI states that credential linking remains undecided. Full yarn validate passed with 339 tests after removing a 28-byte bundle regression without increasing budgets; yarn infra:check passed for 21 modules and 9 environment parameter files. No abuse-protection, broad accessibility-hardening, live Azure configuration, deployment verification, credential linking, or later story work was implemented.",
       "dependencies": ["US-002", "US-006"]
     },
     {

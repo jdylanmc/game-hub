@@ -1,6 +1,7 @@
 import type { GameHubUserId } from '@game-hub/auth-contract';
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiConfiguration } from './config.js';
+import { IdentityResolutionConflictError } from './identity-store.js';
 import { handleApiRequest } from './session-handler.js';
 
 const configuration: ApiConfiguration = {
@@ -84,6 +85,37 @@ describe('application session endpoint', () => {
       status: 401,
     });
     expect(getOrCreate).not.toHaveBeenCalled();
+  });
+
+  it('returns a typed conflict without provider details when identity resolution is ambiguous', async () => {
+    const getOrCreate = vi.fn().mockRejectedValue(new IdentityResolutionConflictError());
+
+    await expect(handleApiRequest(request(encodePrincipal()), configuration, { getOrCreate })).resolves.toMatchObject({
+      body: {
+        error: 'identity_resolution_conflict',
+        state: 'error',
+      },
+      status: 409,
+    });
+  });
+
+  it('never merges matching email details from distinct platform subjects', async () => {
+    const getOrCreate = vi
+      .fn()
+      .mockResolvedValueOnce('usr_11111111-2222-4333-8444-555555555555')
+      .mockResolvedValueOnce('usr_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee');
+
+    await handleApiRequest(request(encodePrincipal({ userId: 'first-subject' })), configuration, { getOrCreate });
+    await handleApiRequest(request(encodePrincipal({ userId: 'second-subject' })), configuration, { getOrCreate });
+
+    expect(getOrCreate).toHaveBeenNthCalledWith(1, {
+      provider: 'aad',
+      subject: 'first-subject',
+    });
+    expect(getOrCreate).toHaveBeenNthCalledWith(2, {
+      provider: 'aad',
+      subject: 'second-subject',
+    });
   });
 
   it.each([

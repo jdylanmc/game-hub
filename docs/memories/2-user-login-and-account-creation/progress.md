@@ -32,6 +32,13 @@
   rejects external, protocol-relative, backslash, control-character,
   authentication-service, and application programming interface targets before
   they can enter a managed sign-in or sign-out URL.
+- Hosted authentication returns through a non-secret `/account` completion
+  marker. The website resolves the managed session before continuing to the
+  validated return path and treats an anonymous result as an incomplete flow.
+- An authenticated platform session must not silently become anonymous when
+  application identity resolution fails. The API returns only typed
+  non-sensitive session-failure or identity-conflict codes, and matching email
+  details never merge provider subjects.
 
 ## Iteration 1: Select the identity architecture and contracts
 
@@ -196,3 +203,33 @@
 - No authentication failure user interface, duplicate-identity handling, abuse
   protection, live Azure configuration, deployment verification, or later
   story was implemented.
+
+## Iteration 7: Handle authentication failures and duplicate identities
+
+- Changed hosted sign-in to return through `/account` with a non-secret
+  completion marker and the already validated website return path. A resolved
+  authenticated session continues to that path; an anonymous result presents a
+  recoverable sign-in state instead of guessing success.
+- The account state clearly covers canceled flows, provider unavailability,
+  and invalid or expired attempts, then offers a fresh hosted sign-in. Public
+  browsing and game play remain rendered throughout.
+- Added shared non-sensitive `session_resolution_failed` and
+  `identity_resolution_conflict` application response codes. Storage outages
+  return 503, unresolved identity conflicts return 409, and neither response
+  exposes provider, email, claim, token, credential, storage, or exception
+  details.
+- Website session discovery no longer silently downgrades an authenticated
+  platform session to anonymous when application resolution fails. The shared
+  header offers retry for availability failures and routes identity conflicts
+  to managed sign-out recovery.
+- Identity resolution continues to key only on the trusted provider and
+  platform subject. Deterministic tests prove that matching user-details email
+  values do not merge distinct subjects. The user interface explicitly states
+  that no accounts were linked or merged and that credential linking remains
+  undecided.
+- Full `yarn validate` passed with 339 tests after correcting an initial
+  28-byte entry-bundle regression without raising the reviewed budget.
+  `yarn infra:check` passed for 21 modules and 9 environment parameter files.
+- No credential-linking policy, abuse protection, broad accessibility
+  hardening, live Azure configuration, deployment verification, or later story
+  was implemented.
