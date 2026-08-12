@@ -92,7 +92,7 @@
         "Targeted tests reject unauthorized authors, edited mismatches, changed heads, wrong reviewers, missing outage evidence, excessive or expired lifetimes, FAIL results, platform failures, and promotion use."
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Public test seam: a new waiver-validation CLI/library over supplied pull-request comment metadata."
     },
     {

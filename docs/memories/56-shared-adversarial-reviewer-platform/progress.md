@@ -78,3 +78,17 @@
   scripts/publish-adversarial-evidence.test.mjs
   scripts/fan-in-adversarial-evidence.test.mjs
   --coverage.enabled=false`; `yarn typecheck`.
+
+### US-005 — Validate exact-head outage waivers
+
+- **Confirmed seam:** `validateAdversarialWaiver` over supplied pull-request
+  comment metadata.
+- **Red:** The waiver test could not import a validator, so no machine-readable
+  comment could bind an outage to the exact head.
+- **Green:** A waiver requires exactly one unedited comment from an authorized
+  owner, one repository/pull-request/reviewer/head binding, outage evidence,
+  rationale, authorizer, canonical chronology, and an unexpired maximum
+  24-hour lifetime. It only accepts compute-only INCONCLUSIVE results and
+  refuses promotion use.
+- **Broader checks:** `yarn vitest run
+  scripts/validate-adversarial-waiver.test.mjs --coverage.enabled=false`.
