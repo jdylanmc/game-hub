@@ -220,8 +220,8 @@
         "Workflow policy rejects removal or weakening of mandatory test commands and artifacts"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "The pull-request and main workflow retains the canonical yarn test:ci command and now publishes a dedicated unit-test-evidence artifact immediately after every executed test step, including failures. The 14-day artifact requires the piped diagnostic test log, JUnit XML, and complete coverage directory. Workflow policy rejects command aliases, missing or weakened artifact paths, success-only publication, missing-evidence tolerance, retention changes, and loss of the failure-artifact proof. The isolated fail-closed harness runs the exact piped canonical assertion failure and verifies its diagnostic log, failing JUnit result, JSON coverage summary, and LCOV report; it also proves success-only publication is rejected, bringing the full matrix to 23 representative failures.",
       "dependencies": ["US-013"]
     },
     {

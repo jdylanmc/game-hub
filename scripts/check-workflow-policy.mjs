@@ -120,6 +120,12 @@ violations.push(
     workflow,
   }),
 );
+violations.push(
+  ...validateTestEvidencePolicy({
+    continuousIntegrationFailureProof,
+    workflow,
+  }),
+);
 
 for (const artifactPath of requiredArtifactPaths) {
   if (!workflow.includes(`            ${artifactPath}`)) {
@@ -277,11 +283,13 @@ function validateLintIntegrationPolicy({
     'run: yarn install --immutable 2>&1 | tee continuous-integration-evidence/install.log',
     'run: yarn lint 2>&1 | tee continuous-integration-evidence/lint.log',
     'run: yarn test:ci-fail-closed 2>&1 | tee continuous-integration-evidence/fail-closed.log',
-    '            continuous-integration-evidence/',
   ]) {
     if (occurrences(workflowSource, fragment) !== 1) {
       lintViolations.push(`Continuous integration lint contract must contain exactly one: ${fragment}`);
     }
+  }
+  if (occurrences(workflowSource, '\n            continuous-integration-evidence/\n') !== 1) {
+    lintViolations.push('Continuous integration lint contract must retain the complete evidence directory.');
   }
 
   for (const fragment of [
@@ -375,7 +383,12 @@ function validateTestIntegrationPolicy({
   }
 
   const proofTestCommand = "runSandbox(yarnExecutable, ['test:ci'])";
-  if (occurrences(failureProofSource, proofTestCommand) !== 6) {
+  const pipedProofTestCommand =
+    "runPipedSandbox(yarnExecutable, ['test:ci'], 'continuous-integration-evidence/test.log')";
+  if (
+    occurrences(failureProofSource, proofTestCommand) !== 5 ||
+    occurrences(failureProofSource, pipedProofTestCommand) !== 1
+  ) {
     testViolations.push('Canonical command wiring for nine continuous-integration test failure proofs is required.');
   }
   for (const label of [
@@ -397,8 +410,92 @@ function validateTestIntegrationPolicy({
   return testViolations;
 }
 
+function validateTestEvidencePolicy({
+  continuousIntegrationFailureProof: failureProofSource,
+  workflow: workflowSource,
+}) {
+  const evidenceViolations = [];
+  const testStep = workflowStep(workflowSource, 'Run tests with coverage');
+  const evidenceStep = workflowStep(workflowSource, 'Retain unit test evidence for 14 days');
+  const testCommand = 'run: yarn test:ci 2>&1 | tee continuous-integration-evidence/test.log';
+  const failClosedCommand = 'run: yarn test:ci-fail-closed 2>&1 | tee continuous-integration-evidence/fail-closed.log';
+
+  for (const [label, command] of [
+    ['canonical deterministic test command', testCommand],
+    ['canonical fail-closed test command', failClosedCommand],
+  ]) {
+    if (occurrences(workflowSource, command) !== 1) {
+      evidenceViolations.push(`Continuous integration must contain exactly one ${label}: ${command}`);
+    }
+  }
+
+  for (const [label, fragment] of [
+    ['stable test step identity', '        id: unit_tests'],
+    ['canonical deterministic test execution', `        ${testCommand}`],
+  ]) {
+    if (occurrences(testStep, fragment) !== 1) {
+      evidenceViolations.push(`Canonical test step is missing or weakened: ${label}.`);
+    }
+  }
+
+  for (const [label, fragment] of [
+    ['failure-safe upload condition', "        if: ${{ always() && steps.unit_tests.outcome != 'skipped' }}"],
+    [
+      'pinned artifact publisher',
+      '        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4',
+    ],
+    ['run-scoped artifact name', '          name: unit-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}'],
+    ['diagnostic test log', '            continuous-integration-evidence/test.log'],
+    ['JUnit result', '            test-results/junit.xml'],
+    ['coverage reports', '            coverage/'],
+    ['missing-evidence failure', '          if-no-files-found: error'],
+    ['14-day retention', '          retention-days: 14'],
+  ]) {
+    if (occurrences(evidenceStep, fragment) !== 1) {
+      evidenceViolations.push(`Unit-test evidence upload is missing or weakened: ${label}.`);
+    }
+  }
+
+  const testPosition = workflowSource.indexOf('      - name: Run tests with coverage');
+  const evidencePosition = workflowSource.indexOf('      - name: Retain unit test evidence for 14 days');
+  const buildPosition = workflowSource.indexOf('      - name: Build production website');
+  if (!(testPosition >= 0 && testPosition < evidencePosition && evidencePosition < buildPosition)) {
+    evidenceViolations.push(
+      'Unit-test evidence upload must immediately follow canonical tests without weakening gate ordering.',
+    );
+  }
+
+  for (const fragment of [
+    "runPipedSandbox(yarnExecutable, ['test:ci'], 'continuous-integration-evidence/test.log')",
+    'await assertCanonicalTestFailureEvidence();',
+    "sandboxPath('test-results/junit.xml')",
+    "sandboxPath('coverage/coverage-summary.json')",
+    "sandboxPath('coverage/lcov.info')",
+  ]) {
+    if (!failureProofSource.includes(fragment)) {
+      evidenceViolations.push(`Canonical failing-test evidence proof is missing or weakened: ${fragment}`);
+    }
+  }
+
+  return evidenceViolations;
+}
+
+function workflowStep(workflowSource, name) {
+  const marker = `      - name: ${name}`;
+  const start = workflowSource.indexOf(marker);
+  if (start < 0) return '';
+
+  const next = workflowSource.indexOf('\n      - name: ', start + marker.length);
+  return workflowSource.slice(start, next < 0 ? undefined : next);
+}
+
 function occurrences(source, fragment) {
   return source.split(fragment).length - 1;
 }
 
-export { validateContinuousIntegrationBootstrapPolicy, validateLintIntegrationPolicy, validateTestIntegrationPolicy };
+export {
+  validateContinuousIntegrationBootstrapPolicy,
+  validateLintIntegrationPolicy,
+  validateTestEvidencePolicy,
+  validateTestIntegrationPolicy,
+};

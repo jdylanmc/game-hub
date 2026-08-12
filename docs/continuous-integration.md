@@ -26,7 +26,7 @@ dependencies already exist:
 | `yarn format:check` | Prettier reports all covered files formatted. |
 | `yarn lint` | ESLint completes with zero errors and zero warnings. |
 | `yarn policy:check` | Lint suppressions are approved and workflow and Code Owner invariants remain intact. |
-| `yarn test:ci-fail-closed` | Canonical lint behavior proofs pass, then all 14 representative continuous integration failure probes fail for their expected reason. |
+| `yarn test:ci-fail-closed` | Canonical lint behavior proofs pass, then all 23 representative continuous integration failure probes fail for their expected reason. |
 | `yarn security:audit` | The recursive dependency audit reports no high-severity findings; an unavailable registry fails the command. |
 | `yarn test:ci` | Test integrity, Ralph orchestration simulations, deterministic Vitest execution, JUnit output, and configured coverage thresholds pass. |
 | `yarn generate:check` | Workspace generation leaves the committed manifest and import map unchanged and clean. |
@@ -70,10 +70,13 @@ acceptance evidence are documented in
 - `yarn test:ci-fail-closed` uses an isolated detached worktree to prove that
   formatting, lint, type, test, generation, production build, bundle budget,
   missing build output, missing workflow command, masked pipeline failure,
-  invalid fresh-runner bootstrap, unavailable security audit, and Storybook
-  browser-build failures cannot complete successfully. Its lint probe runs the
-  exact `yarn lint` plus `tee` pipeline from the workflow and verifies the
-  retained log identifies the file, line, column, severity, and rule.
+  invalid fresh-runner bootstrap, success-only unit-test evidence publication,
+  unavailable security audit, and Storybook browser-build failures cannot
+  complete successfully. Its lint probe runs the exact `yarn lint` plus `tee`
+  pipeline from the workflow and verifies the retained log identifies the file,
+  line, column, severity, and rule. Its representative assertion probe runs the
+  canonical test pipeline and verifies that the failed run still writes the
+  diagnostic log, failing JUnit result, JSON coverage summary, and LCOV report.
 
 The required job has a 30-minute timeout and concurrency cancellation enabled.
 An error, cancellation, timeout, stale generated output, unavailable mandatory
@@ -130,9 +133,14 @@ consume secrets. Fork pull requests therefore run the same unprivileged
 contract as repository branches. Every action is pinned to a full commit SHA,
 and the runner and Node.js version are pinned.
 
-The workflow uploads one
-`continuous-integration-evidence-<run-id>-<attempt>` artifact for 14 days, even
-after a failed gate. Missing evidence makes artifact upload fail. It contains:
+After every executed canonical test step, including a failed one, the workflow
+uploads `unit-test-evidence-<run-id>-<attempt>` for 14 days. It requires the
+diagnostic test log, `test-results/junit.xml`, and the complete `coverage/`
+directory; missing evidence fails publication.
+
+The workflow also uploads
+`continuous-integration-evidence-<run-id>-<attempt>` for 14 days, even after a
+failed gate. Missing evidence makes artifact upload fail. It contains:
 
 - per-gate logs, including dependency-security audit and fail-closed proof;
 - actionable lint diagnostics retained in `continuous-integration-evidence/lint.log`;
@@ -176,7 +184,7 @@ group and cost limits, and document the new requirement separately.
 | Complete gates on pull requests and protected-branch updates | Workflow `pull_request` and `main` push triggers plus the 12-command contract above |
 | Missing, pending, failed, canceled, or stale checks block merge | Strict `main` branch protection bound to `Continuous integration` and app ID `15368` |
 | Clean checkouts reproduce every gate | Pinned Node.js and Yarn plus `corepack enable && yarn validate` |
-| Representative failures block completion | Fourteen isolated probes in `scripts/prove-ci-fail-closed.mjs`, including the retained exact workflow lint pipeline |
+| Representative failures block completion | Twenty-three isolated probes in `scripts/prove-ci-fail-closed.mjs`, including retained exact workflow lint and test pipelines |
 | Forks need no privileged credentials | Read-only permissions, no secrets, no persisted checkout credentials, and no `pull_request_target` |
 | Workflow protection cannot self-approve weakening | Code Owner review, non-last-pusher approval, and policy-checked ownership and workflow invariants |
 | Outputs and security evidence have defined retention | Fail-closed 14-day evidence artifact containing logs, tests, coverage, production, and Storybook output |

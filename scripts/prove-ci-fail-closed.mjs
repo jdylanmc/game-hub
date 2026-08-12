@@ -98,6 +98,16 @@ try {
   });
 
   await proveFailure({
+    expected: /Unit-test evidence upload is missing or weakened: failure-safe upload condition/,
+    label: 'success-only unit-test evidence upload',
+    prepare: () =>
+      replaceFile('.github/workflows/continuous-integration.yml', (content) =>
+        content.replace("if: ${{ always() && steps.unit_tests.outcome != 'skipped' }}", 'if: success()'),
+      ),
+    run: () => runSandbox(yarnExecutable, ['policy:workflow']),
+  });
+
+  await proveFailure({
     expected: /fail-closed run shell|bash -eo pipefail/,
     label: 'pipeline failure masking',
     prepare: () =>
@@ -150,7 +160,7 @@ try {
     run: () => runSandbox(yarnExecutable, ['build-storybook']),
   });
 
-  console.log('Continuous integration fail-closed proof passed for 22 representative failures.');
+  console.log('Continuous integration fail-closed proof passed for 23 representative failures.');
 } catch (error) {
   runError = error;
 } finally {
@@ -228,8 +238,11 @@ async function proveCanonicalTestFailures() {
         'src/ci-failure-probe.test.ts',
         "import { expect, it } from 'vitest';\nit('fails deliberately', () => expect(true).toBe(false));\n",
       ),
-    run: () => runSandbox(yarnExecutable, ['test:ci']),
-    verify: ({ output }) => assertOutputIncludes(output, 'src/ci-failure-probe.test.ts', 'test assertion'),
+    run: () => runPipedSandbox(yarnExecutable, ['test:ci'], 'continuous-integration-evidence/test.log'),
+    verify: async ({ output }) => {
+      assertOutputIncludes(output, 'src/ci-failure-probe.test.ts', 'test assertion');
+      await assertCanonicalTestFailureEvidence();
+    },
   });
 
   await proveFailure({
@@ -428,6 +441,28 @@ async function assertActionableLintEvidence(relativePath) {
   }
   if (!/\b1:7\s+error\s+.+\sno-unused-vars\b/.test(output)) {
     throw new Error(`Retained lint evidence is missing an actionable line, column, severity, and rule:\n${output}`);
+  }
+}
+
+async function assertCanonicalTestFailureEvidence() {
+  const testLog = await fs.readFile(sandboxPath('continuous-integration-evidence/test.log'), 'utf8');
+  if (!testLog.includes('src/ci-failure-probe.test.ts') || !testLog.includes('expected true to be false')) {
+    throw new Error(`Retained test diagnostics do not identify the failing assertion:\n${testLog.slice(-4000)}`);
+  }
+
+  const junit = await fs.readFile(sandboxPath('test-results/junit.xml'), 'utf8');
+  if (!/<testsuites\b/.test(junit) || !/\bfailures="[1-9]\d*"/.test(junit)) {
+    throw new Error('Retained JUnit evidence does not report the failing test.');
+  }
+
+  const coverageSummary = JSON.parse(await fs.readFile(sandboxPath('coverage/coverage-summary.json'), 'utf8'));
+  if (!coverageSummary.total?.lines || typeof coverageSummary.total.lines.pct !== 'number') {
+    throw new Error('Retained coverage summary is missing measured line coverage.');
+  }
+
+  const lcov = await fs.readFile(sandboxPath('coverage/lcov.info'), 'utf8');
+  if (!lcov.includes('SF:')) {
+    throw new Error('Retained LCOV evidence does not identify measured source files.');
   }
 }
 

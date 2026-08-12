@@ -47,6 +47,10 @@
 - Issue #28 is orchestration priority 3 and remains blocked on issues #30 and
   #27 because adversarial test review and lint completion overlap package,
   configuration, source, test, documentation, and workflow-policy surfaces.
+- Canonical test publication uses a dedicated
+  `unit-test-evidence-<run-id>-<attempt>` artifact for 14 days. It runs
+  immediately after an executed `yarn test:ci` step with `always()` semantics
+  and requires the test log, JUnit XML, and complete coverage directory.
 
 ## 2026-08-11 - Planning
 
@@ -445,3 +449,36 @@
   contract.
 - Test-specific workflow evidence and the broader unit-test contract remain
   intentionally deferred to US-014 and US-015.
+
+## 2026-08-12 - US-014: Publish test-specific continuous-integration evidence
+
+- Kept pull-request and `main` validation on the canonical deterministic
+  `yarn test:ci` command with the existing Bash `-eo pipefail` evidence
+  pipeline and cheapest-to-most-expensive deterministic gate order.
+- Added a dedicated `unit-test-evidence-<run-id>-<attempt>` upload immediately
+  after every executed test step, including failures. It retains the
+  diagnostic test log, `test-results/junit.xml`, and complete `coverage/`
+  directory for 14 days and fails when any required evidence is missing.
+- Extended workflow policy to require exactly one canonical test command and
+  fail-closed proof command, stable test-step identity, failure-safe upload,
+  pinned artifact action, run-scoped naming, all three evidence categories,
+  missing-file failure, 14-day retention, and placement before builds.
+- Added targeted mutation cases rejecting command aliases, success-only
+  publication, removed diagnostics, JUnit, or coverage, warning-only missing
+  files, shortened retention, and weakened failure-artifact assertions.
+- The representative assertion proof now runs the exact canonical test and
+  `tee` pipeline, then verifies the failed run still writes actionable
+  diagnostics, a failing JUnit result, JSON coverage summary, and LCOV source
+  evidence. A new isolated workflow mutation proves success-only artifact
+  publication fails policy, increasing the full matrix to 23 representative
+  continuous-integration failures.
+- Directly related workflow guidance documents the 14-day test evidence
+  retention; the broader test-writing and test-boundary documentation remains
+  intentionally deferred to US-015.
+- Files changed: `.github/workflows/continuous-integration.yml`, `AGENTS.md`,
+  `docs/continuous-integration.md`, `scripts/check-workflow-policy.mjs`,
+  `scripts/check-workflow-policy.test.mjs`,
+  `scripts/prove-ci-fail-closed.mjs`, and this issue memory.
+- Targeted checks passed: Prettier, 31 workflow-policy mutation tests,
+  `yarn policy:workflow`, and all 23 isolated fail-closed proofs.
+- The complete `yarn validate` contract passed on the first and only attempt.
