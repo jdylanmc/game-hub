@@ -2,6 +2,16 @@ targetScope = 'subscription'
 
 metadata description = 'Subscription entry point for one Game Hub environment.'
 
+type NonSecretEnvironmentVariable = {
+  name: string
+  value: string
+}
+
+type SecretEnvironmentReference = {
+  name: string
+  secretRef: string
+}
+
 @description('Azure subscription that owns every Game Hub environment.')
 @allowed([
   '11213dbd-39fe-46ba-87db-5f5e8c449aed'
@@ -43,6 +53,53 @@ param additionalTags object = {}
   'Enabled'
 ])
 param frontendStagingEnvironmentPolicy string
+
+@description('Full container image reference used by the future API revision.')
+param apiContainerImage string
+
+@description('Repository name reserved in Azure Container Registry for future API image publication.')
+@minLength(1)
+param apiImageRepository string
+
+@description('Whether the Container App ingress is externally reachable.')
+param apiIngressExternal bool
+
+@description('Container port targeted by API ingress.')
+@minValue(1)
+@maxValue(65535)
+param apiIngressTargetPort int
+
+@description('API ingress transport protocol.')
+@allowed([
+  'auto'
+  'http'
+  'http2'
+])
+param apiIngressTransport string
+
+@description('Minimum API replicas.')
+@minValue(0)
+param apiMinReplicas int
+
+@description('Maximum API replicas.')
+@minValue(1)
+param apiMaxReplicas int
+
+@description('Container CPU allocation expressed as a valid Container Apps decimal string.')
+param apiCpuCores string
+
+@description('Container memory allocation.')
+param apiMemory string
+
+@description('Concurrent HTTP requests targeted per API replica before scale-out.')
+@minValue(1)
+param apiHttpConcurrentRequests int
+
+@description('Non-secret environment variables passed to the future API container.')
+param apiEnvironmentVariables NonSecretEnvironmentVariable[] = []
+
+@description('Environment variable names mapped to secure Container Apps secret references.')
+param apiSecretEnvironmentReferences SecretEnvironmentReference[] = []
 
 var resourceGroupName = 'rg-${applicationName}-${environmentName}-${locationCode}'
 var requiredTags = {
@@ -92,6 +149,42 @@ module staticWebApp './modules/static-web-app.bicep' = {
   }
 }
 
+module containerRegistry './modules/container-registry.bicep' = {
+  name: '${applicationName}-${environmentName}-container-registry'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    apiImageRepository: apiImageRepository
+    imagePullIdentityName: foundation.outputs.resourceNames.apiManagedIdentity
+    location: location
+    name: foundation.outputs.resourceNames.containerRegistry
+    tags: tags
+  }
+}
+
+module containerAppApi './modules/container-app-api.bicep' = {
+  name: '${applicationName}-${environmentName}-container-app-api'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    appName: foundation.outputs.resourceNames.containerApp
+    cpuCores: apiCpuCores
+    environmentName: foundation.outputs.resourceNames.containerAppsEnvironment
+    environmentVariables: apiEnvironmentVariables
+    httpConcurrentRequests: apiHttpConcurrentRequests
+    image: apiContainerImage
+    imagePullIdentityId: containerRegistry.outputs.imagePullIdentityId
+    ingressExternal: apiIngressExternal
+    ingressTargetPort: apiIngressTargetPort
+    ingressTransport: apiIngressTransport
+    location: location
+    maxReplicas: apiMaxReplicas
+    memory: apiMemory
+    minReplicas: apiMinReplicas
+    registryLoginServer: containerRegistry.outputs.loginServer
+    secretEnvironmentReferences: apiSecretEnvironmentReferences
+    tags: tags
+  }
+}
+
 @description('Explicit Azure subscription selected for this environment.')
 output subscriptionId string = targetSubscriptionId
 
@@ -126,5 +219,61 @@ output frontendEndpoint string = staticWebApp.outputs.endpoint
 output frontendDeployment object = union(staticWebApp.outputs.deploymentConfiguration, {
   resourceGroupName: resourceGroupModule.outputs.name
   staticWebAppName: staticWebApp.outputs.name
+  subscriptionId: targetSubscriptionId
+})
+
+@description('Azure Container Registry resource identifier.')
+output registryResourceId string = containerRegistry.outputs.id
+
+@description('Azure Container Registry resource name.')
+output registryName string = containerRegistry.outputs.registryName
+
+@description('Azure Container Registry login server.')
+output registryLoginServer string = containerRegistry.outputs.loginServer
+
+@description('Private registry repository reserved for future API image publication.')
+output apiImageRepository string = containerRegistry.outputs.apiImageRepository
+
+@description('Pull-only user-assigned managed identity resource identifier.')
+output apiImagePullIdentityId string = containerRegistry.outputs.imagePullIdentityId
+
+@description('Pull-only user-assigned managed identity client identifier.')
+output apiImagePullIdentityClientId string = containerRegistry.outputs.imagePullIdentityClientId
+
+@description('Pull-only user-assigned managed identity principal identifier.')
+output apiImagePullIdentityPrincipalId string = containerRegistry.outputs.imagePullIdentityPrincipalId
+
+@description('Deterministic AcrPull role assignment identifier for the pull-only identity.')
+output apiImagePullRoleAssignmentId string = containerRegistry.outputs.imagePullRoleAssignmentId
+
+@description('Azure Container Apps managed environment resource identifier.')
+output apiEnvironmentResourceId string = containerAppApi.outputs.environmentId
+
+@description('Azure Container Apps managed environment name.')
+output apiEnvironmentName string = containerAppApi.outputs.environmentName
+
+@description('Azure Container App resource identifier.')
+output apiResourceId string = containerAppApi.outputs.appId
+
+@description('Azure Container App resource name.')
+output apiResourceName string = containerAppApi.outputs.appName
+
+@description('Stable Container App ingress hostname across revisions.')
+output apiDefaultHostname string = containerAppApi.outputs.fqdn
+
+@description('Stable HTTPS endpoint for direct API diagnostics.')
+output apiEndpoint string = containerAppApi.outputs.endpoint
+
+@description('System-assigned API runtime identity principal identifier.')
+output apiRuntimePrincipalId string = containerAppApi.outputs.runtimePrincipalId
+
+@description('Non-secret API image, ingress, scaling, and publication contract.')
+output apiDeployment object = union(containerAppApi.outputs.deploymentConfiguration, {
+  imagePullIdentityId: containerRegistry.outputs.imagePullIdentityId
+  imagePullRoleAssignmentId: containerRegistry.outputs.imagePullRoleAssignmentId
+  privateImageRepository: containerRegistry.outputs.apiImageRepository
+  registryLoginServer: containerRegistry.outputs.loginServer
+  registryName: containerRegistry.outputs.registryName
+  resourceGroupName: resourceGroupModule.outputs.name
   subscriptionId: targetSubscriptionId
 })

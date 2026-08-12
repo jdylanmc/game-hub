@@ -7,10 +7,12 @@ Reusing the same entry point and parameter file converges on the same resource
 names; no timestamp, random name, imperative resource creation command, or
 Azure portal step is part of the deployment path.
 
-The current stack creates the environment resource group and an Azure Static
-Web Apps Standard frontend. Later issue #1 stories add the application
-programming interface (API), assets, ingress, identity, and observability
-resources behind the existing module boundary.
+The current stack creates the environment resource group, an Azure Static Web
+Apps Standard frontend, Azure Container Registry Basic, and an Azure Container
+Apps consumption environment and application boundary for the future
+application programming interface (API). Later issue #1 stories add assets,
+canonical ingress, authentication configuration, secure runtime references,
+and observability behind the existing module boundaries.
 
 ## Layout
 
@@ -20,6 +22,8 @@ resources behind the existing module boundary.
 | `modules/resource-group.bicep` | Resource group lifecycle at subscription scope |
 | `modules/foundation.bicep` | Resource-group-scoped deterministic service names and output contract |
 | `modules/static-web-app.bicep` | Azure Static Web Apps Standard frontend and Vite artifact publication contract |
+| `modules/container-registry.bicep` | Azure Container Registry Basic, pull-only managed identity, and scoped `AcrPull` assignment |
+| `modules/container-app-api.bicep` | Azure Container Apps environment, API revision, ingress, scaling, settings, and runtime identity |
 | `environments/dev.bicepparam` | On-demand development values |
 | `environments/prod.bicepparam` | Persistent production-ready values |
 | `.bicep-version` | Exact Bicep command-line interface (CLI) version used locally and by future automation |
@@ -97,9 +101,10 @@ same fixed subscription deployment name and location because Azure keeps a
 deployment name's location immutable.
 
 The outputs contain only the selected subscription and region, resource group
-identity, required tags, deterministic future resource names, and the frontend
-deployment contract. They must never contain storage keys, registry
-credentials, deployment credentials, provider secrets, or connection strings.
+identity, required tags, deterministic resource names, and the frontend, API,
+registry, and identity deployment contracts. They must never contain storage
+keys, registry credentials, deployment credentials, provider secrets,
+connection strings, or resolved secret values.
 
 ## Frontend hosting
 
@@ -149,3 +154,65 @@ keep the resolved value masked and process-local. Never place that value in
 Bicep parameters, deployment outputs, repository files, logs, artifacts, or
 pull request content. The deployment workflow and exact publisher invocation
 are intentionally deferred to US-009.
+
+## Containerized API and registry
+
+`modules/container-registry.bicep` declares Azure Container Registry Basic with
+administrative credentials and anonymous pull disabled. Its public network
+endpoint remains enabled because private endpoints require the Premium tier.
+Microsoft Entra role-based access control remains the authentication boundary:
+a dedicated user-assigned managed identity receives only `AcrPull` on this
+registry, and the Container App uses that identity only for image retrieval.
+No registry password, access key, or connection string is accepted or emitted.
+
+`modules/container-app-api.bicep` declares a consumption-only Azure Container
+Apps environment and one Container App in single-revision mode. The app has a
+separate system-assigned runtime identity with no data-plane role assignments
+in this story. Later modules can grant that principal narrowly scoped access to
+named resources without widening the image-pull identity.
+
+The committed environment files make the following API settings explicit:
+
+| Setting | Development | Production |
+| --- | --- | --- |
+| Minimum replicas | `0` | `1` |
+| Maximum replicas | `2` | `5` |
+| CPU | `0.25` vCPU | `0.5` vCPU |
+| Memory | `0.5Gi` | `1Gi` |
+| HTTP concurrency target | `50` | `100` |
+| Ingress | External HTTPS, port `80`, automatic HTTP transport | External HTTPS, port `80`, automatic HTTP transport |
+
+Image reference, private repository name, ingress exposure, target port,
+transport, replica limits, allocation, HTTP concurrency, and non-secret
+environment variables are Bicep parameters. `apiSecretEnvironmentReferences`
+accepts only Container Apps secret reference names; it never carries secret
+values. The secure configuration story will create those named references
+through managed identity and an approved secret store before any are used.
+
+The initial image is the digest-pinned Microsoft Container Apps hello-world
+image. It is a deterministic bootstrap revision only, not the Game Hub API and
+not API functionality evidence. Future image automation publishes an immutable
+image to the `apiImageRepository` output, then supplies that full image
+reference as `apiContainerImage`. Push automation must use a separate
+Microsoft Entra workload identity federated through OpenID Connect and a
+least-privilege registry role; registry administrative credentials remain
+disabled.
+
+The subscription deployment returns these non-secret API and registry outputs:
+
+| Output | Use |
+| --- | --- |
+| `registryResourceId`, `registryName`, `registryLoginServer` | Registry deployment and role-assignment targets |
+| `apiImageRepository` | Stable private repository target for immutable API images |
+| `apiImagePullIdentityId`, client ID, principal ID, and role assignment ID | Audit the pull-only identity boundary |
+| `apiEnvironmentResourceId`, `apiEnvironmentName` | Container Apps environment operations |
+| `apiResourceId`, `apiResourceName` | Container App deployment target |
+| `apiDefaultHostname`, `apiEndpoint` | Stable revision-independent direct diagnostic endpoint |
+| `apiRuntimePrincipalId` | Future least-privilege runtime role assignments |
+| `apiDeployment` | Non-secret image, ingress, scaling, registry, identity, resource group, and subscription contract |
+
+The direct Container App endpoint is diagnostic. Azure Front Door and the
+Static Web Apps linked-backend story will establish the canonical browser API
+base URL. These outputs do not prove that the registry, environment, app,
+image, or endpoint exists. They are available only after an actual Azure
+deployment, which this repository change does not perform.

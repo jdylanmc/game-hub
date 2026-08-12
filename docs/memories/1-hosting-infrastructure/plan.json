@@ -77,8 +77,8 @@
         "Outputs expose the stable API endpoint and registry information required by deployment automation"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added bounded Azure Container Registry and Azure Container Apps Bicep modules with environment-aware image, ingress, scaling, allocation, HTTP concurrency, and non-secret settings parameters. Azure Container Registry Basic disables administrative credentials and anonymous pull; a dedicated user-assigned identity receives only AcrPull, while the Container App has a separate system-assigned runtime identity with no data-plane roles yet. Stable registry, image repository, environment, app, endpoint, deployment contract, and identity outputs are non-secret. Development and production use explicit bounded scaling defaults and a digest-pinned public bootstrap image until workload-identity automation publishes the future API image. Bicep, compiled-contract, formatting, lint, policy, build, and diff validation passed; no Azure deployment, image publication, endpoint reachability test, or live deployment evidence was performed or claimed.",
       "dependencies": ["US-002"]
     },
     {

@@ -16,6 +16,17 @@
   `yarn infra:install` and `yarn infra:check`.
 - Azure Static Web Apps is declared in `infra/modules/static-web-app.bicep`;
   `frontendDeployment` is the non-secret Vite `dist/` publication contract.
+- Azure Container Registry is declared in
+  `infra/modules/container-registry.bicep`; its dedicated user-assigned identity
+  receives only `AcrPull`, while registry administrative credentials and
+  anonymous pull remain disabled.
+- The future application programming interface boundary is declared in
+  `infra/modules/container-app-api.bicep`; the Container App uses a separate
+  system-assigned runtime identity and exposes revision-independent endpoint
+  outputs.
+- API image, ingress, scaling, allocation, HTTP concurrency, and non-secret
+  settings are environment parameters. Secret values remain outside committed
+  parameter files; only names of future secure references may be configured.
 - Issue #30 is an orchestration dependency because it currently owns
   overlapping `infra`, `.github`, and policy surfaces.
 
@@ -106,4 +117,39 @@
   inspection, and `git diff --check`.
 - No Azure sign-in, validation deployment, `what-if`, resource deployment,
   content publication, endpoint reachability check, or live deployment evidence
+  was performed or claimed.
+
+## 2026-08-11 — US-004 Provision Azure Container Apps API and Azure Container Registry
+
+- Added a bounded Azure Container Registry Basic module with deterministic
+  naming, administrative credentials disabled, anonymous pull disabled, and a
+  stable private repository output for the future API image.
+- Created a dedicated user-assigned image-pull identity and granted it only the
+  built-in `AcrPull` role at registry scope through a deterministic role
+  assignment.
+- Added a consumption-only Azure Container Apps environment and a
+  single-revision Container App with configurable image, external ingress,
+  target port, transport, replica bounds, CPU, memory, HTTP concurrency,
+  non-secret environment variables, and named secure-reference placeholders.
+- Kept workload permissions separate from image retrieval: the Container App
+  has a system-assigned runtime identity with no data-plane roles in this
+  story, while the pull-only identity is used exclusively by the registry
+  configuration.
+- Added explicit development defaults that scale to zero and production
+  defaults with one warm replica. Both environments use a digest-pinned public
+  bootstrap image until OpenID Connect-federated publication automation pushes
+  the future API image to the private repository.
+- Added non-secret outputs for the registry, login server, private repository,
+  pull identity and role assignment, Container Apps environment, Container
+  App, stable diagnostic hostname and endpoint, runtime principal, and API
+  deployment contract.
+- Documented the bootstrap-image evidence boundary, direct diagnostic endpoint,
+  future canonical ingress, Microsoft Entra workload identity publication,
+  secret-reference policy, identity separation, cost defaults, and output
+  contract.
+- Validation: `yarn infra:install`, `yarn infra:check`, compiled-template
+  contract inspection, `yarn format:check`, `yarn lint`, `yarn policy:check`,
+  `yarn build`, and `git diff --check`.
+- No Azure sign-in, validation deployment, `what-if`, resource deployment,
+  image publication, endpoint reachability check, or live deployment evidence
   was performed or claimed.
