@@ -163,6 +163,14 @@ const args = process.argv.slice(2);
 const statePath = process.env.FAKE_GH_STATE_PATH;
 const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
 const cwd = process.cwd();
+if (
+  process.env.EXPECTED_GH_TOKEN &&
+  !(args[0] === 'auth' && args[1] === 'token') &&
+  process.env.GH_TOKEN !== process.env.EXPECTED_GH_TOKEN
+) {
+  process.stderr.write('unexpected GH_TOKEN\\n');
+  process.exit(1);
+}
 const option = (name) => {
   const index = args.indexOf(name);
   return index === -1 ? null : args[index + 1];

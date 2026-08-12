@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadPlan, repositoryIdentity, run } from './ralph-worktrees.mjs';
+import { createIsolatedGitHubEnvironment, verifyGitHubIdentity } from './ralph-github-auth.mjs';
 import {
   checkpointFilePath,
   DEFAULT_STALE_AFTER_SECONDS,
@@ -228,7 +229,7 @@ export function classifyLoopStatus(snapshot) {
 
 export function collectLoopSnapshot(
   loop,
-  { now = Date.now(), staleAfterMs = DEFAULT_STALE_AFTER_SECONDS * 1000 } = {},
+  { githubEnvironment = process.env, now = Date.now(), staleAfterMs = DEFAULT_STALE_AFTER_SECONDS * 1000 } = {},
 ) {
   const snapshot = {
     adversarialState: 'not-required',
@@ -314,7 +315,7 @@ export function collectLoopSnapshot(
           '--json',
           'number,url,state,isDraft',
         ],
-        { cwd: loop.worktreePath },
+        { cwd: loop.worktreePath, env: githubEnvironment },
       ),
     );
     if (pullRequests.length > 1) {
@@ -333,7 +334,7 @@ export function collectLoopSnapshot(
             '--json',
             'number,url,state,isDraft,headRefOid,statusCheckRollup',
           ],
-          { cwd: loop.worktreePath },
+          { cwd: loop.worktreePath, env: githubEnvironment },
         ),
       );
       const checks = detailedPullRequest.statusCheckRollup ?? [];
@@ -421,12 +422,18 @@ async function main() {
     encoding: 'utf8',
   }).trim();
   const plan = loadPlan(repoRoot, memoryDir);
-  const snapshot = collectLoopSnapshot({
-    branchName: plan.branchName,
-    issueNumber: plan.issueNumber,
-    memoryDir,
-    worktreePath: repoRoot,
-  });
+  const owner = plan.repoNameWithOwner.split('/')[0];
+  const githubEnvironment = createIsolatedGitHubEnvironment(owner);
+  verifyGitHubIdentity(owner, githubEnvironment, repoRoot);
+  const snapshot = collectLoopSnapshot(
+    {
+      branchName: plan.branchName,
+      issueNumber: plan.issueNumber,
+      memoryDir,
+      worktreePath: repoRoot,
+    },
+    { githubEnvironment },
+  );
 
   if (hasFlag(args, '--json')) {
     process.stdout.write(`${JSON.stringify(snapshot, null, 2)}\n`);

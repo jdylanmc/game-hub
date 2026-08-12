@@ -562,11 +562,19 @@ function checkpointFromPlan(plan, patch = {}) {
   };
 }
 
-async function waitForCheckOutcome({ deadlineAt, githubEnvironment, loop, repoRoot, runtimeState, staleAfterMs }) {
+async function waitForCheckOutcome({
+  deadlineAt,
+  githubEnvironment,
+  loop,
+  onSignal,
+  repoRoot,
+  runtimeState,
+  staleAfterMs,
+}) {
   const missingChecksGraceUntil = Date.now() + 60_000;
   runtimeState.updateLease({ childPid: null, phase: 'check-wait' });
   while (true) {
-    const snapshot = collectLoopSnapshot(loop, { staleAfterMs });
+    const snapshot = collectLoopSnapshot(loop, { githubEnvironment, staleAfterMs });
     runtimeState.updateCheckpoint({
       checkState: {
         adversarial: snapshot.adversarialState,
@@ -583,6 +591,31 @@ async function waitForCheckOutcome({ deadlineAt, githubEnvironment, loop, repoRo
           }
         : null,
     });
+
+    const requestedSignal = onSignal();
+    if (requestedSignal) {
+      const nextResumableAction =
+        'Inspect the pending exact-head checks, then resume from the last verified checkpoint.';
+      runtimeState.stopLease({
+        lastKnownHead: snapshot.localCommit,
+        outcome: 'cancelled',
+        reason: `Received ${requestedSignal} while waiting for pull-request checks.`,
+      });
+      runtimeState.updateCheckpoint({
+        checkState: {
+          adversarial: snapshot.adversarialState,
+          required: snapshot.ciState,
+        },
+        lastVerifiedHead: snapshot.localCommit,
+        nextResumableAction,
+        phase: 'check-wait',
+      });
+      return {
+        ...snapshot,
+        nextAction: nextResumableAction,
+        status: 'cancelled',
+      };
+    }
 
     if (Date.now() >= deadlineAt.getTime()) {
       const nextResumableAction =
@@ -830,7 +863,10 @@ export async function runRalphLoop(argv = process.argv.slice(2), { cwd = process
     runtimeState.startLease({ lastKnownHead: initialHead, phase: 'preflight' });
     const initialSnapshot = collectLoopSnapshot(
       { branchName, issueNumber, memoryDir: memory.relativeMemoryDir, repoNameWithOwner, worktreePath: repoRoot },
-      { staleAfterMs: options.leaseStaleSeconds * LOCK_STALE_AFTER_MULTIPLIER },
+      {
+        githubEnvironment,
+        staleAfterMs: options.leaseStaleSeconds * LOCK_STALE_AFTER_MULTIPLIER,
+      },
     );
     runtimeState.updateCheckpoint(
       checkpointFromPlan(plan, {
@@ -1100,6 +1136,7 @@ export async function runRalphLoop(argv = process.argv.slice(2), { cwd = process
         process.stdout.write(`Draft pull request: ${pullRequest.url}\n`);
 
         const publicationSnapshot = collectLoopSnapshot(loop, {
+          githubEnvironment,
           staleAfterMs: options.leaseStaleSeconds * LOCK_STALE_AFTER_MULTIPLIER,
         });
         runtimeState.updateCheckpoint(
@@ -1140,6 +1177,7 @@ export async function runRalphLoop(argv = process.argv.slice(2), { cwd = process
           deadlineAt: currentDeadlineAt,
           githubEnvironment,
           loop,
+          onSignal: () => signalRequested,
           repoRoot,
           runtimeState,
           staleAfterMs: options.leaseStaleSeconds * LOCK_STALE_AFTER_MULTIPLIER,
@@ -1176,6 +1214,10 @@ export async function runRalphLoop(argv = process.argv.slice(2), { cwd = process
         if (completionSnapshot.status === 'timed-out') {
           process.stderr.write(`${completionSnapshot.nextAction}\n`);
           return 124;
+        }
+        if (completionSnapshot.status === 'cancelled') {
+          process.stderr.write(`${completionSnapshot.nextAction}\n`);
+          return 130;
         }
 
         const blockedStatus = !['not-required', 'success'].includes(completionSnapshot.adversarialState)

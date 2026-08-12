@@ -440,3 +440,24 @@ test('pending checks time out with a truthful check-wait checkpoint', async () =
   assert.equal(checkpoint.checkState.required, 'pending');
   assert.match(checkpoint.nextResumableAction, /inspect the pending exact-head checks/i);
 });
+
+test('cancellation during check wait records a resumable cancelled state', async () => {
+  const fixture = createRalphFixture('pending-check-cancel');
+  writeGhState(fixture, { checkState: 'pending' });
+  const runner = spawnRunner(fixture, ['--max-iterations', '1', '--iteration-deadline-minutes', '1'], {
+    EXPECTED_GH_TOKEN: 'test-token',
+    FAKE_COPILOT_SCENARIO: 'complete',
+    RALPH_HEARTBEAT_SECONDS: '1',
+  });
+
+  await waitFor(() => readLease(fixture)?.phase === 'check-wait', 20_000);
+  runner.kill('SIGTERM');
+  const result = await collectOutput(runner);
+  assert.equal(result.code, 130);
+  const lease = readLease(fixture);
+  const checkpoint = readCheckpoint(fixture);
+  assert.equal(lease.stop.outcome, 'cancelled');
+  assert.match(lease.stop.reason, /waiting for pull-request checks/);
+  assert.equal(checkpoint.phase, 'check-wait');
+  assert.match(checkpoint.nextResumableAction, /inspect the pending exact-head checks/i);
+});

@@ -35,12 +35,21 @@ function publishedSnapshot(fixture) {
     process.env.PATH = `${fixture.binDir}:${originalPath}`;
     process.env.FAKE_GH_STATE_PATH = fixture.ghStatePath;
     process.env.GH_TOKEN = 'test-token';
-    return collectLoopSnapshot({
-      branchName: fixture.branchName,
-      issueNumber: fixture.issueNumber,
-      memoryDir: fixture.memoryDir,
-      worktreePath: fixture.worktreePath,
-    });
+    return collectLoopSnapshot(
+      {
+        branchName: fixture.branchName,
+        issueNumber: fixture.issueNumber,
+        memoryDir: fixture.memoryDir,
+        worktreePath: fixture.worktreePath,
+      },
+      {
+        githubEnvironment: {
+          ...process.env,
+          EXPECTED_GH_TOKEN: 'isolated-token',
+          GH_TOKEN: 'isolated-token',
+        },
+      },
+    );
   } finally {
     process.env.PATH = originalPath;
     if (originalGhState === undefined) {

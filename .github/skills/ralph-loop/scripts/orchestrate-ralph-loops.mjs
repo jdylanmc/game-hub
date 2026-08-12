@@ -24,8 +24,8 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   });
 }
 
-function collectStatus(loop) {
-  return collectLoopSnapshot(loop);
+function collectStatus(loop, githubEnvironment) {
+  return collectLoopSnapshot(loop, { githubEnvironment });
 }
 
 async function main() {
@@ -136,12 +136,12 @@ async function main() {
   const reporter = new RalphStatusReporter({ heartbeatMs: statusSeconds * 1000 });
   const statusTimer = setInterval(() => {
     for (const { loop } of running.values()) {
-      reporter.observe(loop, collectStatus(loop));
+      reporter.observe(loop, collectStatus(loop, githubEnvironment));
     }
   }, pollSeconds * 1000);
 
   const launch = (loop) => {
-    reporter.reportLaunch(loop, collectStatus(loop));
+    reporter.reportLaunch(loop, collectStatus(loop, githubEnvironment));
     const runner = path.join(loop.worktreePath, '.github/skills/ralph-loop/scripts/run-ralph-loop.sh');
     const child = spawn(
       runner,
@@ -167,7 +167,7 @@ async function main() {
       settled = true;
       running.delete(childKey);
       failed ||= Boolean(blocker) || code !== 0;
-      const snapshot = collectStatus(loop);
+      const snapshot = collectStatus(loop, githubEnvironment);
       reporter.observe(loop, snapshot);
       if (!blocker && code === 0) {
         reporter.reportCompletion(loop, snapshot);
