@@ -229,3 +229,26 @@
 - Checks passed: targeted Prettier and ESLint, all six Neon Drift tests,
   `yarn typecheck`, and the full `yarn validate` contract.
 - Orbital Stack remains intentionally untouched for US-007.
+
+## 2026-08-12 - US-007: Test Orbital Stack lifecycle
+
+- Added Node-environment tests for explicit-time stack progression,
+  deterministic plate increments, the eighteen-plate maximum, immutable
+  initial state, repeatable advancement, and the absence of random consumption.
+- Added deterministic lifecycle tests with a manual simulation clock, seeded
+  random source, controlled animation-frame queue, and mocked WebGL renderer.
+- Proved start creates exactly one animation loop with a zero-delta first frame,
+  including when the injected clock begins at zero.
+- Proved repeated pause and resume calls emit exactly one matching phase and
+  announcement per transition, paused frames and plate input do not advance
+  simulation, and the first resumed frame has zero elapsed time.
+- Made start and disposal idempotent, guarded input and lifecycle calls after
+  disposal, canceled the pending animation frame, removed the pointer listener,
+  disposed rendering once, and blocked retained stale callbacks.
+- Files changed: `games/orbital-stack/src/index.ts`,
+  `games/orbital-stack/src/index.test.ts`,
+  `games/orbital-stack/src/simulation.test.ts`, and this issue memory.
+- Checks passed: targeted Prettier and ESLint, all six Orbital Stack tests,
+  `yarn typecheck`, and the full `yarn validate` contract.
+- Generator, contract, host, and later testing stories remain intentionally
+  untouched.

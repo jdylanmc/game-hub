@@ -122,8 +122,8 @@
         "Start and dispose behavior does not leak animation frames or input listeners"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added Node-environment tests for explicit-time stack progression, deterministic plate increments, the eighteen-plate cap, immutability, repeatability, and unused randomness. Added deterministic lifecycle coverage with an injected clock and random source plus mocked rendering and controlled animation frames. Start, pause, resume, lifecycle announcements, plate input, disposal, animation cancellation, stale callbacks, and pointer-listener cleanup are idempotent and require no real browser rendering.",
       "dependencies": ["US-002"]
     },
     {
