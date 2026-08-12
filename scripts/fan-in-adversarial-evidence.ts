@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AdversarialFindingValidator } from './validate-adversarial-finding.ts';
 import { validateAgentRegistry } from './validate-adversarial-agent-registry.ts';
+import { AdversarialFindingValidator as SharedV2FindingValidator } from './shared-v2/validate-adversarial-finding.ts';
 
 type JsonObject = Record<string, unknown>;
 
@@ -42,7 +43,12 @@ function evaluateAdversarialFanIn(options: {
   headSha: string;
   enabledReviewers: string[];
   evidence: unknown[];
-}): { valid: boolean; conclusion: 'success' | 'neutral' | 'failure'; reasons: string[] } {
+}): {
+  valid: boolean;
+  conclusion: 'success' | 'neutral' | 'failure';
+  reasons: string[];
+  legacyEvidence: string[];
+} {
   const reasons: string[] = [];
   if (!/^[a-f0-9]{40}$/.test(options.headSha)) reasons.push('Fan-in head SHA is invalid.');
   if (
@@ -73,6 +79,7 @@ function evaluateAdversarialFanIn(options: {
   const entries = options.evidence.filter(isObject) as unknown as FanInEvidence[];
   if (entries.length !== options.evidence.length) reasons.push('Fan-in evidence is malformed.');
   const seen = new Set<string>();
+  const legacyEvidence: string[] = [];
   let inconclusive = false;
   for (const entry of entries) {
     if (!entry || typeof entry.agentName !== 'string' || seen.has(entry.agentName)) {
@@ -110,23 +117,43 @@ function evaluateAdversarialFanIn(options: {
       reasons.push(`Artifact manifest is invalid for ${entry.agentName}.`);
       continue;
     }
-    const validation = new AdversarialFindingValidator(options.repoRoot, entry.agentName).validate(entry.result);
+    const schemaVersion = isObject(entry.result) ? entry.result.schemaVersion : undefined;
+    const validation =
+      schemaVersion === '2.0.0'
+        ? new SharedV2FindingValidator(options.repoRoot, entry.agentName).validate(entry.result)
+        : new AdversarialFindingValidator(options.repoRoot, entry.agentName).validate(entry.result);
     if (!validation.valid || !isObject(entry.result) || !isObject(entry.result.verdict)) {
-      reasons.push(`Reviewer result is invalid for ${entry.agentName}.`);
+      reasons.push(
+        `Reviewer result is invalid for ${entry.agentName}: ${
+          validation.errors.map((error) => error.field).join(', ') || 'missing verdict'
+        }.`,
+      );
       continue;
     }
     const verdict = entry.result.verdict;
-    const resultHead = isObject(entry.result.provenance) ? entry.result.provenance.headCommit : undefined;
+    const legacy = schemaVersion === '1.0.0';
+    const attribution = isObject(entry.result.attribution) ? entry.result.attribution : {};
+    const summary = isObject(entry.result.summary) ? entry.result.summary : {};
+    const resultHead = legacy
+      ? attribution.repositoryCommit
+      : isObject(entry.result.provenance)
+        ? entry.result.provenance.headCommit
+        : undefined;
     if (resultHead !== options.headSha) {
       reasons.push(`Reviewer result is stale for ${entry.agentName}.`);
       continue;
     }
+    if (legacy && summary.pullRequestCommit !== undefined && summary.pullRequestCommit !== options.headSha) {
+      reasons.push(`Legacy reviewer summary is stale for ${entry.agentName}.`);
+      continue;
+    }
     const expectedConclusion =
-      verdict.decision === 'PASS' ? 'success' : verdict.decision === 'INCONCLUSIVE' ? 'neutral' : 'failure';
+      verdict.decision === 'PASS' ? 'success' : !legacy && verdict.decision === 'INCONCLUSIVE' ? 'neutral' : 'failure';
     if (check.conclusion !== expectedConclusion || check.conclusion === 'failure') {
       reasons.push(`Reviewer conclusion is blocking or mismatched for ${entry.agentName}.`);
       continue;
     }
+    if (legacy) legacyEvidence.push(entry.agentName);
     if (check.conclusion === 'neutral') inconclusive = true;
   }
   for (const name of options.enabledReviewers) {
@@ -136,6 +163,7 @@ function evaluateAdversarialFanIn(options: {
     valid: reasons.length === 0,
     conclusion: reasons.length > 0 ? 'failure' : inconclusive ? 'neutral' : 'success',
     reasons,
+    legacyEvidence: [...new Set(legacyEvidence)].sort(),
   };
 }
 

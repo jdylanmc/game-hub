@@ -5,8 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AdversarialReviewerEngine, createReviewerFromEnvironment } from './review-adversarial-context.ts';
-import { stableStringify } from './collect-adversarial-context.ts';
-import { expectedReportFingerprintComponents } from './calibration-attestation.ts';
+import { stableStringify } from '../collect-adversarial-context.ts';
+import { expectedReportFingerprintComponents } from '../calibration-attestation.ts';
 import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
 
 const REPORT_SCHEMA_VERSION = '1.0.0';
@@ -57,9 +57,14 @@ interface ReviewerLike {
 
 interface CalibrationRun {
   repetition: number;
-  decision: string;
-  severity: string;
+  decision: 'PASS' | 'FAIL' | 'INCONCLUSIVE';
+  kind: 'POLICY' | 'PLATFORM' | 'COMPUTE';
+  severity: 'INFO' | 'ADVISORY' | 'BLOCKING' | 'ERROR' | 'INCONCLUSIVE';
   blockingCategories: string[];
+  diagnostic?: {
+    code: string;
+    message: string;
+  };
   resultFingerprint: string;
   tokensUsed: number;
   estimatedCostUsd: number;
@@ -89,6 +94,9 @@ interface CalibrationMetrics {
   averageCostUsd: number;
   p95LatencyMs: number;
   errorRate: number;
+  platformFailureCount: number;
+  computeInconclusiveCount: number;
+  diagnosticCodes: string[];
   totalCostUsd?: number;
 }
 
@@ -218,6 +226,8 @@ function benchmarkPacket(benchmark: BenchmarkCase, index: number, agentName = 'u
       pullRequestNumber: index + 1,
       baseSha: sha256(`base:${benchmark.id}`).slice(0, 40),
       headSha,
+      workflowRunId: index + 1,
+      workflowRunAttempt: 1,
       inputSha256: sha256(benchmark.id),
       configVersion: '1.0.0',
       configSha256: sha256('benchmark-config'),
@@ -268,8 +278,13 @@ function normalizedResult(
   agentName = 'unit-test-reviewer',
 ): {
   decision: string;
+  kind: string;
   severity: string;
   blockingCategories: string[];
+  diagnostic?: {
+    code: string;
+    message: string;
+  };
   tokensUsed: number;
   estimatedCostUsd: number;
   error: boolean;
@@ -287,16 +302,29 @@ function normalizedResult(
     .map((finding) => String((finding as JsonObject).category))
     .sort();
   const summary = isObject(result.summary) ? result.summary : {};
+  const kind = typeof verdict.kind === 'string' ? verdict.kind : 'UNKNOWN';
+  const sourceDiagnostic =
+    kind === 'PLATFORM' && isObject(verdict.platformError)
+      ? verdict.platformError
+      : kind === 'COMPUTE' && isObject(verdict.compute)
+        ? verdict.compute
+        : undefined;
+  const diagnostic =
+    sourceDiagnostic && typeof sourceDiagnostic.code === 'string' && typeof sourceDiagnostic.message === 'string'
+      ? { code: sourceDiagnostic.code, message: sourceDiagnostic.message }
+      : undefined;
   const normalized = {
-    decision: String(verdict.decision ?? 'ERROR'),
-    severity: String(verdict.severity ?? 'ERROR'),
+    decision: typeof verdict.decision === 'string' ? verdict.decision : 'FAIL',
+    kind,
+    severity: typeof verdict.severity === 'string' ? verdict.severity : 'ERROR',
     blockingCategories,
+    ...(diagnostic ? { diagnostic } : {}),
   };
   return {
     ...normalized,
     tokensUsed: Number(summary.tokensUsed ?? 0),
     estimatedCostUsd: Number(summary.estimatedCost ?? 0),
-    error: normalized.decision === 'ERROR',
+    error: normalized.decision === 'FAIL' && normalized.kind === 'PLATFORM',
     fingerprint: sha256(stableStringify(normalized)),
   };
 }
@@ -324,10 +352,10 @@ function computeMetrics(
   const advisoryCases = corpus.cases.filter((benchmark) => benchmark.strength === 'advisory');
   const detected = weakCases.filter((benchmark) => {
     const runs = byId.get(benchmark.id)?.runs ?? [];
-    return runs.every((run) => run.decision === 'FAIL' && run.blockingCategories.length > 0);
+    return runs.every((run) => run.decision === 'FAIL' && run.kind === 'POLICY' && run.blockingCategories.length > 0);
   });
   const falsePositives = strongCases.filter((benchmark) =>
-    (byId.get(benchmark.id)?.runs ?? []).some((run) => run.decision === 'FAIL'),
+    (byId.get(benchmark.id)?.runs ?? []).some((run) => run.decision === 'FAIL' && run.kind === 'POLICY'),
   );
   const missedCriticalScenarios = weakCases
     .filter((benchmark) => benchmark.critical && !detected.includes(benchmark))
@@ -341,7 +369,7 @@ function computeMetrics(
     .map((benchmark) => benchmark.id)
     .sort();
   const advisoryEscalations = advisoryCases.filter((benchmark) =>
-    (byId.get(benchmark.id)?.runs ?? []).some((run) => run.decision === 'FAIL'),
+    (byId.get(benchmark.id)?.runs ?? []).some((run) => run.decision === 'FAIL' && run.kind === 'POLICY'),
   );
   let agreementComparisons = 0;
   let agreements = 0;
@@ -369,6 +397,9 @@ function computeMetrics(
     averageCostUsd: rounded(totalCost / Math.max(1, runs.length)),
     p95LatencyMs: percentile95(runs.map((run) => run.latencyMs)),
     errorRate: rounded(errors / Math.max(1, runs.length)),
+    platformFailureCount: runs.filter((run) => run.kind === 'PLATFORM').length,
+    computeInconclusiveCount: runs.filter((run) => run.kind === 'COMPUTE').length,
+    diagnosticCodes: [...new Set(runs.flatMap((run) => (run.diagnostic ? [run.diagnostic.code] : [])))].sort(),
   };
   if (agentName === 'gilfoyle-security-architect') {
     metrics.advisoryCaseCount = advisoryCases.length;
@@ -385,35 +416,90 @@ function reportHash(report: JsonObject): string {
   return sha256(stableStringify(unsigned));
 }
 
+function calibrationRunFingerprint(value: {
+  decision: string;
+  kind: string;
+  severity: string;
+  blockingCategories: string[];
+  diagnostic?: {
+    code: string;
+    message: string;
+  };
+}): string {
+  return sha256(
+    stableStringify({
+      decision: value.decision,
+      kind: value.kind,
+      severity: value.severity,
+      blockingCategories: value.blockingCategories,
+      ...(value.diagnostic ? { diagnostic: value.diagnostic } : {}),
+    }),
+  );
+}
+
 function isCalibrationRun(value: unknown): value is CalibrationRun {
   if (!isObject(value)) return false;
   const blockingCategories = value.blockingCategories;
   const decision = value.decision;
+  const kind = value.kind;
   const severity = value.severity;
+  const diagnostic = isObject(value.diagnostic)
+    ? {
+        code: value.diagnostic.code,
+        message: value.diagnostic.message,
+      }
+    : undefined;
+  const validDiagnostic =
+    diagnostic === undefined ||
+    (typeof diagnostic.code === 'string' &&
+      diagnostic.code.length > 0 &&
+      typeof diagnostic.message === 'string' &&
+      diagnostic.message.length > 0);
   const normalizedFingerprint =
     typeof decision === 'string' &&
+    typeof kind === 'string' &&
     typeof severity === 'string' &&
     Array.isArray(blockingCategories) &&
-    blockingCategories.every((category) => typeof category === 'string')
-      ? sha256(stableStringify({ decision, severity, blockingCategories }))
+    blockingCategories.every((category) => typeof category === 'string') &&
+    validDiagnostic
+      ? calibrationRunFingerprint({
+          decision,
+          kind,
+          severity,
+          blockingCategories,
+          ...(diagnostic && typeof diagnostic.code === 'string' && typeof diagnostic.message === 'string'
+            ? { diagnostic: { code: diagnostic.code, message: diagnostic.message } }
+            : {}),
+        })
       : '';
+  const policyPass = decision === 'PASS' && kind === 'POLICY' && ['INFO', 'ADVISORY'].includes(String(severity));
+  const policyFail =
+    decision === 'FAIL' && kind === 'POLICY' && severity === 'BLOCKING' && blockingCategories.length > 0;
+  const platformFail =
+    decision === 'FAIL' &&
+    kind === 'PLATFORM' &&
+    severity === 'ERROR' &&
+    blockingCategories.length === 0 &&
+    diagnostic !== undefined;
+  const computeInconclusive =
+    decision === 'INCONCLUSIVE' &&
+    kind === 'COMPUTE' &&
+    severity === 'INCONCLUSIVE' &&
+    blockingCategories.length === 0 &&
+    diagnostic !== undefined;
   return (
     Number.isInteger(value.repetition) &&
-    ['PASS', 'FAIL', 'ERROR'].includes(String(decision)) &&
-    ['INFO', 'ADVISORY', 'BLOCKING', 'ERROR'].includes(String(severity)) &&
-    ((decision === 'PASS' && ['INFO', 'ADVISORY'].includes(String(severity))) ||
-      (decision === 'FAIL' && severity === 'BLOCKING') ||
-      (decision === 'ERROR' && severity === 'ERROR')) &&
+    ['PASS', 'FAIL', 'INCONCLUSIVE'].includes(String(decision)) &&
+    ['POLICY', 'PLATFORM', 'COMPUTE'].includes(String(kind)) &&
+    ['INFO', 'ADVISORY', 'BLOCKING', 'ERROR', 'INCONCLUSIVE'].includes(String(severity)) &&
+    (policyPass || policyFail || platformFail || computeInconclusive) &&
     Array.isArray(blockingCategories) &&
-    ((decision === 'PASS' && blockingCategories.length === 0) ||
-      (decision === 'FAIL' && blockingCategories.length > 0) ||
-      decision === 'ERROR') &&
     stableStringify(blockingCategories) === stableStringify([...new Set(blockingCategories)].sort()) &&
     value.resultFingerprint === normalizedFingerprint &&
     [value.tokensUsed, value.estimatedCostUsd, value.latencyMs].every(
       (metric) => typeof metric === 'number' && Number.isFinite(metric) && metric >= 0,
     ) &&
-    value.error === (decision === 'ERROR')
+    value.error === platformFail
   );
 }
 
@@ -444,9 +530,11 @@ async function evaluateBenchmarks(options: {
       const normalized = normalizedResult(result, agentName);
       runs.push({
         repetition,
-        decision: normalized.decision,
-        severity: normalized.severity,
+        decision: normalized.decision as CalibrationRun['decision'],
+        kind: normalized.kind as CalibrationRun['kind'],
+        severity: normalized.severity as CalibrationRun['severity'],
         blockingCategories: normalized.blockingCategories,
+        ...(normalized.diagnostic ? { diagnostic: normalized.diagnostic } : {}),
         resultFingerprint: normalized.fingerprint,
         tokensUsed: normalized.tokensUsed,
         estimatedCostUsd: normalized.estimatedCostUsd,
@@ -578,66 +666,48 @@ function validatePromotionReport(
 }
 
 function oracleFinding(benchmark: BenchmarkCase, agentName = 'unit-test-reviewer'): JsonObject {
-  if (agentName === 'gilfoyle-security-architect') {
-    const securitySeverity = benchmark.expectedSecuritySeverity ?? 'HIGH';
-    const securityControlBypass = benchmark.expectedControlBypass ?? 'NONE';
-    return {
-      id: `${benchmark.expectedCategory?.toUpperCase().replace(/-/g, '') ?? 'SECURITY'}-1`,
-      title: `Unsafe ${benchmark.scenario}`,
-      category: benchmark.expectedCategory,
-      securitySeverity,
-      severity:
-        ['CRITICAL', 'HIGH'].includes(securitySeverity) || ['CONFIRMED', 'UNCERTAIN'].includes(securityControlBypass)
-          ? 'BLOCKING'
-          : 'ADVISORY',
-      confidence: 'HIGH',
-      securityControlBypass,
-      description: `The benchmark contains a concrete ${benchmark.scenario} weakness.`,
-      citations: {
-        productionFiles: [
-          {
-            path: 'src/benchmark.ts',
-            startLine: 1,
-            endLine: Math.max(1, benchmark.production.split('\n').length),
-            snippet: benchmark.production,
-          },
-        ],
-        testFiles: [],
+  const proposedSeverity = benchmark.strength === 'advisory' ? 'ADVISORY' : 'BLOCKING';
+  const citations = {
+    productionFiles: [
+      {
+        path: 'src/benchmark.ts',
+        startLine: 1,
+        endLine: Math.max(1, benchmark.production.split('\n').length),
+        snippet: benchmark.production,
       },
-      exploitOrFailureScenario: `An attacker can exploit the ${benchmark.scenario} weakness under the stated trust boundary.`,
-      impact: 'The weakness can violate confidentiality, integrity, availability, or privilege boundaries.',
-      remediation: 'Apply the safe paired benchmark control.',
-      verificationGuidance: 'Run the paired deterministic safe benchmark and a negative abuse case.',
-    };
-  }
+    ],
+    testFiles: [
+      {
+        path: 'src/benchmark.test.ts',
+        startLine: 1,
+        endLine: Math.max(1, benchmark.test.split('\n').length),
+        snippet: benchmark.test,
+      },
+    ],
+  };
   return {
     id: `${benchmark.expectedCategory?.toUpperCase().replace(/-/g, '') ?? 'BENCHMARK'}-1`,
-    title: `Weak ${benchmark.scenario} coverage`,
-    category: benchmark.expectedCategory,
-    severity: 'BLOCKING',
-    confidence: 'HIGH',
-    description: `The benchmark intentionally omits the ${benchmark.scenario} behavior.`,
-    citations: {
-      productionFiles: [
-        {
-          path: 'src/benchmark.ts',
-          startLine: 1,
-          endLine: 1,
-          snippet: benchmark.production,
-        },
-      ],
-      testFiles: [
-        {
-          path: 'src/benchmark.test.ts',
-          startLine: 1,
-          endLine: 1,
-          snippet: benchmark.test,
-        },
-      ],
-    },
-    missingScenario: benchmark.scenario,
-    expectedFailureSignal: 'The strong benchmark must fail when this behavior regresses.',
-    suggestedTest: 'Use the paired strong benchmark test.',
+    title: `${agentName === 'gilfoyle-security-architect' ? 'Unsafe' : 'Weak'} ${benchmark.scenario}`,
+    category: benchmark.expectedCategory ?? 'other',
+    proposedSeverity,
+    severity: proposedSeverity,
+    confidence: proposedSeverity === 'BLOCKING' ? 'HIGH' : 'MEDIUM',
+    description: `The benchmark intentionally contains a ${benchmark.scenario} weakness.`,
+    citations,
+    policyRule: 'Calibrated high-confidence blockers require remediation and verification.',
+    failureScenario: `The unsafe ${benchmark.scenario} behavior reaches the production trust boundary.`,
+    impact: 'The weakness can merge undetected or violate the expected control.',
+    remediation: ['Apply the safe paired benchmark control.'],
+    verificationGuidance: 'Run the paired safe benchmark and negative abuse case.',
+    ...(proposedSeverity === 'BLOCKING'
+      ? {
+          critic: {
+            decision: 'CONFIRM',
+            rationale: 'The benchmark evidence directly demonstrates the proposed blocker.',
+            citations,
+          },
+        }
+      : {}),
   };
 }
 
@@ -651,6 +721,7 @@ function oracleModelResult(benchmark: BenchmarkCase, agentName = 'unit-test-revi
     attribution: {},
     verdict: {
       decision: blocking ? 'FAIL' : 'PASS',
+      kind: 'POLICY',
       severity: blocking ? 'BLOCKING' : findings.length > 0 ? 'ADVISORY' : 'INFO',
       blockingFindingsCount: blocking ? findings.length : 0,
       advisoryFindingsCount: blocking ? 0 : findings.length,
@@ -665,12 +736,35 @@ function createFixtureReviewer(
   benchmark: BenchmarkCase,
   agentName = 'unit-test-reviewer',
 ): AdversarialReviewerEngine {
+  const criticResponse = {
+    decision: 'CONFIRM',
+    rationale: 'The benchmark evidence directly demonstrates the proposed blocker.',
+    citations: [
+      {
+        path: 'src/benchmark.ts',
+        startLine: 1,
+        endLine: Math.max(1, benchmark.production.split('\n').length),
+        snippet: benchmark.production,
+      },
+      {
+        path: 'src/benchmark.test.ts',
+        startLine: 1,
+        endLine: Math.max(1, benchmark.test.split('\n').length),
+        snippet: benchmark.test,
+      },
+    ],
+  };
   const transport = {
-    complete: async () => ({
-      content: JSON.stringify(oracleModelResult(benchmark, agentName)),
-      promptTokens: 1000,
-      completionTokens: 500,
-    }),
+    complete: (request: { messages: Array<{ content: string }> }) =>
+      Promise.resolve({
+        content: JSON.stringify(
+          request.messages[1]?.content.startsWith('Critic review:')
+            ? criticResponse
+            : oracleModelResult(benchmark, agentName),
+        ),
+        promptTokens: 1000,
+        completionTokens: 500,
+      }),
   };
   return new AdversarialReviewerEngine({
     repoRoot,
@@ -765,6 +859,8 @@ if (isCli) {
 }
 
 export {
+  benchmarkPacket,
+  calibrationRunFingerprint,
   calibrationFingerprint,
   computeMetrics,
   createFixtureReviewer,

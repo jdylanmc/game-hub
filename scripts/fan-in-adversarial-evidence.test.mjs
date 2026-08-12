@@ -82,15 +82,68 @@ function evidence(overrides = {}) {
 }
 
 describe('evaluateAdversarialFanIn', () => {
-  it('accepts structurally complete exact-head PASS evidence and preserves INCONCLUSIVE as neutral', () => {
+  it('accepts exact-head legacy v1 evidence and labels it explicitly while rejecting mixed duplicate evidence', () => {
+    const legacy = evidence({
+      result: {
+        schemaVersion: '1.0.0',
+        findingVersion: 'unit-test-reviewer@2026-08-12T19:00:00Z',
+        attribution: {
+          agentName: 'unit-test-reviewer',
+          agentVersion: '1.0.0',
+          modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
+          promptVersion: '1.0.3',
+          promptContentHash: '9d5667c8233da813b06adc93eba7daf832339653b44c617a006df51b21697c68',
+          policyVersion: '1.0.0',
+          toolsVersion: '1.0.1',
+          subscriptionId: '11213dbd-39fe-46ba-87db-5f5e8c449aed',
+          repositoryCommit: headSha,
+          timestamp: '2026-08-12T19:00:00Z',
+        },
+        verdict: {
+          decision: 'PASS',
+          severity: 'INFO',
+          blockingFindingsCount: 0,
+          advisoryFindingsCount: 0,
+          policyDecisionRationale: 'No blockers.',
+        },
+        findings: [],
+        summary: {
+          pullRequestNumber: 56,
+          pullRequestCommit: headSha,
+        },
+      },
+    });
+    const accepted = evaluateAdversarialFanIn({
+      repoRoot: '.',
+      headSha,
+      enabledReviewers: ['unit-test-reviewer'],
+      evidence: [legacy],
+    });
+    expect(accepted).toMatchObject({
+      valid: true,
+      conclusion: 'success',
+      legacyEvidence: ['unit-test-reviewer'],
+    });
+
     expect(
       evaluateAdversarialFanIn({
         repoRoot: '.',
         headSha,
         enabledReviewers: ['unit-test-reviewer'],
-        evidence: [evidence()],
+        evidence: [legacy, evidence()],
       }),
-    ).toMatchObject({ conclusion: 'success', valid: true });
+    ).toMatchObject({ valid: false, conclusion: 'failure' });
+  });
+
+  it('accepts structurally complete exact-head PASS evidence and preserves INCONCLUSIVE as neutral', () => {
+    const acceptedV2 = evaluateAdversarialFanIn({
+      repoRoot: '.',
+      headSha,
+      enabledReviewers: ['unit-test-reviewer'],
+      evidence: [evidence()],
+    });
+    expect(acceptedV2.reasons).toEqual([]);
+    expect(acceptedV2).toMatchObject({ conclusion: 'success', valid: true });
 
     const inconclusive = evidence({
       check: {

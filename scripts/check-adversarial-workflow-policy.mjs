@@ -37,16 +37,6 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson, resolv
     'cancel-in-progress: false',
     'timeout-minutes: 10',
     'timeout-minutes: 20',
-    'Resolve enabled primary reviewer matrix',
-    'node scripts/resolve-adversarial-reviewer-matrix.ts --github-output "$GITHUB_OUTPUT"',
-    'reviewer_matrix: ${{ steps.matrix.outputs.reviewer_matrix }}',
-    'matrix: ${{ fromJSON(needs.resolve.outputs.reviewer_matrix) }}',
-    'ADVERSARIAL_AGENT_NAME: ${{ matrix.agentName }}',
-    'ACTIVE_CALIBRATION_REPORT: ${{ matrix.calibrationReport }}',
-    'name: Adversarial Review / fan-in',
-    'needs:',
-    'Publish exact-head deterministic fan-in',
-    'node scripts/publish-adversarial-fan-in.ts "$GITHUB_REPOSITORY" "$HEAD_SHA"',
     '--require-eligible',
     '--expected-head-sha "$EXPECTED_HEAD_SHA"',
     'yarn calibration:check --report "$ACTIVE_CALIBRATION_REPORT"',
@@ -68,15 +58,6 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson, resolv
   ];
   for (const fragment of requiredFragments) {
     if (!workflow.includes(fragment)) violations.push(`Missing adversarial workflow invariant: ${fragment}`);
-  }
-  if (
-    workflow.includes('ADVERSARIAL_AGENT_NAME: unit-test-reviewer') ||
-    workflow.includes('ACTIVE_CALIBRATION_REPORT: config/adversarial-agents/active-calibration-unit-test-reviewer.json')
-  ) {
-    violations.push('Primary reviewer execution must be registry-driven, not hardcoded.');
-  }
-  if (!workflow.includes("if: always() && needs.resolve.outputs.eligible == 'true'")) {
-    violations.push('Fan-in must publish a structural failure even when an individual reviewer fails.');
   }
 
   const calibrationPosition = workflow.indexOf('Validate promoted calibration before model access');
@@ -120,9 +101,9 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson, resolv
 
   const writePermissions = [...workflow.matchAll(/^\s{6}([a-z-]+): write\s*$/gm)].map((match) => match[1]);
   if (
-    writePermissions.length !== 3 ||
-    writePermissions.filter((permission) => permission === 'checks').length !== 2 ||
-    writePermissions.filter((permission) => permission === 'id-token').length !== 1 ||
+    writePermissions.length !== 2 ||
+    !writePermissions.includes('checks') ||
+    !writePermissions.includes('id-token') ||
     workflow.includes('write-all') ||
     workflow.includes('secrets.')
   ) {
@@ -130,7 +111,7 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson, resolv
   }
   if (
     (workflow.match(/id-token: write/g) ?? []).length !== 1 ||
-    (workflow.match(/checks: write/g) ?? []).length !== 2 ||
+    (workflow.match(/checks: write/g) ?? []).length !== 1 ||
     (workflow.match(/yarn review:adversarial/g) ?? []).length !== 1
   ) {
     violations.push('Inference identity, check publication, and model invocation must occur exactly once.');
@@ -138,10 +119,10 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson, resolv
 
   const installCommands = workflow.match(/\byarn install[^\n]*/g) ?? [];
   if (
-    installCommands.length !== 3 ||
+    installCommands.length !== 2 ||
     installCommands.some((command) => command.trim() !== 'yarn install --immutable')
   ) {
-    violations.push('All protected-base jobs must bootstrap with direct yarn install --immutable.');
+    violations.push('Both protected-base jobs must bootstrap with direct yarn install --immutable.');
   }
 
   if (

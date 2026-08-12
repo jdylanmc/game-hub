@@ -32,7 +32,6 @@ jobs:
       head_repository: ${{ steps.resolve.outputs.head_repository }}
       head_repository_url: ${{ steps.resolve.outputs.head_repository_url }}
       capacity_slot: ${{ steps.resolve.outputs.capacity_slot }}
-      reviewer_matrix: ${{ steps.matrix.outputs.reviewer_matrix }}
 
     steps:
       - name: Check out protected base workflow code
@@ -71,19 +70,12 @@ jobs:
             --output workflow-input.json \
             --github-output "$GITHUB_OUTPUT"
 
-      - name: Resolve enabled primary reviewer matrix
-        id: matrix
-        run: node scripts/resolve-adversarial-reviewer-matrix.ts --github-output "$GITHUB_OUTPUT"
-
   review:
-    name: Adversarial review / ${{ matrix.agentName }}
+    name: Adversarial review
     needs:
       - resolve
-    if: always() && needs.resolve.outputs.eligible == 'true'
+    if: needs.resolve.outputs.eligible == 'true'
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.resolve.outputs.reviewer_matrix) }}
     timeout-minutes: 20
     environment: adversarial-review
     permissions:
@@ -97,9 +89,9 @@ jobs:
       cancel-in-progress: false
     env:
       AZURE_CORE_OUTPUT: none
-      ADVERSARIAL_AGENT_NAME: ${{ matrix.agentName }}
-      AZURE_OPENAI_DEPLOYMENT_ID: ${{ matrix.deploymentId }}
-      ACTIVE_CALIBRATION_REPORT: ${{ matrix.calibrationReport }}
+      ADVERSARIAL_AGENT_NAME: unit-test-reviewer
+      AZURE_OPENAI_DEPLOYMENT_ID: game-hub-unit-test-reviewer
+      ACTIVE_CALIBRATION_REPORT: config/adversarial-agents/active-calibration-unit-test-reviewer.json
 
     steps:
       - name: Check out protected base workflow code
@@ -287,42 +279,3 @@ jobs:
           if (publication.conclusion === 'failure') process.exit(1);
           if (!['success', 'neutral'].includes(publication.conclusion)) process.exit(1);
           NODE
-
-  fan-in:
-    name: Adversarial Review / fan-in
-    needs:
-      - resolve
-      - review
-    if: needs.resolve.outputs.eligible == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      checks: write
-      contents: read
-    steps:
-      - name: Check out protected base workflow code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          repository: ${{ github.repository }}
-          ref: ${{ github.sha }}
-          persist-credentials: false
-          fetch-depth: 1
-
-      - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 24.13.0
-
-      - name: Enable pinned Yarn
-        run: corepack enable
-
-      - name: Install protected base dependencies
-        run: yarn install --immutable
-
-      - name: Publish exact-head deterministic fan-in
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
-        run: |
-          set -euo pipefail
-          node scripts/publish-adversarial-fan-in.ts "$GITHUB_REPOSITORY" "$HEAD_SHA"

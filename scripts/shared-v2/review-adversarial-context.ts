@@ -7,9 +7,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AdversarialFindingValidator } from './validate-adversarial-finding.ts';
 import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
-import { stableStringify } from './collect-adversarial-context.ts';
+import { stableStringify } from '../collect-adversarial-context.ts';
 
-const ENGINE_VERSION = '1.0.1';
+const ENGINE_VERSION = '2.0.0';
 
 type JsonObject = Record<string, unknown>;
 
@@ -34,6 +34,13 @@ interface ReviewerEngineConfig {
     maxEstimatedCostUsd: number;
     inputUsdPerMillionTokens: number;
     outputUsdPerMillionTokens: number;
+  };
+  critic: {
+    maxConcurrentReviews: number;
+    inconclusiveBlocksAtConfidence: 'HIGH';
+  };
+  persona: {
+    fallbackTitle: string;
   };
   allowedTools: string[];
   allowedNetworkDestinations: string[];
@@ -97,9 +104,12 @@ interface ReviewResult {
   schemaVersion: string;
   findingVersion: string;
   attribution: JsonObject;
+  provenance: JsonObject;
+  artifactDigest: JsonObject;
   verdict: JsonObject;
   findings: unknown[];
   summary?: JsonObject;
+  presentation?: JsonObject;
 }
 
 class ReviewerTransportError extends Error {
@@ -211,6 +221,109 @@ function loadJson(filePath: string): JsonObject {
   return value;
 }
 
+const citationSchema: JsonObject = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['path', 'startLine', 'endLine', 'snippet'],
+  properties: {
+    path: { type: 'string' },
+    startLine: { type: 'integer', minimum: 1 },
+    endLine: { type: 'integer', minimum: 1 },
+    snippet: { type: 'string' },
+  },
+};
+
+const citationsSchema: JsonObject = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['productionFiles', 'testFiles'],
+  properties: {
+    productionFiles: { type: 'array', items: citationSchema },
+    testFiles: { type: 'array', items: citationSchema },
+    issueRequirements: { type: 'array', items: { type: 'string' } },
+  },
+};
+
+const primaryResponseSchema: JsonObject = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['verdict', 'findings'],
+  properties: {
+    verdict: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'decision',
+        'kind',
+        'severity',
+        'blockingFindingsCount',
+        'advisoryFindingsCount',
+        'policyDecisionRationale',
+      ],
+      properties: {
+        decision: { enum: ['PASS', 'FAIL'] },
+        kind: { const: 'POLICY' },
+        severity: { enum: ['INFO', 'ADVISORY', 'BLOCKING'] },
+        blockingFindingsCount: { type: 'integer', minimum: 0 },
+        advisoryFindingsCount: { type: 'integer', minimum: 0 },
+        policyDecisionRationale: { type: 'string' },
+      },
+    },
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'id',
+          'title',
+          'category',
+          'proposedSeverity',
+          'severity',
+          'confidence',
+          'description',
+          'citations',
+          'policyRule',
+          'failureScenario',
+          'impact',
+          'remediation',
+          'verificationGuidance',
+        ],
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          category: { type: 'string' },
+          proposedSeverity: { enum: ['BLOCKING', 'ADVISORY'] },
+          severity: { enum: ['BLOCKING', 'ADVISORY'] },
+          confidence: { enum: ['HIGH', 'MEDIUM', 'LOW'] },
+          description: { type: 'string' },
+          citations: citationsSchema,
+          policyRule: { type: 'string' },
+          failureScenario: { type: 'string' },
+          impact: { type: 'string' },
+          remediation: { type: 'array', items: { type: 'string' }, minItems: 1 },
+          verificationGuidance: { type: 'string' },
+        },
+      },
+    },
+  },
+};
+
+const criticResponseSchema: JsonObject = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['decision', 'rationale', 'citations'],
+  properties: {
+    decision: { enum: ['CONFIRM', 'REJECT', 'INCONCLUSIVE'] },
+    rationale: { type: 'string' },
+    citations: {
+      type: 'array',
+      minItems: 1,
+      items: citationSchema,
+    },
+  },
+};
+
 function loadRuntime(
   repoRoot: string,
   agentName = 'unit-test-reviewer',
@@ -218,7 +331,6 @@ function loadRuntime(
 ): {
   engineConfig: ReviewerEngineConfig;
   agentConfig: AgentConfig;
-  responseSchema: JsonObject;
   policyVersion: string;
   blockingFindingsMinimum: number;
   reviewerPrompt: string;
@@ -227,7 +339,6 @@ function loadRuntime(
   const registration = loadAgentRegistration(repoRoot, agentName, { allowDisabledForCalibration });
   const engineConfig = loadJson(path.join(repoRoot, registration.engineConfigFile)) as unknown as ReviewerEngineConfig;
   const policy = loadJson(path.join(repoRoot, registration.policyFile));
-  const responseSchema = loadJson(path.join(repoRoot, registration.schemaFile));
   const policyProperties = isObject(policy.properties) ? policy.properties : {};
   const failThresholds = isObject(policyProperties.failThresholds) ? policyProperties.failThresholds : {};
   const failThresholdProperties = isObject(failThresholds.properties) ? failThresholds.properties : {};
@@ -259,7 +370,6 @@ function loadRuntime(
   return {
     engineConfig,
     agentConfig,
-    responseSchema,
     policyVersion: String(policy.version),
     blockingFindingsMinimum: blockingThreshold,
     reviewerPrompt,
@@ -268,68 +378,163 @@ function loadRuntime(
 }
 
 function packetIdentity(packet: unknown): {
+  repository: string;
   headSha: string;
+  baseSha: string;
   pullRequestNumber: number;
+  sourceIssueNumber: number;
+  workflowRunId: number;
+  workflowRunAttempt: number;
   contextStatus: string;
 } {
   if (!isObject(packet) || !isObject(packet.attribution)) {
     throw new Error('Context packet attribution is missing');
   }
   const headSha = packet.attribution.headSha;
+  const baseSha = packet.attribution.baseSha;
   const pullRequestNumber = packet.attribution.pullRequestNumber;
-  if (typeof headSha !== 'string' || !/^[a-f0-9]{40}$/.test(headSha) || !Number.isInteger(pullRequestNumber)) {
+  const sourceIssueNumber = packet.attribution.issueNumber;
+  const workflowRunId = packet.attribution.workflowRunId;
+  const workflowRunAttempt = packet.attribution.workflowRunAttempt;
+  const repository = packet.attribution.repository;
+  if (
+    typeof repository !== 'string' ||
+    !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) ||
+    typeof headSha !== 'string' ||
+    !/^[a-f0-9]{40}$/.test(headSha) ||
+    typeof baseSha !== 'string' ||
+    !/^[a-f0-9]{40}$/.test(baseSha) ||
+    !Number.isInteger(pullRequestNumber) ||
+    !Number.isInteger(sourceIssueNumber) ||
+    !Number.isInteger(workflowRunId) ||
+    !Number.isInteger(workflowRunAttempt)
+  ) {
     throw new Error('Context packet identity is invalid');
   }
   return {
+    repository,
     headSha,
+    baseSha,
     pullRequestNumber: Number(pullRequestNumber),
+    sourceIssueNumber: Number(sourceIssueNumber),
+    workflowRunId: Number(workflowRunId),
+    workflowRunAttempt: Number(workflowRunAttempt),
     contextStatus: String(packet.status),
   };
 }
 
-function runtimeAttribution(agent: AgentConfig, policyVersion: string, headSha: string, timestamp: string): JsonObject {
-  const attribution: JsonObject = {
+function configurationFingerprint(agent: AgentConfig, policyVersion: string): string {
+  return sha256(
+    stableStringify({
+      agentName: agent.name,
+      agentVersion: agent.version,
+      schemaContentHash: agent.schemaContentHash,
+      policyContentHash: agent.policyContentHash,
+      policyVersion,
+    }),
+  );
+}
+
+function runtimeAttribution(
+  agent: AgentConfig,
+  policyVersion: string,
+  headSha: string,
+  timestamp: string,
+  contextFingerprint: string,
+): JsonObject {
+  return {
     agentName: agent.name,
     agentVersion: agent.version,
     modelDeployment: agent.modelDeployment,
+    modelVersion: agent.modelVersion,
     promptVersion: agent.promptVersion,
     promptContentHash: agent.promptContentHash,
+    schemaVersion: '2.0.0',
+    schemaContentHash: agent.schemaContentHash,
     policyVersion,
+    policyContentHash: agent.policyContentHash,
     toolsVersion: agent.toolsVersion,
     subscriptionId: '11213dbd-39fe-46ba-87db-5f5e8c449aed',
     repositoryCommit: headSha,
+    contextFingerprint,
+    calibrationFingerprint: configurationFingerprint(agent, policyVersion),
     timestamp,
   };
-  if (agent.name === 'gilfoyle-security-architect') {
-    attribution.modelVersion = agent.modelVersion;
-    attribution.schemaVersion = '1.0.0';
-    attribution.schemaContentHash = agent.schemaContentHash;
-    attribution.policyContentHash = agent.policyContentHash;
-  }
-  return attribution;
 }
 
-function errorResult(options: {
+function platformFailure(options: {
   agent: AgentConfig;
   policyVersion: string;
-  headSha: string;
+  identity: {
+    repository: string;
+    headSha: string;
+    baseSha: string;
+    pullRequestNumber: number;
+    sourceIssueNumber: number;
+    workflowRunId: number;
+    workflowRunAttempt: number;
+  };
   timestamp: string;
   code: string;
   message: string;
+  contextSha256?: string;
 }): ReviewResult {
+  const contextSha256 = options.contextSha256 ?? '0'.repeat(64);
   return {
-    schemaVersion: '1.0.0',
+    schemaVersion: '2.0.0',
     findingVersion: `${options.agent.name}@${options.timestamp}`,
-    attribution: runtimeAttribution(options.agent, options.policyVersion, options.headSha, options.timestamp),
+    attribution: runtimeAttribution(
+      options.agent,
+      options.policyVersion,
+      options.identity.headSha,
+      options.timestamp,
+      contextSha256,
+    ),
+    provenance: {
+      repository: options.identity.repository,
+      pullRequestNumber: options.identity.pullRequestNumber,
+      sourceIssueNumber: options.identity.sourceIssueNumber,
+      baseCommit: options.identity.baseSha,
+      headCommit: options.identity.headSha,
+      workflowRunId: options.identity.workflowRunId,
+      workflowRunAttempt: options.identity.workflowRunAttempt,
+      contextSha256,
+      configurationFingerprint: configurationFingerprint(options.agent, options.policyVersion),
+    },
+    artifactDigest: { algorithm: 'sha256', value: contextSha256 },
     verdict: {
-      decision: 'ERROR',
+      decision: 'FAIL',
+      kind: 'PLATFORM',
       severity: 'ERROR',
       blockingFindingsCount: 0,
       advisoryFindingsCount: 0,
-      errorMessage: `${options.code}: ${options.message}`,
+      platformError: { code: options.code, message: options.message },
       policyDecisionRationale: 'Review failed closed before a policy-safe verdict was available.',
     },
     findings: [],
+  };
+}
+
+function computeInconclusive(
+  options: Parameters<typeof platformFailure>[0] & { retryDelaysMs: number[] },
+): ReviewResult {
+  return {
+    ...platformFailure(options),
+    verdict: {
+      decision: 'INCONCLUSIVE',
+      kind: 'COMPUTE',
+      severity: 'INCONCLUSIVE',
+      blockingFindingsCount: 0,
+      advisoryFindingsCount: 0,
+      compute: {
+        code: options.code,
+        message: options.message,
+        attempts: 3,
+        retryDelaysMs: options.retryDelaysMs,
+      },
+      policyDecisionRationale:
+        'The reviewed artificial-intelligence compute remained unavailable after bounded retries.',
+    },
   };
 }
 
@@ -345,8 +550,8 @@ function deduplicateFindings(findings: unknown[]): unknown[] {
     .sort((left, right) => {
       const fingerprintOrder = left.fingerprint.localeCompare(right.fingerprint);
       if (fingerprintOrder !== 0) return fingerprintOrder;
-      const leftId = isObject(left.finding) ? String(left.finding.id ?? '') : '';
-      const rightId = isObject(right.finding) ? String(right.finding.id ?? '') : '';
+      const leftId = isObject(left.finding) && typeof left.finding.id === 'string' ? left.finding.id : '';
+      const rightId = isObject(right.finding) && typeof right.finding.id === 'string' ? right.finding.id : '';
       return leftId.localeCompare(rightId);
     });
   const seen = new Set<string>();
@@ -359,6 +564,80 @@ function deduplicateFindings(findings: unknown[]): unknown[] {
     .map(({ finding }) => finding);
 }
 
+function canonicalCategoryId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const canonical = value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return canonical.length > 0 ? canonical : undefined;
+}
+
+function canonicalizeFindingIds(findings: unknown[]): unknown[] {
+  const ordered = findings
+    .map((finding) => ({
+      finding,
+      category: isObject(finding) ? canonicalCategoryId(finding.category) : undefined,
+      fingerprint: findingFingerprint(finding),
+    }))
+    .sort((left, right) => {
+      const categoryOrder = String(left.category ?? '').localeCompare(String(right.category ?? ''));
+      return categoryOrder === 0 ? left.fingerprint.localeCompare(right.fingerprint) : categoryOrder;
+    });
+  const ordinals = new Map<string, number>();
+  return ordered.map(({ finding, category }) => {
+    if (!isObject(finding) || !category) return finding;
+    const ordinal = (ordinals.get(category) ?? 0) + 1;
+    ordinals.set(category, ordinal);
+    return {
+      ...finding,
+      id: `${category}-${String(ordinal).padStart(3, '0')}`,
+    };
+  });
+}
+
+function canonicalizeCriticCitations(value: unknown, primaryValue: unknown): JsonObject {
+  if (!Array.isArray(value) || value.length === 0 || !isObject(primaryValue)) {
+    throw new Error('CRITIC_CITATIONS_MISMATCH');
+  }
+  const authoritative: JsonObject = { productionFiles: [], testFiles: [] };
+  const primarySources: Array<[string, unknown[]]> = [
+    ['productionFiles', Array.isArray(primaryValue.productionFiles) ? primaryValue.productionFiles : []],
+    ['testFiles', Array.isArray(primaryValue.testFiles) ? primaryValue.testFiles : []],
+  ];
+  const consumed = new Set<string>();
+  for (const citation of value) {
+    if (!isObject(citation) || Object.keys(citation).sort().join(',') !== 'endLine,path,snippet,startLine') {
+      throw new Error('CRITIC_CITATIONS_MISMATCH');
+    }
+    const source = primarySources.find(([, citations]) =>
+      citations.some((candidate) => stableStringify(candidate) === stableStringify(citation)),
+    );
+    if (!source) throw new Error('CRITIC_CITATIONS_MISMATCH');
+    const key = `${source[0]}\n${stableStringify(citation)}`;
+    if (consumed.has(key)) throw new Error('CRITIC_CITATIONS_MISMATCH');
+    consumed.add(key);
+    (authoritative[source[0]] as unknown[]).push(citation);
+  }
+  return authoritative;
+}
+
+function withProvisionalCritics(findings: unknown[]): unknown[] {
+  return findings.map((finding) => {
+    if (!isObject(finding) || finding.proposedSeverity !== 'BLOCKING' || finding.critic !== undefined) {
+      return finding;
+    }
+    return {
+      ...finding,
+      critic: {
+        decision: 'CONFIRM',
+        rationale: 'Pending separate critic validation.',
+        citations: finding.citations,
+      },
+    };
+  });
+}
+
 function deriveVerdict(findings: unknown[], blockingFindingsMinimum: number, agentName: string): JsonObject {
   const blockingCount = findings.filter(
     (finding) =>
@@ -369,6 +648,7 @@ function deriveVerdict(findings: unknown[], blockingFindingsMinimum: number, age
   const advisoryCount = findings.length - blockingCount;
   return {
     decision: blockingCount >= blockingFindingsMinimum ? 'FAIL' : 'PASS',
+    kind: 'POLICY',
     severity:
       blockingCount >= blockingFindingsMinimum
         ? 'BLOCKING'
@@ -497,6 +777,8 @@ class AdversarialReviewerEngine {
     endpoint: string;
     deploymentId: string;
     transport: ReviewerTransport;
+    criticTransport?: ReviewerTransport;
+    personaRenderer?: (result: Readonly<ReviewResult>) => Promise<string>;
     clock?: ReviewerClock;
     semaphore?: ReviewSemaphore;
     limitsOverride?: Partial<ReviewerEngineConfig['limits']>;
@@ -509,6 +791,8 @@ class AdversarialReviewerEngine {
     endpoint: string;
     deploymentId: string;
     transport: ReviewerTransport;
+    criticTransport?: ReviewerTransport;
+    personaRenderer?: (result: Readonly<ReviewResult>) => Promise<string>;
     clock?: ReviewerClock;
     semaphore?: ReviewSemaphore;
     limitsOverride?: Partial<ReviewerEngineConfig['limits']>;
@@ -542,6 +826,101 @@ class AdversarialReviewerEngine {
     return this.semaphore.run(() => this.reviewWithPermit(packet));
   }
 
+  private async applyCritics(
+    findings: unknown[],
+    request: Readonly<ReviewerTransportRequest>,
+    clock: ReviewerClock,
+  ): Promise<unknown[]> {
+    const transport = this.options.criticTransport ?? this.options.transport;
+    const reviewed: unknown[] = [];
+    for (const finding of findings) {
+      if (!isObject(finding) || finding.proposedSeverity !== 'BLOCKING') {
+        reviewed.push(finding);
+        continue;
+      }
+      const criticRequest = deepFreeze<ReviewerTransportRequest>({
+        ...request,
+        responseSchema: criticResponseSchema,
+        messages: [
+          request.messages[0],
+          {
+            role: 'developer',
+            content:
+              'Critic review: return only JSON with decision CONFIRM, REJECT, or INCONCLUSIVE, a cited rationale, and a non-empty citations ARRAY. Every array item must be an exact, unmodified {path,startLine,endLine,snippet} citation copied from the primary finding; never invent, alter, categorize, or wrap citations. Do not change the primary finding.',
+          },
+          { role: 'user', content: stableStringify(finding) },
+        ],
+      });
+      let critic: JsonObject | undefined;
+      const delays: number[] = [];
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const response = await transport.complete(criticRequest, new AbortController().signal);
+          const parsed: unknown = JSON.parse(response.content ?? '');
+          if (!isObject(parsed)) throw new Error('Critic output was not a JSON object');
+          critic = parsed;
+          break;
+        } catch (error) {
+          if (error instanceof ReviewerTransportError && error.retryable && attempt < 2) {
+            const delay = error.retryAfterMs ?? 250 * 2 ** attempt;
+            delays.push(delay);
+            await clock.sleep(delay);
+            continue;
+          }
+          if (error instanceof ReviewerTransportError && error.retryable) {
+            critic = {
+              decision: 'INCONCLUSIVE',
+              rationale: `Critic compute was unavailable after three attempts: ${error.code}.`,
+              citations: finding.citations,
+            };
+            break;
+          }
+          throw new Error(`CRITIC_FAILURE: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      if (
+        !critic ||
+        !['CONFIRM', 'REJECT', 'INCONCLUSIVE'].includes(String(critic.decision)) ||
+        typeof critic.rationale !== 'string'
+      ) {
+        throw new Error('CRITIC_OUTPUT_INVALID');
+      }
+      critic = {
+        ...critic,
+        citations: canonicalizeCriticCitations(critic.citations, finding.citations),
+      };
+      const severity =
+        critic.decision === 'CONFIRM' || (critic.decision === 'INCONCLUSIVE' && finding.confidence === 'HIGH')
+          ? 'BLOCKING'
+          : 'ADVISORY';
+      reviewed.push({ ...finding, critic, severity });
+    }
+    return reviewed;
+  }
+
+  private async addPresentation(result: ReviewResult, fallbackTitle: string): Promise<ReviewResult> {
+    const neutral = (): JsonObject => ({
+      title: fallbackTitle,
+      summary: `Authoritative decision: ${String(result.verdict.decision)}.`,
+      mode: 'NEUTRAL_FALLBACK',
+    });
+    try {
+      if (!this.options.personaRenderer) return { ...result, presentation: neutral() };
+      const rendered = await this.options.personaRenderer(Object.freeze(structuredClone(result)));
+      if (!rendered.trim()) throw new Error('Persona renderer returned empty output');
+      return {
+        ...result,
+        presentation: {
+          title: fallbackTitle,
+          summary: rendered,
+          mode: 'PERSONA',
+        },
+      };
+    } catch {
+      return { ...result, presentation: neutral() };
+    }
+  }
+
   private async reviewWithPermit(packet: unknown): Promise<ReviewResult> {
     const runtime = loadRuntime(this.options.repoRoot, this.options.agentName, this.options.calibrationMode === true);
     runtime.engineConfig.limits = {
@@ -554,24 +933,33 @@ class AdversarialReviewerEngine {
     try {
       identity = packetIdentity(packet);
     } catch (error) {
-      return errorResult({
+      return platformFailure({
         agent: runtime.agentConfig,
         policyVersion: runtime.policyVersion,
-        headSha: '0'.repeat(40),
+        identity: {
+          repository: 'unknown/unknown',
+          headSha: '0'.repeat(40),
+          baseSha: '0'.repeat(40),
+          pullRequestNumber: 1,
+          sourceIssueNumber: 1,
+          workflowRunId: 1,
+          workflowRunAttempt: 1,
+        },
         timestamp,
         code: 'CONTEXT_IDENTITY_INVALID',
         message: error instanceof Error ? error.message : String(error),
       });
     }
 
-    const fail = (code: string, message: string): ReviewResult =>
-      errorResult({
+    const fail = (code: string, message: string, contextSha256?: string): ReviewResult =>
+      platformFailure({
         agent: runtime.agentConfig,
         policyVersion: runtime.policyVersion,
-        headSha: identity.headSha,
+        identity,
         timestamp,
         code,
         message,
+        contextSha256,
       });
 
     if (identity.contextStatus !== 'READY') {
@@ -585,7 +973,7 @@ class AdversarialReviewerEngine {
     const evidenceHash = sha256(evidence);
     const delimiter = `UNTRUSTED_EVIDENCE_${evidenceHash}`;
     const attributionInstruction = stableStringify(
-      runtimeAttribution(runtime.agentConfig, runtime.policyVersion, identity.headSha, timestamp),
+      runtimeAttribution(runtime.agentConfig, runtime.policyVersion, identity.headSha, timestamp, evidenceHash),
     );
     const messages: TransportMessage[] = [
       { role: 'system', content: runtime.systemPolicy },
@@ -613,7 +1001,7 @@ class AdversarialReviewerEngine {
       apiVersion: runtime.engineConfig.apiVersion,
       credentialScope: runtime.engineConfig.credentialScope,
       messages,
-      responseSchema: runtime.responseSchema,
+      responseSchema: primaryResponseSchema,
       maxOutputTokens: runtime.engineConfig.limits.maxOutputTokens,
       temperature: 0,
       allowedTools: [],
@@ -652,6 +1040,25 @@ class AdversarialReviewerEngine {
             !transportError.retryable ||
             attempt === runtime.engineConfig.limits.maxRetries
           ) {
+            if (
+              !abortController.signal.aborted &&
+              transportError.retryable &&
+              attempt === runtime.engineConfig.limits.maxRetries
+            ) {
+              return computeInconclusive({
+                agent: runtime.agentConfig,
+                policyVersion: runtime.policyVersion,
+                identity,
+                timestamp,
+                code: transportError.code,
+                message: transportError.message,
+                contextSha256: evidenceHash,
+                retryDelaysMs: Array.from(
+                  { length: runtime.engineConfig.limits.maxRetries },
+                  (_, retry) => runtime.engineConfig.limits.retryBaseDelayMs * 2 ** retry,
+                ),
+              });
+            }
             return fail(abortController.signal.aborted ? 'TIMEOUT' : transportError.code, transportError.message);
           }
           const delay = transportError.retryAfterMs ?? runtime.engineConfig.limits.retryBaseDelayMs * 2 ** attempt;
@@ -698,9 +1105,30 @@ class AdversarialReviewerEngine {
     }
     const candidate = {
       ...modelResult,
-      schemaVersion: '1.0.0',
+      findings: canonicalizeFindingIds(
+        withProvisionalCritics(Array.isArray(modelResult.findings) ? modelResult.findings : []),
+      ),
+      schemaVersion: '2.0.0',
       findingVersion: `${runtime.agentConfig.name}@${timestamp}`,
-      attribution: runtimeAttribution(runtime.agentConfig, runtime.policyVersion, identity.headSha, timestamp),
+      attribution: runtimeAttribution(
+        runtime.agentConfig,
+        runtime.policyVersion,
+        identity.headSha,
+        timestamp,
+        evidenceHash,
+      ),
+      provenance: {
+        repository: identity.repository,
+        pullRequestNumber: identity.pullRequestNumber,
+        sourceIssueNumber: identity.sourceIssueNumber,
+        baseCommit: identity.baseSha,
+        headCommit: identity.headSha,
+        workflowRunId: identity.workflowRunId,
+        workflowRunAttempt: identity.workflowRunAttempt,
+        contextSha256: evidenceHash,
+        configurationFingerprint: configurationFingerprint(runtime.agentConfig, runtime.policyVersion),
+      },
+      artifactDigest: { algorithm: 'sha256', value: evidenceHash },
     };
     const candidateValidation = this.validator.validate(candidate);
     if (!candidateValidation.valid) {
@@ -710,20 +1138,28 @@ class AdversarialReviewerEngine {
         candidateValidation.errors.map((error) => `${error.field}: ${error.message}`).join('; '),
       );
     }
-    if (isObject(candidate.verdict) && candidate.verdict.decision === 'ERROR') {
-      return fail(
-        'MODEL_REPORTED_ERROR',
-        typeof candidate.verdict.errorMessage === 'string'
-          ? candidate.verdict.errorMessage
-          : 'Model reported an unspecified review error',
+    let findings: unknown[];
+    try {
+      findings = await this.applyCritics(
+        deduplicateFindings(Array.isArray(candidate.findings) ? candidate.findings : []),
+        request,
+        clock,
       );
+    } catch (error) {
+      return fail('CRITIC_EXECUTION_FAILED', error instanceof Error ? error.message : String(error), evidenceHash);
     }
-
-    const findings = deduplicateFindings(Array.isArray(candidate.findings) ? candidate.findings : []);
     const finalResult: ReviewResult = {
-      schemaVersion: '1.0.0',
+      schemaVersion: '2.0.0',
       findingVersion: `${runtime.agentConfig.name}@${timestamp}`,
-      attribution: runtimeAttribution(runtime.agentConfig, runtime.policyVersion, identity.headSha, timestamp),
+      attribution: runtimeAttribution(
+        runtime.agentConfig,
+        runtime.policyVersion,
+        identity.headSha,
+        timestamp,
+        evidenceHash,
+      ),
+      provenance: candidate.provenance,
+      artifactDigest: candidate.artifactDigest,
       verdict: deriveVerdict(findings, runtime.blockingFindingsMinimum, runtime.agentConfig.name),
       findings,
       summary: {
@@ -735,14 +1171,15 @@ class AdversarialReviewerEngine {
         contextLimitations: [],
       },
     };
-    const finalValidation = this.validator.validate(finalResult);
+    const withPresentation = await this.addPresentation(finalResult, runtime.engineConfig.persona.fallbackTitle);
+    const finalValidation = this.validator.validate(withPresentation);
     if (!finalValidation.valid) {
       return fail(
         'POLICY_DERIVATION_FAILED',
         finalValidation.errors.map((error) => `${error.field}: ${error.message}`).join('; '),
       );
     }
-    return finalResult;
+    return withPresentation;
   }
 }
 

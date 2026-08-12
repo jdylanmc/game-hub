@@ -64,13 +64,6 @@ describe('adversarial workflow policy', () => {
       ),
     ],
     ['evidence retention', workflow.replace('retention-days: 90', 'retention-days: 1')],
-    [
-      'registry-driven reviewer matrix',
-      workflow.replace(
-        'matrix: ${{ fromJSON(needs.resolve.outputs.reviewer_matrix) }}',
-        'matrix: {"include":[{"agentName":"unit-test-reviewer"}]}',
-      ),
-    ],
   ])('rejects weakening %s', (_label, workflowValue) => {
     expect(violations({ workflowValue })).not.toEqual([]);
   });

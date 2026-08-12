@@ -4,10 +4,10 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stableStringify } from './collect-adversarial-context.ts';
+import { stableStringify } from '../collect-adversarial-context.ts';
 import { validatePromotionReport } from './evaluate-adversarial-reviewer.ts';
 import { AdversarialFindingValidator } from './validate-adversarial-finding.ts';
-import { evaluateAdversarialExceptions, type ExceptionEvaluation } from './apply-adversarial-exceptions.ts';
+import { evaluateAdversarialExceptions, type ExceptionEvaluation } from '../apply-adversarial-exceptions.ts';
 import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
 
 type JsonObject = Record<string, unknown>;
@@ -302,8 +302,8 @@ function validateCitation(citation: JsonObject): void {
 
 function primaryCitation(finding: JsonObject): JsonObject {
   const citations = isObject(finding.citations) ? finding.citations : {};
-  const testFiles = Array.isArray(citations.testFiles) ? citations.testFiles : [];
-  const productionFiles = Array.isArray(citations.productionFiles) ? citations.productionFiles : [];
+  const testFiles: unknown[] = Array.isArray(citations.testFiles) ? citations.testFiles : [];
+  const productionFiles: unknown[] = Array.isArray(citations.productionFiles) ? citations.productionFiles : [];
   const allCitations = [...testFiles, ...productionFiles];
   for (const citation of allCitations) {
     if (!isObject(citation)) throw new Error('Finding citation must be an object');
@@ -377,10 +377,10 @@ function decodeMetadata(text: unknown): PublishedCheckMetadata | undefined {
 
 function conclusionFor(result: JsonObject, exceptions: ExceptionEvaluation): 'success' | 'neutral' | 'failure' {
   const verdict = isObject(result.verdict) ? result.verdict : {};
-  if (verdict.decision === 'ERROR' || exceptions.unexceptedBlockingFindingFingerprints.length > 0) {
-    return 'failure';
-  }
-  return verdict.severity === 'ADVISORY' || exceptions.applications.length > 0 ? 'neutral' : 'success';
+  void exceptions;
+  if (verdict.decision === 'PASS') return 'success';
+  if (verdict.decision === 'INCONCLUSIVE' && verdict.kind === 'COMPUTE') return 'neutral';
+  return 'failure';
 }
 
 function checkSummary(result: JsonObject, findingCount: number, exceptions: ExceptionEvaluation): string {
@@ -589,9 +589,8 @@ async function validateEvidenceManifest(
   } else {
     const resultAttribution = isObject(artifact.result.attribution) ? artifact.result.attribution : {};
     try {
-      const validation = new AdversarialFindingValidator(repoRoot, String(resultAttribution.agentName ?? '')).validate(
-        artifact.result,
-      );
+      const agentName = typeof resultAttribution.agentName === 'string' ? resultAttribution.agentName : '';
+      const validation = new AdversarialFindingValidator(repoRoot, agentName).validate(artifact.result);
       if (!validation.valid) reasons.push('Evidence artifact result is not valid reviewer output.');
     } catch {
       reasons.push('Evidence artifact agent registration is invalid.');
@@ -678,18 +677,17 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
   const selectedAttribution = isObject(sanitizedResult.attribution) ? sanitizedResult.attribution : {};
   const validation = new AdversarialFindingValidator(
     options.repoRoot,
-    String(selectedAttribution.agentName ?? ''),
+    typeof selectedAttribution.agentName === 'string' ? selectedAttribution.agentName : '',
   ).validate(sanitizedResult);
   if (!validation.valid) {
     throw new Error(`Reviewer output is invalid: ${validation.errors.map((error) => error.field).join(', ')}`);
   }
   const attribution = sanitizedResult.attribution as JsonObject;
   const summary = isObject(sanitizedResult.summary) ? sanitizedResult.summary : {};
-  const verdict = isObject(sanitizedResult.verdict) ? sanitizedResult.verdict : {};
   if (
     attribution.repositoryCommit !== options.headSha ||
-    (verdict.decision !== 'ERROR' &&
-      (summary.pullRequestCommit !== options.headSha || !Number.isInteger(summary.pullRequestNumber)))
+    summary.pullRequestCommit !== options.headSha ||
+    !Number.isInteger(summary.pullRequestNumber)
   ) {
     throw new Error('Reviewer output does not match the requested pull-request head SHA');
   }
@@ -744,7 +742,7 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
   const previousManifest = validatePreviousManifest(options.previousManifest, {
     repository: options.repository,
     issueNumber: options.issueNumber,
-    pullRequestNumber: Number.isInteger(summary.pullRequestNumber) ? Number(summary.pullRequestNumber) : 0,
+    pullRequestNumber: Number(summary.pullRequestNumber),
     headSha: options.headSha,
     agentName,
   });
@@ -919,7 +917,7 @@ class GitHubRestChecksTransport implements GitHubChecksTransport {
     return {
       id: Number(value.id),
       name: value.name,
-      headSha: String(value.head_sha ?? ''),
+      headSha: typeof value.head_sha === 'string' ? value.head_sha : '',
       externalId: typeof value.external_id === 'string' ? value.external_id : null,
       metadata: decodeMetadata(output.text),
     };
@@ -996,10 +994,11 @@ async function main(): Promise<void> {
     ? calibrationReport.calibrationFingerprint
     : {};
   const calibration: CalibrationAttribution = {
-    reportSha256: String(calibrationReport.reportSha256 ?? ''),
-    fingerprintSha256: String(fingerprint.sha256 ?? ''),
-    policyVersion: String(calibrationReport.promotionPolicyVersion ?? ''),
-    calibratedAt: String(calibrationReport.generatedAt ?? ''),
+    reportSha256: typeof calibrationReport.reportSha256 === 'string' ? calibrationReport.reportSha256 : '',
+    fingerprintSha256: typeof fingerprint.sha256 === 'string' ? fingerprint.sha256 : '',
+    policyVersion:
+      typeof calibrationReport.promotionPolicyVersion === 'string' ? calibrationReport.promotionPolicyVersion : '',
+    calibratedAt: typeof calibrationReport.generatedAt === 'string' ? calibrationReport.generatedAt : '',
   };
   const token = process.env.GITHUB_TOKEN;
   if (!token) throw new Error('GITHUB_TOKEN is required for live GitHub publication');

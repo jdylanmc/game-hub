@@ -226,3 +226,20 @@
   jobs from two to three. The expectation now matches the enforced
   all-protected-base invariant; `yarn test:ci-fail-closed` passes all 23
   representative probes.
+
+## Two-phase bootstrap compatibility boundary
+
+- The existing protected-main v1 reviewer cannot safely review active v2
+  prompt/schema/policy evidence on this bootstrap pull request. Active
+  unit-test reviewer registration, workflow, prompt, schema, policy, engine,
+  calibration report, and architecture fingerprint are therefore restored to
+  their v1-compatible protected-main values.
+- Shared v2 contract, runtime, registry, and publisher code remain dormant
+  under `config/adversarial-agents/shared-v2/` and `scripts/shared-v2/`.
+  Fan-in explicitly labels accepted legacy v1 evidence and fails closed on
+  duplicate/mixed reviewer evidence.
+- The passing real v2 calibration metrics remain review evidence only; they
+  cannot be active while the active fingerprint stays v1-compatible.
+- Follow-up issue #58 owns explicit activation of this boundary, a fresh v2
+  real-Azure calibration, attestation, and protected-main fan-in proof after
+  bootstrap merges.

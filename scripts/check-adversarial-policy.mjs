@@ -174,7 +174,7 @@ if (
   violations.push('Reviewer must use the pinned Azure Identity client and canonical command.');
 }
 if (
-  reviewerConfig.version !== '2.0.0' ||
+  reviewerConfig.version !== '1.0.1' ||
   reviewerConfig.expectedDeploymentId !== 'game-hub-unit-test-reviewer' ||
   reviewerConfig.credentialScope !== 'https://cognitiveservices.azure.com/.default' ||
   JSON.stringify(reviewerConfig.allowedEndpointSuffixes) !== JSON.stringify(['.openai.azure.com']) ||
@@ -183,10 +183,7 @@ if (
   reviewerConfig.limits?.maxOutputBytes > 131072 ||
   reviewerConfig.limits?.maxRetries > 2 ||
   reviewerConfig.limits?.maxEstimatedCostUsd > 0.25 ||
-  reviewerConfig.allowedTools?.length !== 0 ||
-  reviewerConfig.critic?.maxConcurrentReviews !== 3 ||
-  reviewerConfig.critic?.inconclusiveBlocksAtConfidence !== 'HIGH' ||
-  reviewerConfig.persona?.fallbackTitle !== 'Adversarial review result'
+  reviewerConfig.allowedTools?.length !== 0
 ) {
   violations.push('Reviewer engine identity, destination, or execution limits were weakened.');
 }
@@ -367,24 +364,6 @@ if (
 }
 if (packageJson.scripts?.['publish:adversarial'] !== 'node scripts/publish-adversarial-evidence.ts') {
   violations.push('Missing canonical adversarial evidence publication command.');
-}
-if (
-  packageJson.scripts?.['fan-in:adversarial'] !== 'node scripts/fan-in-adversarial-evidence.ts' ||
-  packageJson.scripts?.['waiver:validate'] !== 'node scripts/validate-adversarial-waiver.ts' ||
-  packageJson.scripts?.['promotion:branch-protection'] !== 'node scripts/promote-adversarial-branch-protection.ts'
-) {
-  violations.push('Missing canonical fan-in, waiver, or branch-protection promotion command.');
-}
-if (
-  verdictPolicy.version !== '2.0.0' ||
-  verdictPolicy.properties?.policyVersion?.const !== '2.0.0' ||
-  !publisher.includes("verdict.decision === 'PASS'") ||
-  !publisher.includes("verdict.decision === 'INCONCLUSIVE'") ||
-  !publisher.includes("return 'failure'")
-) {
-  violations.push(
-    'Shared verdict policy must preserve PASS, FAIL, and compute-only INCONCLUSIVE publication semantics.',
-  );
 }
 if (
   packageJson.scripts?.['exceptions:validate'] !==
