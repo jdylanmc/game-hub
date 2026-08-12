@@ -10,8 +10,16 @@ const codeowners = await fs.readFile(codeownersPath, 'utf8');
 const ralphRequiredChecks = JSON.parse(
   await fs.readFile(path.join(rootDirectory, 'config', 'ralph-required-checks.json'), 'utf8'),
 );
-const ralphRunner = await fs.readFile(
+const ralphShellRunner = await fs.readFile(
   path.join(rootDirectory, '.github', 'skills', 'ralph-loop', 'scripts', 'run-ralph-loop.sh'),
+  'utf8',
+);
+const ralphRunner = await fs.readFile(
+  path.join(rootDirectory, '.github', 'skills', 'ralph-loop', 'scripts', 'run-ralph-loop.mjs'),
+  'utf8',
+);
+const ralphStatus = await fs.readFile(
+  path.join(rootDirectory, '.github', 'skills', 'ralph-loop', 'scripts', 'ralph-status.mjs'),
   'utf8',
 );
 const violations = [];
@@ -92,21 +100,38 @@ for (const rule of requiredCodeOwnerRules) {
   if (!codeowners.split('\n').includes(rule)) {
     violations.push(`Missing mandatory Code Owner rule: ${rule}`);
   }
+}
 
-  if (
-    ralphRequiredChecks.version !== '1.0.0' ||
-    JSON.stringify(ralphRequiredChecks.requiredChecks) !==
-      JSON.stringify(['Continuous integration', 'Adversarial Review / unit-test-reviewer'])
-  ) {
-    violations.push('Ralph required-check configuration is missing or weakened.');
-  }
-  for (const fragment of [
-    'gh pr view "$PR_NUMBER"',
-    '--json headRefOid,statusCheckRollup',
-    'node scripts/check-required-pull-request-gates.mjs',
-    '--expected-head-sha "$expected_head_sha"',
-  ]) {
-    if (!ralphRunner.includes(fragment)) {
+if (
+  ralphRequiredChecks.version !== '1.0.0' ||
+  JSON.stringify(ralphRequiredChecks.requiredChecks) !==
+    JSON.stringify(['Continuous integration', 'Adversarial Review / unit-test-reviewer'])
+) {
+  violations.push('Ralph required-check configuration is missing or weakened.');
+}
+
+for (const [source, fragments] of [
+  [ralphShellRunner, ['exec node "$SCRIPT_DIR/run-ralph-loop.mjs" "$@"']],
+  [
+    ralphRunner,
+    [
+      'snapshot.localCommit === snapshot.remoteCommit',
+      'snapshot.pullRequestHeadSha === snapshot.localCommit',
+      "snapshot.ciState === 'success'",
+      "['not-required', 'success'].includes(snapshot.adversarialState)",
+    ],
+  ],
+  [
+    ralphStatus,
+    [
+      "'number,url,state,isDraft,headRefOid,statusCheckRollup'",
+      'requiredStatusChecksFromPlan(plan)',
+      'duplicates.length || failure.length',
+    ],
+  ],
+]) {
+  for (const fragment of fragments) {
+    if (!source.includes(fragment)) {
       violations.push(`Ralph completion does not fail closed on required checks: ${fragment}`);
     }
   }

@@ -393,3 +393,32 @@
   calibration, protected environment configuration, federated identity,
   end-to-end model/check verification, required-check branch protection, and
   Ralph enforcement remain US-009 prerequisites.
+
+## 2026-08-11 - US-009 recovery and completion
+
+- Recovered the interrupted live rollout without committing `.live-review`
+  context, tokens, credentials, or transient model artifacts. Added the local
+  review directory to `.gitignore`.
+- Verified the deployed East US `gpt-4.1-mini` `2025-04-14`
+  `GlobalStandard` deployment is healthy at 500 capacity units. Bicep remains
+  authoritative and its repeat deployment converges.
+- Preserved the real Azure calibration promotion report: all 18 cases ran three
+  times, weak-pattern detection was 100%, strong false positives and errors were
+  zero, repeated-review agreement was 100%, average estimated cost was
+  `$0.002505`, and p95 latency was 8,500 ms.
+- Verified the interrupted live reviewer run returned a schema-valid `PASS`
+  with no findings for PR #35 head `873d069048e39fa32029502e4b79c034cf7ba606`.
+  Increased declared throughput to 500 capacity units so one bounded worst-case
+  context fits without weakening the two-megabyte limit, three-review runtime
+  concurrency cap, or `$0.25` per-review cost ceiling.
+- Integrated `origin/main` commit `29dca36` and its reinforced Ralph lease,
+  heartbeat, checkpoint, timeout, cancellation, recovery, and exact-head check
+  handling. All focused Ralph runner, status, and parallel tests passed.
+- Enabled strict `main` branch protection for both `Continuous integration` and
+  `Adversarial Review / unit-test-reviewer`, while preserving the existing
+  GitHub Actions binding for deterministic continuous integration.
+- Reconciled every issue acceptance criterion to implementation and live
+  evidence. The final PR #35 head is published only after the complete local
+  suite, exact-head deterministic continuous integration, and the unique
+  adversarial reviewer check succeed; the PR body records the final immutable
+  check evidence.

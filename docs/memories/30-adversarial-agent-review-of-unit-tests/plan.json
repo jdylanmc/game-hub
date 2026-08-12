@@ -11,6 +11,10 @@
     "dependencies": [29, 33],
     "changeScopes": [".github", "config", "docs", "infra", "package.json", "scripts", "yarn.lock"]
   },
+  "publication": {
+    "requiredStatusChecks": ["Continuous integration"],
+    "adversarialStatusChecks": ["Adversarial Review / unit-test-reviewer"]
+  },
   "stories": [
     {
       "id": "US-001",
@@ -153,8 +157,8 @@
         "Every issue acceptance criterion is reconciled to implementation and live evidence"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed live rollout and enforcement. Azure resources and least-privilege Microsoft Entra ID identities were deployed idempotently; the real 18-case Azure calibration passed promotion with complete attributable evidence; the bounded reviewer produced a clean PASS against PR #35; exact-head GitHub Checks publication retains redacted evidence; deterministic policy, fail-closed simulations, Ralph status, and required-gate validation reject missing, stale, weakened, canceled, timed-out, malformed, duplicated, or failing checks; strict main branch protection now requires Continuous integration and Adversarial Review / unit-test-reviewer. The current exact-head check and PR body are the authoritative final publication evidence.",
       "dependencies": ["US-005", "US-007", "US-008"]
     }
   ]
