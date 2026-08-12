@@ -24,9 +24,9 @@ Every deployment must explicitly select Azure subscription
 - subscription-scope Bicep as the only supported resource creation path.
 
 `eastus2` is the initial single-region default because it supports the selected
-regional services and Azure Front Door Private Link. It remains a parameter,
-not an application assumption. Multi-region application origins are a future
-availability enhancement, not part of the baseline.
+regional services. It remains a parameter, not an application assumption.
+Multi-region application origins are a future availability enhancement, not
+part of the baseline.
 
 The full development topology is intended to be deployed on demand rather than
 kept running continuously. Production resources are persistent. This preserves
@@ -40,7 +40,7 @@ flowchart LR
   user[Browser] --> afd[Azure Front Door Premium<br/>WAF, bot rules, rate limits]
 
   afd -->|Default route| swa[Azure Static Web Apps Standard<br/>React and Vite dist]
-  afd -->|/game-assets/*<br/>/media/*<br/>/static-assets/*| blob[Azure Blob Storage<br/>Private containers]
+  afd -->|Managed identity<br/>/game-assets/*<br/>/media/*<br/>/static-assets/*| blob[Azure Blob Storage<br/>Private containers]
 
   swa -->|/api/* linked backend| api[Azure Container Apps<br/>Containerized API]
   swa -->|/.auth/*| auth[Static Web Apps authentication<br/>Microsoft Entra ID or GitHub]
@@ -76,9 +76,8 @@ the website's generated application bundles.
 ### Public ingress boundary
 
 Azure Front Door Premium is selected instead of Standard because the baseline
-requires both the managed bot protection rule set and Private Link to the blob
-origin. One WAF security policy covers the canonical frontend, authentication,
-API, and content routes.
+requires the managed bot protection rule set. One WAF security policy covers
+the canonical frontend, authentication, API, and content routes.
 
 The WAF starts in detection mode during a new environment's tuning window and
 must move to prevention mode before that environment is considered
@@ -170,14 +169,15 @@ A general-purpose v2 storage account provides three private blob containers:
 - `static-assets` for other non-application static files.
 
 Anonymous blob access is disabled at the account level. Azure Front Door
-Premium reaches the blob service through Private Link, and clients receive only
-the Front Door URLs. Upload automation uses Microsoft Entra role-based access
-control with `Storage Blob Data Contributor` scoped as narrowly as the
-publisher permits; it does not use account keys.
-
-The Bicep deployment must also make the Front Door managed private endpoint
-approval repeatable. A pending manual portal approval is not an acceptable
-finished deployment.
+Premium uses its system-assigned managed identity and `Storage Blob Data Reader`
+role to authenticate to the blob service. Azure Front Door origin
+authentication does not currently support Private Link origins, so the storage
+public endpoint remains network reachable while anonymous access and Shared Key
+authorization remain disabled. Direct unauthenticated requests cannot read the
+containers. Upload automation uses a separate Microsoft Entra role with
+`Storage Blob Data Contributor` on the dedicated asset account; the GitHub
+publisher uses OpenID Connect federation and never uses account keys, Shared
+Access Signatures, or a client secret.
 
 Development starts with locally redundant storage. Production starts with
 zone-redundant storage in `eastus2`. Geo-redundancy is deferred until recovery
@@ -231,15 +231,15 @@ rather than commit a misleading dollar total.
 | Azure Static Web Apps Standard | Fixed plan charge plus plan limits and overages | One app per environment; use staging environments for frontend-only review |
 | Azure Container Apps | vCPU, memory, requests, and log volume | Scale development to zero; cap replicas in every environment |
 | Azure Container Registry Basic | Daily registry charge plus excess storage and transfer | Basic tier, image cleanup policy in deployment automation |
-| Blob Storage and Private Link | Stored bytes, operations, transfer, and private endpoint processing | LRS in development, ZRS in production, lifecycle policies for stale content |
+| Blob Storage | Stored bytes, operations, and transfer | LRS in development, ZRS in production, bounded soft-delete retention, and no versioning or automatic tier movement without measured need |
 | Key Vault Standard | Operations and optional premium key features | Store only required secrets; prefer managed identity |
 | Log Analytics and Application Insights | Ingested data and retention | Sampling, 30-day baseline retention, explicit daily caps and alerts |
 
 Front Door Premium is intentionally the largest baseline commitment. Replacing
-it with Standard would remove managed bot protection and private blob-origin
-connectivity, while separate edge products would duplicate routing and
-certificate operations. The Premium choice buys one protected canonical
-endpoint and origin isolation.
+it with Standard would remove managed bot protection, while separate edge
+products would duplicate routing and certificate operations. The Premium
+choice buys one protected canonical endpoint and managed-identity access to
+private blob containers.
 
 The initial topology is single-region and does not promise regional failover.
 Adding a second Container Apps environment or storage origin would increase
@@ -276,7 +276,7 @@ deployment with the same parameters must converge. The expected order is:
 1. resource group, monitoring, and identities;
 2. storage, Key Vault, registry, and Container Apps environment;
 3. Container App, Static Web App, and linked API backend;
-4. Front Door routes, WAF policy, and blob Private Link approval; and
+4. Front Door routes, managed blob-origin authentication, and WAF policy; and
 5. Static Web Apps forwarding-gateway restrictions using the Front Door ID.
 
 Deployment outputs expose non-secret application and automation contracts:
@@ -311,12 +311,12 @@ validation, `what-if`, or deployment.
 | Support website authentication | Static Web Apps authentication and route roles | US-006 |
 | Host a Docker-based API | Linked Azure Container Apps backend and Azure Container Registry | US-004 |
 | Store game assets and media | Private general-purpose v2 blob storage containers | US-005 |
-| Put content delivery in front of assets | Front Door Premium blob routes over Private Link | US-005 |
+| Put content delivery in front of assets | Front Door Premium blob routes with managed origin authentication | US-005 |
 | Protect against bots and abusive traffic | Front Door Premium WAF managed bot and rate-limit rules | US-007 |
 | Keep configuration environment aware | Separate resource groups and shared modules with explicit parameters | US-002 and US-008 |
 | Expose deployment configuration | Non-secret service, endpoint, identity, and monitoring outputs | US-002 through US-008 |
 | Avoid committed secrets | Managed identity, Key Vault, and federated deployment identity | US-008 |
-| Make deployment repeatable | Idempotent Bicep, declarative Private Link approval, and documented `what-if` | US-002 and US-009 |
+| Make deployment repeatable | Idempotent Bicep, deterministic role assignments, and documented `what-if` | US-002 and US-009 |
 
 ## Alternatives Not Selected
 
@@ -328,7 +328,11 @@ validation, `what-if`, or deployment.
   origin and a separate authentication and cross-origin resource sharing
   boundary.
 - **Azure Front Door Standard:** supports custom rate limiting but not the
-  selected managed bot rule set or Private Link origin protection.
+  selected managed bot rule set.
+- **Azure Front Door Private Link for the blob origin:** provides network
+  isolation but currently cannot be combined with managed origin
+  authentication. Using it would require anonymous blob access or a stored
+  authorization value, neither of which matches the baseline security model.
 - **Azure Kubernetes Service:** adds cluster operations and idle capacity before
   the API requires that control.
 - **Azure Container Registry Premium:** provides private endpoints and
@@ -344,7 +348,7 @@ validation, `what-if`, or deployment.
 - [Azure Static Web Apps authentication and authorization](https://learn.microsoft.com/azure/static-web-apps/authentication-authorization)
 - [Link Azure Container Apps as a Static Web Apps API](https://learn.microsoft.com/azure/static-web-apps/apis-container-apps)
 - [Configure Azure Front Door manually for Static Web Apps](https://learn.microsoft.com/azure/static-web-apps/front-door-manual?pivots=swa-afd-manual-afd)
-- [Azure Front Door Private Link origins](https://learn.microsoft.com/azure/frontdoor/private-link)
+- [Azure Front Door managed origin authentication](https://learn.microsoft.com/azure/frontdoor/origin-authentication-with-managed-identities)
 - [Azure Front Door WAF bot protection](https://learn.microsoft.com/azure/web-application-firewall/afds/waf-front-door-policy-configure-bot-protection)
 - [Azure Front Door WAF rate limiting](https://learn.microsoft.com/azure/web-application-firewall/afds/waf-front-door-rate-limit)
 - [Azure Container Apps scaling](https://learn.microsoft.com/azure/container-apps/scale-app)

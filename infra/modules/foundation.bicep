@@ -25,6 +25,7 @@ var compactName = replace(baseName, '-', '')
 var uniquenessSuffix = uniqueString(targetSubscriptionId, resourceGroup().id)
 var resourceNames = {
   applicationInsights: 'appi-${baseName}'
+  assetPublisherManagedIdentity: 'id-assets-${baseName}'
   apiManagedIdentity: 'id-api-${baseName}'
   containerApp: 'ca-${baseName}'
   containerAppsEnvironment: 'cae-${baseName}'

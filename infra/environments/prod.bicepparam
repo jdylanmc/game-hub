@@ -24,6 +24,11 @@ param apiEnvironmentVariables = [
     value: 'prod'
   }
 ]
+param assetStorageSkuName = 'Standard_ZRS'
+param assetDeleteRetentionDays = 14
+param gameAssetsCacheDuration = '365.00:00:00'
+param mediaCacheDuration = '01:00:00'
+param staticAssetsCacheDuration = '1.00:00:00'
 param additionalTags = {
   lifecycle: 'persistent'
 }

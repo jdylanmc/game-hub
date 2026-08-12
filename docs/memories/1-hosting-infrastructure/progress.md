@@ -27,6 +27,24 @@
 - API image, ingress, scaling, allocation, HTTP concurrency, and non-secret
   settings are environment parameters. Secret values remain outside committed
   parameter files; only names of future secure references may be configured.
+- Asset storage is declared in `infra/modules/asset-storage.bicep`; the
+  dedicated account separates `game-assets`, `media`, and `static-assets`
+  through private containers and disables anonymous and Shared Key access.
+- Asset publication uses a dedicated user-assigned managed identity with a
+  GitHub OpenID Connect federated credential and `Storage Blob Data
+  Contributor`; commands use `--auth-mode login`, never keys or Shared Access
+  Signatures.
+- Asset content delivery is declared in
+  `infra/modules/asset-content-delivery.bicep`; Azure Front Door uses a
+  system-assigned identity and `Storage Blob Data Reader` to reach the private
+  containers, with separate routes and environment-specific cache durations.
+- Azure Front Door managed origin authentication currently cannot be combined
+  with a Private Link origin. Keep the blob endpoint network reachable while
+  anonymous and Shared Key access remain disabled unless Azure adds a supported
+  identity-plus-Private-Link path.
+- Format Bicep and Bicep parameter files with the pinned
+  `az bicep format --file <path>` command; repository Prettier does not parse
+  those file types.
 - Issue #30 is an orchestration dependency because it currently owns
   overlapping `infra`, `.github`, and policy surfaces.
 
@@ -153,3 +171,40 @@
 - No Azure sign-in, validation deployment, `what-if`, resource deployment,
   image publication, endpoint reachability check, or live deployment evidence
   was performed or claimed.
+
+## 2026-08-11 — US-005 Provision blob assets and content delivery
+
+- Added a dedicated general-purpose v2 storage account with explicitly private
+  `game-assets`, `media`, and `static-assets` containers, Microsoft Entra ID as
+  the default authorization mode, Shared Key and anonymous access disabled,
+  Transport Layer Security 1.2, infrastructure encryption, and bounded
+  environment-specific soft-delete retention.
+- Made cost and resilience values explicit: development uses locally redundant
+  storage, seven recovery days, and shorter edge caches; production uses
+  zone-redundant storage, fourteen recovery days, a one-year immutable game
+  asset cache, a one-hour media cache, and a one-day static asset cache.
+- Created a publication-only user-assigned managed identity with a GitHub
+  OpenID Connect federated credential scoped to the matching repository
+  environment and `Storage Blob Data Contributor` on the dedicated asset
+  account. Upload targets expose only account, container, identity, and
+  `--auth-mode login` contracts.
+- Added Azure Front Door Premium content delivery with a system-assigned
+  identity, `Storage Blob Data Reader`, Microsoft Entra origin authentication,
+  HTTPS-only origin forwarding, compression, query-string-independent caching,
+  and isolated routes for all three content categories.
+- Corrected the architecture decision after verifying current Azure behavior:
+  Front Door managed origin authentication does not support Private Link
+  origins. The storage public endpoint remains network reachable, but anonymous
+  and Shared Key authorization cannot read the private containers.
+- Added non-secret storage, container, publisher identity, role assignment,
+  upload target, Front Door profile, endpoint, public category URL, and caching
+  outputs. Updated deployment documentation with subscription-bound Microsoft
+  Entra upload commands and an explicit evidence boundary.
+- Validation: `yarn infra:install`, `yarn infra:check`, compiled-template
+  contract inspection for storage hardening, containers, identities, role
+  assignments, federated credentials, origin authentication, routes, caching,
+  and outputs; credential-pattern scanning; `yarn format:check`, `yarn lint`,
+  `yarn policy:check`, `yarn build`, and `git diff --check`.
+- No Azure sign-in, validation deployment, `what-if`, resource deployment,
+  asset upload, cache purge, endpoint reachability check, or live deployment
+  evidence was performed or claimed.

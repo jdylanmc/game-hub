@@ -101,7 +101,29 @@ param apiEnvironmentVariables NonSecretEnvironmentVariable[] = []
 @description('Environment variable names mapped to secure Container Apps secret references.')
 param apiSecretEnvironmentReferences SecretEnvironmentReference[] = []
 
+@description('Storage redundancy selected for asset blobs.')
+@allowed([
+  'Standard_LRS'
+  'Standard_ZRS'
+])
+param assetStorageSkuName string
+
+@description('Days that deleted asset blobs and containers remain recoverable.')
+@minValue(1)
+@maxValue(365)
+param assetDeleteRetentionDays int
+
+@description('Azure Front Door edge cache duration for immutable game assets.')
+param gameAssetsCacheDuration string
+
+@description('Azure Front Door edge cache duration for mutable user-facing media.')
+param mediaCacheDuration string
+
+@description('Azure Front Door edge cache duration for other static assets.')
+param staticAssetsCacheDuration string
+
 var resourceGroupName = 'rg-${applicationName}-${environmentName}-${locationCode}'
+var assetPublisherFederatedSubject = 'repo:jdylanmc/game-hub:environment:${environmentName}'
 var requiredTags = {
   application: applicationName
   costCenter: costCenter
@@ -181,6 +203,36 @@ module containerAppApi './modules/container-app-api.bicep' = {
     minReplicas: apiMinReplicas
     registryLoginServer: containerRegistry.outputs.loginServer
     secretEnvironmentReferences: apiSecretEnvironmentReferences
+    tags: tags
+  }
+}
+
+module assetStorage './modules/asset-storage.bicep' = {
+  name: '${applicationName}-${environmentName}-asset-storage'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    deleteRetentionDays: assetDeleteRetentionDays
+    environmentName: environmentName
+    location: location
+    publisherFederatedSubject: assetPublisherFederatedSubject
+    publisherIdentityName: foundation.outputs.resourceNames.assetPublisherManagedIdentity
+    storageAccountName: foundation.outputs.resourceNames.storageAccount
+    storageSkuName: assetStorageSkuName
+    tags: tags
+  }
+}
+
+module assetContentDelivery './modules/asset-content-delivery.bicep' = {
+  name: '${applicationName}-${environmentName}-asset-content-delivery'
+  scope: resourceGroup(targetSubscriptionId, resourceGroupName)
+  params: {
+    endpointName: foundation.outputs.resourceNames.frontDoorEndpoint
+    gameAssetsCacheDuration: gameAssetsCacheDuration
+    mediaCacheDuration: mediaCacheDuration
+    profileName: foundation.outputs.resourceNames.frontDoorProfile
+    staticAssetsCacheDuration: staticAssetsCacheDuration
+    storageAccountName: assetStorage.outputs.storageAccountName
+    storageBlobHostName: replace(replace(assetStorage.outputs.blobEndpoint, 'https://', ''), '/', '')
     tags: tags
   }
 }
@@ -277,3 +329,57 @@ output apiDeployment object = union(containerAppApi.outputs.deploymentConfigurat
   resourceGroupName: resourceGroupModule.outputs.name
   subscriptionId: targetSubscriptionId
 })
+
+@description('Asset storage account resource identifier.')
+output assetStorageAccountId string = assetStorage.outputs.storageAccountId
+
+@description('Asset storage account name.')
+output assetStorageAccountName string = assetStorage.outputs.storageAccountName
+
+@description('Microsoft Entra-authenticated Blob service endpoint.')
+output assetBlobEndpoint string = assetStorage.outputs.blobEndpoint
+
+@description('Private blob container names and resource identifiers by asset category.')
+output assetContainers object = assetStorage.outputs.containers
+
+@description('Asset publisher managed identity resource identifier.')
+output assetPublisherIdentityId string = assetStorage.outputs.publisherIdentityId
+
+@description('Asset publisher managed identity client identifier.')
+output assetPublisherIdentityClientId string = assetStorage.outputs.publisherIdentityClientId
+
+@description('Asset publisher managed identity principal identifier.')
+output assetPublisherIdentityPrincipalId string = assetStorage.outputs.publisherIdentityPrincipalId
+
+@description('OpenID Connect federated credential for asset publication.')
+output assetPublisherFederatedCredentialId string = assetStorage.outputs.publisherFederatedCredentialId
+
+@description('Storage Blob Data Contributor assignment for asset publication.')
+output assetPublisherRoleAssignmentId string = assetStorage.outputs.publisherRoleAssignmentId
+
+@description('Non-secret Microsoft Entra upload targets for game assets, media, and static assets.')
+output assetUploadTargets object = assetStorage.outputs.uploadTargets
+
+@description('Azure Front Door Premium profile resource identifier.')
+output frontDoorProfileId string = assetContentDelivery.outputs.profileId
+
+@description('Azure Front Door endpoint resource identifier.')
+output frontDoorEndpointId string = assetContentDelivery.outputs.endpointId
+
+@description('Azure Front Door endpoint hostname.')
+output frontDoorEndpointHostName string = assetContentDelivery.outputs.endpointHostName
+
+@description('Public content delivery endpoint.')
+output contentEndpoint string = assetContentDelivery.outputs.endpointUrl
+
+@description('Public content delivery endpoints by asset category.')
+output assetContentEndpoints object = assetContentDelivery.outputs.categoryEndpoints
+
+@description('Explicit edge caching contract by asset category.')
+output assetCaching object = assetContentDelivery.outputs.caching
+
+@description('Azure Front Door managed identity principal identifier.')
+output frontDoorPrincipalId string = assetContentDelivery.outputs.profilePrincipalId
+
+@description('Storage Blob Data Reader assignment for Azure Front Door.')
+output frontDoorStorageReaderRoleAssignmentId string = assetContentDelivery.outputs.storageReaderRoleAssignmentId

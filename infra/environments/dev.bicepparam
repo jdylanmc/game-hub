@@ -24,6 +24,11 @@ param apiEnvironmentVariables = [
     value: 'dev'
   }
 ]
+param assetStorageSkuName = 'Standard_LRS'
+param assetDeleteRetentionDays = 7
+param gameAssetsCacheDuration = '1.00:00:00'
+param mediaCacheDuration = '00:05:00'
+param staticAssetsCacheDuration = '01:00:00'
 param additionalTags = {
   lifecycle: 'on-demand'
 }

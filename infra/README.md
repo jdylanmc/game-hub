@@ -8,11 +8,13 @@ names; no timestamp, random name, imperative resource creation command, or
 Azure portal step is part of the deployment path.
 
 The current stack creates the environment resource group, an Azure Static Web
-Apps Standard frontend, Azure Container Registry Basic, and an Azure Container
-Apps consumption environment and application boundary for the future
-application programming interface (API). Later issue #1 stories add assets,
-canonical ingress, authentication configuration, secure runtime references,
-and observability behind the existing module boundaries.
+Apps Standard frontend, Azure Container Registry Basic, an Azure Container Apps
+consumption environment and application boundary for the future application
+programming interface (API), private Blob Storage asset containers, and Azure
+Front Door Premium content delivery routes. Later issue #1 stories extend the
+existing Front Door endpoint into the canonical frontend and API ingress, add
+authentication configuration and web application firewall protection, and
+complete secure runtime references and observability.
 
 ## Layout
 
@@ -24,6 +26,8 @@ and observability behind the existing module boundaries.
 | `modules/static-web-app.bicep` | Azure Static Web Apps Standard frontend and Vite artifact publication contract |
 | `modules/container-registry.bicep` | Azure Container Registry Basic, pull-only managed identity, and scoped `AcrPull` assignment |
 | `modules/container-app-api.bicep` | Azure Container Apps environment, API revision, ingress, scaling, settings, and runtime identity |
+| `modules/asset-storage.bicep` | Private Blob Storage containers, recovery policy, and OpenID Connect-federated asset publisher identity |
+| `modules/asset-content-delivery.bicep` | Azure Front Door Premium profile, managed origin authentication, category routes, and explicit edge caching |
 | `environments/dev.bicepparam` | On-demand development values |
 | `environments/prod.bicepparam` | Persistent production-ready values |
 | `.bicep-version` | Exact Bicep command-line interface (CLI) version used locally and by future automation |
@@ -102,9 +106,9 @@ deployment name's location immutable.
 
 The outputs contain only the selected subscription and region, resource group
 identity, required tags, deterministic resource names, and the frontend, API,
-registry, and identity deployment contracts. They must never contain storage
-keys, registry credentials, deployment credentials, provider secrets,
-connection strings, or resolved secret values.
+registry, asset, content delivery, and identity deployment contracts. They must
+never contain storage keys, registry credentials, deployment credentials,
+provider secrets, connection strings, or resolved secret values.
 
 ## Frontend hosting
 
@@ -216,3 +220,112 @@ Static Web Apps linked-backend story will establish the canonical browser API
 base URL. These outputs do not prove that the registry, environment, app,
 image, or endpoint exists. They are available only after an actual Azure
 deployment, which this repository change does not perform.
+
+## Blob assets and content delivery
+
+`modules/asset-storage.bicep` declares one dedicated general-purpose v2 storage
+account with three private containers:
+
+| Category | Container | Intended content |
+| --- | --- | --- |
+| Game assets | `game-assets` | Independently packaged game resources that use immutable, content-hashed names |
+| User-facing media | `media` | Mutable images and media whose cache must refresh comparatively quickly |
+| Other static assets | `static-assets` | Non-application static files that do not belong in Vite's `/assets/` bundle path |
+
+The account disables anonymous blob access, Shared Key authorization, local
+users, Secure File Transfer Protocol (SFTP), Network File System version 3
+(NFSv3), and cross-tenant replication. Microsoft Entra ID is the default
+authorization mode. HTTPS, Transport Layer Security (TLS) 1.2, infrastructure
+encryption, private container access, and environment-specific soft-delete
+retention are explicit. Development uses locally redundant storage and seven
+days of recovery; production uses zone-redundant storage and fourteen days.
+Versioning and automatic tier transitions remain disabled until measured
+recovery and access patterns justify their additional storage and retrieval
+cost.
+
+Azure Front Door origin authentication currently cannot be combined with an
+Azure Front Door Private Link origin. The storage public endpoint therefore
+remains network reachable, but anonymous and Shared Key requests cannot read
+the containers. The Front Door profile uses a system-assigned managed identity
+with only `Storage Blob Data Reader` on this dedicated asset account, requests
+the `https://storage.azure.com/.default` audience, and forwards only HTTPS to
+the blob origin. No storage access key or Shared Access Signature (SAS) is
+created, accepted, or emitted.
+
+`modules/asset-content-delivery.bicep` creates three independent routes on the
+same Front Door Premium endpoint. Query strings do not fragment the cache, and
+compressible text, font, JavaScript, WebAssembly, and structured-data content
+types use edge compression.
+
+| Route | Development cache | Production cache |
+| --- | ---: | ---: |
+| `/game-assets/*` | 1 day | 365 days |
+| `/media/*` | 5 minutes | 1 hour |
+| `/static-assets/*` | 1 hour | 1 day |
+
+Game asset publishers must use content-hashed object names because the
+production route intentionally treats them as immutable for one year. Mutable
+media and static files use shorter category-specific durations. Purge only
+changed mutable paths after publication; the exact publication and purge
+workflow is deferred to US-009.
+
+### Microsoft Entra upload targets
+
+The storage module creates a publication-only user-assigned managed identity,
+grants it `Storage Blob Data Contributor` on the dedicated asset account, and
+adds a GitHub OpenID Connect federated credential with subject
+`repo:jdylanmc/game-hub:environment:<environment>`. A later workflow must run in
+the matching protected GitHub environment and use this identity; it must not
+create a client secret.
+
+After an actual infrastructure deployment and Microsoft Entra login, the
+non-secret `assetUploadTargets` output supplies the account and container
+names. Upload commands always select subscription
+`11213dbd-39fe-46ba-87db-5f5e8c449aed` and use login authorization:
+
+```bash
+SUBSCRIPTION_ID='11213dbd-39fe-46ba-87db-5f5e8c449aed'
+ENVIRONMENT='dev'
+DEPLOYMENT_NAME="game-hub-${ENVIRONMENT}"
+
+az account set --subscription "$SUBSCRIPTION_ID"
+test "$(az account show --query id --output tsv)" = "$SUBSCRIPTION_ID"
+
+STORAGE_ACCOUNT="$(
+  az deployment sub show \
+    --subscription "$SUBSCRIPTION_ID" \
+    --name "$DEPLOYMENT_NAME" \
+    --query properties.outputs.assetStorageAccountName.value \
+    --output tsv
+)"
+
+az storage blob upload-batch \
+  --subscription "$SUBSCRIPTION_ID" \
+  --auth-mode login \
+  --account-name "$STORAGE_ACCOUNT" \
+  --destination game-assets \
+  --source "$GAME_ASSETS_DIRECTORY" \
+  --overwrite
+
+az storage blob upload-batch \
+  --subscription "$SUBSCRIPTION_ID" \
+  --auth-mode login \
+  --account-name "$STORAGE_ACCOUNT" \
+  --destination media \
+  --source "$MEDIA_DIRECTORY" \
+  --overwrite
+
+az storage blob upload-batch \
+  --subscription "$SUBSCRIPTION_ID" \
+  --auth-mode login \
+  --account-name "$STORAGE_ACCOUNT" \
+  --destination static-assets \
+  --source "$STATIC_ASSETS_DIRECTORY" \
+  --overwrite
+```
+
+The deployment also returns `assetContentEndpoints` for the public category
+URLs and `assetCaching` for the effective edge policy. These contracts do not
+prove that Azure resources exist, that any asset was uploaded, or that any
+endpoint is reachable. This story performs and claims no live deployment,
+upload, purge, or endpoint verification.

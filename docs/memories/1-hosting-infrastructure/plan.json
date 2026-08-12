@@ -91,8 +91,8 @@
         "Outputs and documentation identify the upload targets and public content endpoint without claiming live upload evidence"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Added dedicated private Blob Storage containers for game assets, user-facing media, and other static assets; environment-aware LRS/ZRS redundancy and recovery settings; a publication-only managed identity with GitHub OpenID Connect federation and Storage Blob Data Contributor; and Azure Front Door Premium category routes with system-assigned managed origin authentication, Storage Blob Data Reader, compression, explicit cache durations, upload-target outputs, and public content endpoint outputs. Azure Front Door managed origin authentication currently cannot be combined with Private Link, so the storage endpoint remains network reachable while anonymous and Shared Key authorization are disabled. Bicep, compiled-contract, credential-pattern, formatting, lint, policy, build, and diff validation passed. No Azure deployment, upload, purge, endpoint reachability check, or live evidence was performed or claimed.",
       "dependencies": ["US-002"]
     },
     {
