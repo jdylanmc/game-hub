@@ -176,7 +176,7 @@
       ],
       "priority": 10,
       "passes": true,
-      "notes": "Completed on fix/issue-30-protected-workflow-bootstrap from origin/main. Direct fresh-worktree installation created Yarn state; workflow policy and 18 focused mutation tests passed; 14 isolated fail-closed probes reproduced the original package-script bootstrap failure and proved pipefail behavior; the full yarn validate gate passed with 151 Vitest tests and 26 Ralph tests. Exact-head pull-request checks remain a publication gate and issue #30 remains open until merge plus protected-main verification.",
+      "notes": "Completed on fix/issue-30-protected-workflow-bootstrap from origin/main. Direct fresh-worktree installation created Yarn state; workflow policy and 18 focused mutation tests passed; 14 isolated fail-closed probes reproduced the original package-script bootstrap failure and proved pipefail behavior. The first exact-head CI attempt then failed closed on the registry-unavailable uri-js 4.4.2 lock entry that prior tee semantics could mask, so the second and final remediation attempt constrained that transitive dependency to available 4.4.1 and strengthened the fresh proof with hardened mode plus an empty project-local cache. The full yarn validate gate passed again with 151 Vitest tests and 26 Ralph tests. Exact-head pull-request checks remain a publication gate and issue #30 remains open until merge plus protected-main verification.",
       "dependencies": ["US-009"]
     }
   ]

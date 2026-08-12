@@ -197,7 +197,12 @@ async function proveFreshBootstrap() {
     throw new Error(`Scripted bootstrap failed for an unexpected reason:\n${scriptedOutput.slice(-4000)}`);
   }
 
-  runRequired('install proof dependencies immutably', yarnExecutable, ['install', '--immutable']);
+  runRequired('install proof dependencies immutably', yarnExecutable, ['install', '--immutable'], {
+    env: {
+      YARN_ENABLE_GLOBAL_CACHE: '0',
+      YARN_ENABLE_HARDENED_MODE: '1',
+    },
+  });
   await fs.access(statePath);
   console.log('Verified direct immutable install bootstraps a fresh node-modules worktree.');
 }
@@ -206,8 +211,10 @@ async function syncCurrentPolicySources() {
   for (const relativePath of [
     '.github/workflows/adversarial-review.yml',
     '.github/workflows/continuous-integration.yml',
+    'package.json',
     'scripts/check-adversarial-workflow-policy.mjs',
     'scripts/check-workflow-policy.mjs',
+    'yarn.lock',
   ]) {
     await fs.copyFile(path.join(rootDirectory, relativePath), sandboxPath(relativePath));
   }

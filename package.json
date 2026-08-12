@@ -11,6 +11,9 @@
     "packages/*",
     "games/*"
   ],
+  "resolutions": {
+    "uri-js@npm:^4.2.2": "npm:4.4.1"
+  },
   "scripts": {
     "install:check": "yarn install --immutable",
     "generate:games": "node scripts/generate-game-workspaces.mjs",

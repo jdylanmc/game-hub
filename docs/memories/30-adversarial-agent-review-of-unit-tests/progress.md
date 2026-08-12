@@ -445,3 +445,13 @@
   and Storybook.
 - Exact-head pull-request publication evidence remains pending. Issue #30 stays
   open until merge and protected-main post-merge verification.
+- Exact-head Continuous Integration run `31557874975` failed twice at the now
+  fail-closed install pipeline because the public registry no longer served the
+  locked transitive `uri-js@4.4.2`. This confirmed the previous `tee` masking
+  path was removed and exposed a second tightly coupled fresh-runner blocker.
+- Used the second and final remediation attempt to constrain Ajv's `^4.2.2`
+  transitive resolution to registry-available `uri-js@4.4.1`. The isolated
+  bootstrap proof now enables Yarn hardened mode and disables global cache so
+  it must validate and fetch the committed dependency graph.
+- Re-ran the complete `yarn validate` gate successfully after the lock repair.
+  Exact-head checks on the corrected commit remain pending.

@@ -103,3 +103,18 @@ masked by a successful `tee` exit.
 Issue #30 was reopened for bounded story US-010. Protected main remains affected
 until that remediation is merged and a fresh protected-main run verifies
 pull-request resolution and exact-head check publication.
+
+## Remediation pre-merge evidence
+
+The first exact-head Continuous Integration run for remediation PR #40,
+[`31557874975`](https://github.com/jdylanmc/game-hub/actions/runs/31557874975),
+failed twice at direct immutable installation because the public registry no
+longer served locked transitive dependency `uri-js@4.4.2`. This failure is
+additional evidence that `pipefail` now exposes the originating Yarn result
+rather than accepting `tee`.
+
+The second and final remediation attempt constrains that `^4.2.2` transitive
+dependency to registry-available `4.4.1`. The isolated proof installs with Yarn
+hardened mode enabled and global cache disabled before running all 14 failure
+probes. The complete local validation gate passed again. Exact-head GitHub
+checks after this correction remain the publication authority.
