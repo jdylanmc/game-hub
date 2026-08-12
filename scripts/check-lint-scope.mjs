@@ -43,6 +43,7 @@ try {
     'games/floppy-bird/src/index.ts',
     'packages/game-contract/src/index.test.ts',
     'packages/game-contract/src/index.ts',
+    'scripts/collect-adversarial-context.ts',
     'scripts/generate-game-workspaces.mjs',
     'scripts/generate-mamba-storybook.mjs',
     'src/App.tsx',

@@ -30,6 +30,10 @@
       "postcss.config.js"
     ]
   },
+  "publication": {
+    "requiredStatusChecks": ["Continuous integration"],
+    "adversarialStatusChecks": ["Adversarial Review / unit-test-reviewer"]
+  },
   "stories": [
     {
       "id": "US-001",
@@ -87,7 +91,7 @@
       ],
       "priority": 4,
       "passes": true,
-      "notes": "The canonical lint and lint:fix commands now run a versioned scope gate that creates representative game and package workspaces and requires their TypeScript violations to be reported. Narrow recursive exclusions cover dependencies, coverage, test results, distribution and Storybook builds, generated game metadata, generated Mamba data and stories, and imported Mamba source. The gate verifies host, workspace, Storybook, test, generator, and handwritten Mamba wrapper paths remain linted and proves fixable sentinel content under every output boundary remains unchanged.",
+      "notes": "The canonical lint and lint:fix commands now run a versioned scope gate that creates representative game and package workspaces and requires their TypeScript violations to be reported. Narrow recursive exclusions cover dependencies, coverage, test results, distribution and Storybook builds, generated game metadata, generated Mamba data and stories, and imported Mamba source. The gate verifies host, workspace, Storybook, test, generator, operational TypeScript tool, and handwritten Mamba wrapper paths remain linted and proves fixable sentinel content under every output boundary remains unchanged. After dependency issue #30 merged, the branch integrated its schema-driven TypeScript tools through a dedicated lint project, pinned Node.js declarations, and exact-file baseline overrides while retaining type-aware promise, call, import, and general correctness coverage.",
       "dependencies": ["US-002", "US-003"]
     },
     {

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { selectFailingRalphPullRequest } from './find-failing-ralph-pr.mjs';
 
 const repoNameWithOwner = 'jdylanmc/game-hub';
+const requiredChecks = ['Continuous integration', 'Adversarial Review / unit-test-reviewer'];
 const memory = {
   memoryDir: 'docs/memories/29-high-assurance-github-actions-ci-gates',
   plan: {
@@ -20,7 +21,10 @@ const pullRequest = {
   isDraft: true,
   headRefName: memory.plan.branchName,
   baseRefName: 'main',
-  statusCheckRollup: [{ conclusion: 'FAILURE' }],
+  statusCheckRollup: [
+    { name: requiredChecks[0], conclusion: 'SUCCESS' },
+    { name: requiredChecks[1], conclusion: 'FAILURE' },
+  ],
 };
 
 describe('selectFailingRalphPullRequest', () => {
@@ -38,6 +42,7 @@ describe('selectFailingRalphPullRequest', () => {
         ],
         [memory],
         repoNameWithOwner,
+        requiredChecks,
       ),
     ).toEqual({
       status: 'failing',
@@ -52,23 +57,48 @@ describe('selectFailingRalphPullRequest', () => {
     });
   });
 
-  it('does not route passing or pending pull requests', () => {
+  it('does not route a pull request only when every required check passes', () => {
     const passing = {
       ...pullRequest,
-      statusCheckRollup: [{ conclusion: 'SUCCESS' }],
-    };
-    const pending = {
-      ...pullRequest,
-      statusCheckRollup: [{ status: 'IN_PROGRESS' }],
+      statusCheckRollup: requiredChecks.map((name) => ({ name, conclusion: 'SUCCESS' })),
     };
 
-    expect(selectFailingRalphPullRequest([passing, pending], [memory], repoNameWithOwner)).toEqual({ status: 'none' });
+    expect(selectFailingRalphPullRequest([passing], [memory], repoNameWithOwner, requiredChecks)).toEqual({
+      status: 'none',
+    });
+  });
+
+  it.each([
+    ['missing', [{ name: requiredChecks[0], conclusion: 'SUCCESS' }]],
+    [
+      'pending',
+      [
+        { name: requiredChecks[0], conclusion: 'SUCCESS' },
+        { name: requiredChecks[1], status: 'IN_PROGRESS' },
+      ],
+    ],
+    [
+      'canceled',
+      [
+        { name: requiredChecks[0], conclusion: 'SUCCESS' },
+        { name: requiredChecks[1], conclusion: 'CANCELLED' },
+      ],
+    ],
+  ])('routes a Ralph pull request with a %s adversarial check', (_label, statusCheckRollup) => {
+    expect(
+      selectFailingRalphPullRequest(
+        [{ ...pullRequest, statusCheckRollup }],
+        [memory],
+        repoNameWithOwner,
+        requiredChecks,
+      ),
+    ).toMatchObject({ status: 'failing', pullRequestNumber: pullRequest.number });
   });
 
   it('fails safely when issue ownership is absent', () => {
-    expect(() => selectFailingRalphPullRequest([{ ...pullRequest, body: '' }], [memory], repoNameWithOwner)).toThrow(
-      /no ralph-issue identity marker/,
-    );
+    expect(() =>
+      selectFailingRalphPullRequest([{ ...pullRequest, body: '' }], [memory], repoNameWithOwner, requiredChecks),
+    ).toThrow(/no ralph-issue identity marker/);
   });
 
   it('fails safely when memory identity does not match', () => {
@@ -77,6 +107,7 @@ describe('selectFailingRalphPullRequest', () => {
         [pullRequest],
         [{ ...memory, plan: { ...memory.plan, baseBranch: 'release' } }],
         repoNameWithOwner,
+        requiredChecks,
       ),
     ).toThrow(/maps to 0 matching memories/);
   });

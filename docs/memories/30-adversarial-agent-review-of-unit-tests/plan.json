@@ -1,0 +1,165 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 30,
+  "issueTitle": "Adversarial Agent Review of Unit Tests",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/30",
+  "branchName": "ralph/issue-30-adversarial-agent-review-of-unit-tests",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 0,
+    "dependencies": [29, 33],
+    "changeScopes": [".github", "config", "docs", "infra", "package.json", "scripts", "yarn.lock"]
+  },
+  "publication": {
+    "requiredStatusChecks": ["Continuous integration"],
+    "adversarialStatusChecks": ["Adversarial Review / unit-test-reviewer"]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Define the adversarial agent contract",
+      "description": "Define the reusable versioned prompt, policy, model, tools, verdict, finding schema, attribution, and fail-closed interface for independent pull-request review agents.",
+      "acceptanceCriteria": [
+        "A strict versioned JSON schema defines verdict, blocking and advisory severity, confidence, category, citations, missing scenario, expected failure signal, suggested test, and run attribution",
+        "Each agent prompt is a dedicated human-editable repository file with an explicit version and content hash",
+        "Prompt, policy, schema, model, and tool configuration are versioned independently so prompt tuning does not silently change enforcement",
+        "Invalid, incomplete, or unactionable structured results fail validation",
+        "The contract supports registering additional independent adversarial agents without coupling their prompts or verdicts"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Remediated after adversarial review: schema 1.0.0 now requires complete attribution, actionable finding fields, exact citations, derived counts, and rejects undeclared properties. The validator rejects verdict/count mismatches including PASS with a validated high-confidence blocking finding; six targeted tests cover the blocking cases.",
+      "dependencies": []
+    },
+    {
+      "id": "US-002",
+      "title": "Provision secure Azure inference",
+      "description": "Provision the Azure-hosted GPT-4.1 mini reviewer and keyless GitHub identity through idempotent Bicep with bounded consumption and operational cost controls.",
+      "acceptanceCriteria": [
+        "Bicep and environment parameter files deploy the model and supporting identities into subscription 11213dbd-39fe-46ba-87db-5f5e8c449aed without committed secrets",
+        "The deployment uses GPT-4.1 mini consumption capacity and supports at most three concurrent reviews initially",
+        "GitHub Actions uses OpenID Connect and least-privilege Azure roles",
+        "Budget, alerting, quotas, and documentation target less than $100 per month",
+        "Reapplying the deployment converges without duplicate resources"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Remediated after adversarial review: verified immutable action SHAs; exact subscription-supported gpt-4.1-mini 2025-04-14 GlobalStandard attribution; subscription-scoped modular Bicep; validated prod/test parameter deployments; checked max-three runtime configuration; $99 production Azure Consumption budget with alerts; manual protected-main deployment; Microsoft Entra ID inference with local auth disabled and declarative narrow roles. Live identity bootstrap and deployment remain intentionally deferred to US-009.",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-003",
+      "title": "Collect bounded untrusted review context",
+      "description": "Build a deterministic context collector for issue requirements, pull-request metadata, diffs, contracts, manifests, generators, workflows, validation configuration, and relevant tests without executing pull-request code.",
+      "acceptanceCriteria": [
+        "Context selection is deterministic, size-bounded, attributable, and reproducible locally",
+        "Fork and pull-request content is treated as untrusted data and cannot supply instructions or executable workflow code",
+        "Production and test evidence retains file and line information for citations",
+        "Missing or truncated mandatory context is explicit and can block review"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Added a versioned deterministic collector and local command that reads explicit issue/PR metadata plus base/head Git objects without checkout or code execution. It collects bounded production/test diffs with old/new line citations and mandatory contracts, manifests, generators, workflows, validation config, and existing tests. Canonical hashes and exact commits provide attribution; binary, missing, file-limited, globally limited, or truncated mandatory evidence blocks. Ten tests cover malicious fork prompt injection, non-execution, binary/large files, rename/delete, deterministic ordering/output, line citations, packet limits, CLI reproduction, and required-context failures.",
+      "dependencies": ["US-001"]
+    },
+    {
+      "id": "US-004",
+      "title": "Implement the Azure reviewer engine",
+      "description": "Call Azure GPT-4.1 mini with prompt-injection isolation, bounded execution, strict schema validation, finding deduplication, verdict policy, and fail-closed error handling.",
+      "acceptanceCriteria": [
+        "The reviewer authenticates without static model credentials and invokes the configured Azure deployment",
+        "Prompt-injection content is delimited as untrusted evidence and cannot alter system policy or tool boundaries",
+        "Timeout, network, model, schema, missing-output, and policy failures produce a blocking error verdict",
+        "Review limits cover context, tools, network destinations, tokens, time, concurrency, retries, and cost",
+        "Structured output is deterministic enough for policy evaluation and local reproduction"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Implemented a keyless Azure GPT-4.1 mini reviewer engine using pinned Azure Identity and validated HTTPS endpoint/deployment environment configuration. Versioned system policy, human prompt, and hash-delimited untrusted evidence remain separate with no tools. The engine enforces context/input/output/time/concurrency/retry/cost/network limits, retries only identified transient failures with the same frozen request, validates strict structured results, rejects supplied policy mismatches, deduplicates findings, derives final policy verdicts, and returns schema-valid blocking ERROR results on every unsafe failure. Seventeen deterministic fake-transport tests cover injection, Azure bearer auth, malformed/missing/schema/policy output, timeout, transient/nontransient retries, network exhaustion, duplicates, budgets, concurrency, model errors, destination restrictions, API-key rejection, and attribution.",
+      "dependencies": ["US-001", "US-002", "US-003"]
+    },
+    {
+      "id": "US-005",
+      "title": "Build calibration and evaluation",
+      "description": "Create versioned weak and strong review benchmarks, score reviewer quality and cost, and gate promotion on explicit measured thresholds.",
+      "acceptanceCriteria": [
+        "Benchmarks cover tautologies, ineffective mocks, absent errors, races, duplicate scores, collision boundaries, archive traversal, authorization bypass, and cleanup leaks",
+        "Evaluation reports detection, false positives, missed critical scenarios, reviewer agreement, cost, and latency",
+        "Strong examples are not incorrectly blocked beyond the configured threshold",
+        "The check cannot become required unless the versioned promotion policy passes",
+        "Model, prompt, tool, framework, or architecture changes invalidate or rerun calibration"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Added a versioned 18-case paired weak/strong benchmark corpus for all nine required scenarios, deterministic fake-transport and future keyless Azure evaluation, measured detection/false positives/missed critical scenarios/agreement/tokens/cost/latency/errors, and a fail-closed Azure-only promotion policy. Promotion validates complete repeated case evidence, recomputed metrics, report integrity, strict thresholds, and fingerprints the model, prompt, tools, framework, schema, verdict policy, system policy, reviewer config, corpus, and architecture. Fourteen calibration tests prove fixture, stale, incomplete, malformed, threshold-failing, inconsistent, and tampered reports cannot promote.",
+      "dependencies": ["US-004"]
+    },
+    {
+      "id": "US-006",
+      "title": "Publish actionable GitHub evidence",
+      "description": "Publish concise check annotations and a retained structured artifact tied to the exact review inputs and configuration without comment spam.",
+      "acceptanceCriteria": [
+        "Each review creates or updates one check run on the pull-request head commit",
+        "Blocking and advisory findings include concise actionable annotations with exact citations",
+        "The complete validated JSON result is retained with explicit retention and no sensitive content",
+        "Repeated runs deduplicate superseded findings and remain attributable to issue, commit, model, prompt, tools, and policy"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Added a reusable GitHub Checks publisher with an injectable transport that revalidates reviewer output, binds one agent-specific check to the exact head SHA, creates or updates the sole matching run, batches at most 50 concise annotations per request, and maps blocking/advisory results to failure/neutral conclusions. Stable run/finding fingerprints deduplicate reruns and record supersession. It writes and revalidates a redacted 90-day JSON evidence artifact/manifest with complete issue, repository, commit, model, prompt, schema, policy, tools, calibration, timing, cost, and supersession attribution. Fifteen deterministic tests cover create/update, limits, unsafe citations, conclusions, stale SHAs, duplicates, supersession, redaction/integrity, missing output, API failures, and duplicate checks. No workflow, live publication, Azure deployment, or US-007 work was added.",
+      "dependencies": ["US-004"]
+    },
+    {
+      "id": "US-007",
+      "title": "Add the fork-safe GitHub Actions pipeline",
+      "description": "Run the reviewer from base-branch-controlled workflow code with keyless Azure access, restricted permissions, bounded concurrency, and no execution of untrusted pull-request code.",
+      "acceptanceCriteria": [
+        "Relevant pull-request changes trigger review and later relevant pushes rerun it",
+        "The adversarial workflow cannot start until the complete deterministic continuous-integration workflow succeeds for the same pull-request head commit",
+        "Deterministic gates are ordered from cheapest to most expensive so early failures avoid builds, simulations, and model cost",
+        "Forked and malicious pull requests cannot access secrets, model credentials, write-capable tools, or unrestricted network destinations",
+        "Workflow actions are immutably pinned and permissions, timeouts, concurrency, evidence retention, and failure behavior are policy-tested",
+        "The reviewer never overrides or masks deterministic continuous integration failures",
+        "Three reviews can execute concurrently without shared mutable state"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Added a protected-base workflow_run pipeline that gates on the canonical Continuous integration workflow completing successfully for the exact current pull-request head SHA. It resolves fork metadata and issue requirements through read-only GitHub APIs, checks out/installs only protected main, fetches exact untrusted Git objects without checkout, collects bounded evidence, requires promoted calibration before OpenID Connect, invokes the restricted reviewer, revalidates the head before publication, retains evidence for 90 days, and fails closed. Job-scoped least permissions, a protected inference environment, immutable verified action SHAs, explicit 10/20-minute timeouts, and three deterministic concurrency lanes are policy-enforced. Twenty-five deterministic resolver/policy tests cover forks, failed/missing/canceled/stale CI, base-code control, exact SHA, relevant reruns, permission/action/timeout/concurrency/retention weakening, missing output, and ambiguity. No live Azure deployment, environment configuration, branch protection, or US-008 work was performed.",
+      "dependencies": ["US-002", "US-003", "US-004", "US-006"]
+    },
+    {
+      "id": "US-008",
+      "title": "Add exceptions scaling and operations",
+      "description": "Document and implement auditable time-limited exceptions, operational diagnostics, local reproduction, and horizontally scalable independent agent registration.",
+      "acceptanceCriteria": [
+        "Exceptions require an owner, rationale, issue reference, expiry, affected finding fingerprint, and audit evidence",
+        "Expired, malformed, overly broad, or unrelated exceptions fail closed",
+        "Operational guidance covers transient retry boundaries, quota, cost, model incidents, prompt rollback, and local reproduction",
+        "Additional adversarial agents can be registered with independent prompts, policies, checks, calibration, and concurrency limits",
+        "No shared state allows one reviewer to suppress, rewrite, or impersonate another"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Added a strict versioned exception contract and protected registry requiring exact owner, rationale, issue, expiry, agent/version, repository, head SHA, run/finding fingerprints, independent approval evidence, and integrity hashes. Exception evaluation fails closed for malformed, expired, future-excessive, wildcard, unrelated, cross-agent, cross-SHA, tampered, duplicate/replayed, self-approved, or noncurrent findings; it preserves the original reviewer result and records immutable application evidence. Publication maps only exact exceptions to neutral warnings while all unexcepted blocking findings still fail. Added strict hashed independent-agent registration for prompt, schema, policy, engine, benchmark, promotion policy, calibration, check, state namespace, and per-agent concurrency, with runtime/validator/publisher selection bound to the registered agent. Added operator guidance for retries, quota/cost, incidents, rollback, exceptions, registration, and local reproduction. Added 19 new deterministic exception/isolation tests; all 129 tests and the complete deterministic suite pass. No live deployment, repository settings, branch protection, or US-009 work was performed.",
+      "dependencies": ["US-005", "US-006", "US-007"]
+    },
+    {
+      "id": "US-009",
+      "title": "Calibrate deploy and enforce the gate",
+      "description": "Deploy the Azure resources, run calibration, integrate policy and fail-closed tests, connect Ralph, and require the adversarial review check after promotion thresholds pass.",
+      "acceptanceCriteria": [
+        "Azure deployment, model invocation, GitHub check publication, and retained evidence are verified end to end",
+        "Calibration passes the versioned promotion policy before blocking enforcement is enabled",
+        "Repository policy and fail-closed proofs reject missing, weakened, canceled, timed-out, malformed, or bypassed adversarial reviews",
+        "Main branch protection requires the promoted adversarial review check alongside continuous integration",
+        "Ralph treats adversarial findings as blocking pull-request failures and iterates until resolved",
+        "Every issue acceptance criterion is reconciled to implementation and live evidence"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Completed live rollout and enforcement. Azure resources and least-privilege Microsoft Entra ID identities were deployed idempotently; the real 18-case Azure calibration passed promotion with complete attributable evidence; the bounded reviewer produced a clean PASS against PR #35; exact-head GitHub Checks publication retains redacted evidence; deterministic policy, fail-closed simulations, Ralph status, and required-gate validation reject missing, stale, weakened, canceled, timed-out, malformed, duplicated, or failing checks; strict main branch protection now requires Continuous integration and Adversarial Review / unit-test-reviewer. The current exact-head check and PR body are the authoritative final publication evidence.",
+      "dependencies": ["US-005", "US-007", "US-008"]
+    }
+  ]
+}

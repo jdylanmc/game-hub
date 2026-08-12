@@ -34,6 +34,10 @@
   coverage, distribution, Storybook, and test-result directories. Generated
   game metadata and generated or imported Mamba paths are listed explicitly;
   handwritten Mamba wrappers and generators stay linted.
+- TypeScript operational scripts use `scripts/tsconfig.json` for type-aware
+  ESLint project service without adding those standalone tools to the root
+  application build. Node.js declarations are pinned directly at the runtime's
+  major version.
 
 ## 2026-08-11 - Planning
 
@@ -203,5 +207,24 @@ Current inspection found these issue #27 gaps:
   lint and scope policy, suppression and workflow policy, fail-closed proofs,
   dependency audit, tests and coverage, generated-state verification,
   typecheck, production build, bundle budgets, and Storybook build.
+- Before publication, dependency issue #30 merged to `main`, making the pull
+  request conflict and preventing an exact-head continuous integration run.
+  Merged the dependency and regenerated the conflicted Yarn lockfile. The scope
+  gate immediately exposed its eight new handwritten TypeScript operational
+  tools, so US-004 added a dedicated script lint project, pinned
+  `@types/node` 24.13.3, and retained type-aware Node.js linting.
+- The imported schema-driven tools validate untrusted JSON at explicit runtime
+  boundaries. Exact-file overrides preserve their merged baseline for
+  structural stringification, assertion, and unsafe-value rules while keeping
+  promise, call, import, unused-code, and other type-aware correctness checks
+  active. The scope gate now explicitly verifies one of these TypeScript tools
+  remains linted.
+- Reconciled the issue publication contract with the newly required
+  `Adversarial Review / unit-test-reviewer` exact-head check. The pull request
+  remains draft because four stories remain.
+- Re-ran the complete `yarn validate` gate after the dependency merge and lint
+  integration. The expanded policy, fail-closed, Ralph, adversarial-tool, and
+  application test suites all passed with the promoted calibration fingerprint
+  still current.
 - US-005 is next. It should require narrow inline suppressions with exact rules
   and durable reasons, plus accepted and rejected policy cases.

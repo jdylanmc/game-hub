@@ -189,9 +189,11 @@ const checks = () => {
   const result = [];
   const required = check('Continuous integration', state.checkState);
   if (required) result.push(required);
+  if (required && state.duplicateRequiredCheck) result.push({ ...required });
   if (state.adversarialCheckName) {
     const adversarial = check(state.adversarialCheckName, state.adversarialState);
     if (adversarial) result.push(adversarial);
+    if (adversarial && state.duplicateAdversarialCheck) result.push({ ...adversarial });
   }
   return result;
 };

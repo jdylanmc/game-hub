@@ -1,0 +1,7 @@
+{
+  "$schema": "./exception-schema.json",
+  "version": "1.0.0",
+  "maximumValidityHours": 168,
+  "maximumExceptionsPerRun": 3,
+  "exceptions": []
+}

@@ -9,9 +9,19 @@ import tseslint from 'typescript-eslint';
 const sourceFiles = ['**/*.{js,mjs,cjs,ts,tsx}'];
 const typescriptFiles = ['**/*.{ts,tsx}'];
 const browserFiles = ['src/**/*.{ts,tsx}', 'games/*/src/**/*.{ts,tsx}', '.storybook/preview.ts'];
-const nodeTypescriptFiles = ['*.config.ts', '.storybook/main.ts'];
+const nodeTypescriptFiles = ['*.config.ts', '.storybook/main.ts', 'scripts/**/*.ts'];
 const testFiles = ['**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'];
 const reactFiles = ['src/**/*.{ts,tsx}', '.storybook/preview.ts'];
+const adversarialToolFiles = [
+  'scripts/apply-adversarial-exceptions.ts',
+  'scripts/collect-adversarial-context.ts',
+  'scripts/evaluate-adversarial-reviewer.ts',
+  'scripts/prepare-adversarial-workflow.ts',
+  'scripts/publish-adversarial-evidence.ts',
+  'scripts/review-adversarial-context.ts',
+  'scripts/validate-adversarial-agent-registry.ts',
+  'scripts/validate-adversarial-finding.ts',
+];
 
 export default tseslint.config(
   {
@@ -82,6 +92,19 @@ export default tseslint.config(
     rules: {
       // TypeScript owns named-import validation, including type-only exports.
       'import-x/named': 'off',
+    },
+  },
+  {
+    files: adversarialToolFiles,
+    rules: {
+      // These schema-driven tools validate untrusted JSON at explicit runtime boundaries.
+      '@typescript-eslint/no-base-to-string': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/require-await': 'off',
     },
   },
   {
