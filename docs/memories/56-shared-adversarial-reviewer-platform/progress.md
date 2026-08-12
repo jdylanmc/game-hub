@@ -130,3 +130,13 @@
 - Draft pull request: #57.
 - The draft deliberately remains not-ready until a real Azure calibration
   refreshes the active report and the complete policy gate passes.
+- **Next gate enabled:** after a human merges this shared platform under the
+  existing unit-test-reviewer gate, issue #22 (Gilfoyle) is the next
+  reviewer-platform implementation. Its protected-`main` workflow run is the
+  bootstrap proof vehicle for `Adversarial Review / fan-in`; fan-in remains
+  published but not branch-protection-required in this issue. A later
+  human-reviewed additive promotion may require it only after that exact-head
+  proof exists.
+- Local Azure calibration prerequisites are unavailable in this worktree
+  (`AZURE_OPENAI_ENDPOINT`, deployment, client ID, and tenant ID are unset),
+  so the required real calibration cannot be produced or attested here.
