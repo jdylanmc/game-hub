@@ -35,3 +35,5 @@
   config, prompt, and focused fixture test. The next slice must stage
   publisher, matrix, fan-in, waiver, and promotion modules before the final
   small activation transaction.
+- The current v1 collector accepted the committed staging head as `READY` at
+  `730740` consumed evidence bytes, below its immutable `786432`-byte limit.
