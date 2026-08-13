@@ -27,6 +27,10 @@ engine:
     azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
     azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
 model: gpt-4.1-mini
+models:
+  default-ai-credits-pricing:
+    input: 0.4
+    output: 1.6
 max-ai-credits: 100
 timeout-minutes: 5
 sandbox:
