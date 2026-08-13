@@ -1,0 +1,82 @@
+name: Agent prompt proof
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  run-prompt:
+    name: ${{ matrix.agent }}
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: adversarial-review
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - agent: gilfoyle-security-architect
+            prompt: .github/agent-prompt-proof/gilfoyle-security-architect.md
+          - agent: solid-snake
+            prompt: .github/agent-prompt-proof/solid-snake.md
+          - agent: teddy
+            prompt: .github/agent-prompt-proof/teddy.md
+          - agent: gordon-ramsay
+            prompt: .github/agent-prompt-proof/gordon-ramsay.md
+          - agent: mad-max
+            prompt: .github/agent-prompt-proof/mad-max.md
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Sign in to Azure
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Run prompt and print response
+        env:
+          AGENT: ${{ matrix.agent }}
+          AZURE_OPENAI_DEPLOYMENT_ID: game-hub-unit-test-reviewer
+          AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+          PROMPT_FILE: ${{ matrix.prompt }}
+        run: |
+          set -euo pipefail
+          token="$(az account get-access-token \
+            --resource https://cognitiveservices.azure.com \
+            --query accessToken \
+            --output tsv)"
+          jq -n --rawfile prompt "$PROMPT_FILE" '{
+            messages: [{role: "user", content: $prompt}],
+            max_completion_tokens: 100
+          }' > request.json
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $token" \
+            --header "Content-Type: application/json" \
+            --data @request.json \
+            "$AZURE_OPENAI_ENDPOINT/openai/deployments/$AZURE_OPENAI_DEPLOYMENT_ID/chat/completions?api-version=2025-04-01-preview" \
+            > response.json
+          jq --exit-status --raw-output '.choices[0].message.content' response.json > response.txt
+          echo "Response from $AGENT:"
+          cat response.txt
+
+      - name: Upload response
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ matrix.agent }}-response
+          path: |
+            response.json
+            response.txt
+          retention-days: 14
