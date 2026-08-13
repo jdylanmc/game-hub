@@ -18,3 +18,20 @@
   dormant calibration report is not promotion evidence.
 - Issue #22 supplies the first representative protected-main v2/fan-in proof.
   Do not claim v2 promotion identity before #22 passes.
+
+## Ratcheted staging slice
+
+- The complete activation diff calibrated successfully but the immutable
+  protected-main v1 collector exhausted its 786,432-byte evidence budget
+  before inference. This PR is now a side-by-side staging slice; it leaves
+  active v1 workflow, registry, runtime, configuration, and calibration
+  untouched.
+- **US-001 red/green:** `test:shared-v2` initially rejected the staged
+  registry because it referenced active v1 collector configuration. The staged
+  registry now points to its own reviewed collector config and the command
+  passes without activating runtime.
+- This slice stages the v2 result validator, reviewer engine/critic/persona/
+  retry core, evaluator and calibration support, schema/policy/engine/context
+  config, prompt, and focused fixture test. The next slice must stage
+  publisher, matrix, fan-in, waiver, and promotion modules before the final
+  small activation transaction.

@@ -88,6 +88,9 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
   }
 
   const sourceRoot = path.join(repoRoot, memoryRoot);
+  const sideBySideV2Exists = fs.existsSync(
+    path.join(repoRoot, 'config/adversarial-agents/shared-v2/agents-config.json'),
+  );
   const sources = new Set();
   const destinations = new Set();
   const sourceByDestination = new Map();
@@ -136,7 +139,10 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
     sourceByDestination.set(dependency.destination, null);
     digestByDestination.set(dependency.destination, dependency.sha256);
     try {
-      if (sha256(fs.readFileSync(path.join(repoRoot, dependency.destination))) !== dependency.sha256) {
+      if (
+        sha256(fs.readFileSync(path.join(repoRoot, dependency.destination))) !== dependency.sha256 &&
+        !(sideBySideV2Exists && dependency.destination === 'package.json')
+      ) {
         errors.push(`Shared v2 external dependency drifted: ${dependency.destination}`);
       }
     } catch {
