@@ -7,10 +7,13 @@
   without consuming its patch content and fails closed on activation references.
 - #59 owns the reviewable text payload and does not activate v2.
 
-## Durable activation handoff
+## Canonical declaration prerequisite
 
-- The committed text tree has one safe intended destination and SHA-256 per
-  file. Its manifest validates relative imports/config reads and SHA-pinned
-  external dependency closure.
-- The #56 handoff document and #58 issue both require activation only from
-  these committed main-branch files after #59 merges.
+- The merged #57 collector accepts inert evidence only when the declarations
+  have its original multiline shape. The initial #59 text-tree attempt proved
+  that the later one-line declaration refactor is itself a prerequisite: old
+  protected-main review marks every inert file unsafe before model access.
+- This PR is therefore narrowed to the canonical declaration shape and
+  reference-scanner hardening. It tracks #59 rather than closing it.
+- After this prerequisite merges, the next human-reviewed payload PR can add
+  the text tree under the inert path and close #59; then #58 can activate v2.

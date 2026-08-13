@@ -34,7 +34,6 @@
     "context:collect": "node scripts/collect-adversarial-context.ts",
     "review:adversarial": "node scripts/review-adversarial-context.ts",
     "publish:adversarial": "node scripts/publish-adversarial-evidence.ts",
-    "shared-v2:check": "node scripts/check-shared-v2-boundary.mjs",
     "exceptions:validate": "node scripts/apply-adversarial-exceptions.ts --exceptions config/adversarial-agents/exceptions.json",
     "agents:validate": "node scripts/validate-adversarial-agent-registry.ts .",
     "workflow:prepare-adversarial": "node scripts/prepare-adversarial-workflow.ts",
