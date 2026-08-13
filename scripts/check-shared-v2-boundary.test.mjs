@@ -17,6 +17,10 @@ describe('shared v2 dormant boundary', () => {
       activationIssue: 58,
       activeReviewerContractVersion: '1.0.0',
       v2ContractVersion: '2.0.0',
+      payload: {
+        path: 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source.tar.gz',
+        sha256: '0'.repeat(64),
+      },
       files: [
         {
           path: 'scripts/shared-v2/review-adversarial-context.ts',

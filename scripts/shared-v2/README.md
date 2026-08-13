@@ -1,10 +1,6 @@
-# Shared reviewer v2 dormant boundary
+# Shared reviewer v2 source payload
 
-This complete, fingerprinted v2 implementation is committed for follow-up
-activation. Bootstrap deliberately leaves the active reviewer on v1 so the
-current protected-main reviewer can publish its required exact-head check.
-
-Validate the manifest with `yarn shared-v2:check`. The check verifies every
-recorded file digest and confirms the active v1 workflow does not reference the
-dormant boundary. Only issue #58 may activate it after a fresh matching Azure
-calibration, protected attestation, and fan-in proof.
+The complete reviewed v2 source payload and fingerprint manifest are retained
+under `docs/memories/56-shared-adversarial-reviewer-platform/`. Run
+`yarn shared-v2:check` to verify its digest and archive contents. Issue #58
+extracts this payload into the active runtime only after explicit activation.

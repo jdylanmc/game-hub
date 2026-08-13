@@ -251,10 +251,13 @@
 ## Final-review durable dormant-platform repair
 
 - Complete reviewed v2 result/critic/persona runtime, matrix, fan-in, waiver,
-  promotion, schema/policy/configuration, and publisher files are committed
-  under `scripts/shared-v2/` and `config/adversarial-agents/shared-v2/`.
-- `yarn shared-v2:check` verifies every manifest digest and that active v1
-  schema, policy, engine, and workflow do not reference the dormant boundary.
-  Its deterministic tests fail closed on a changed or duplicate manifest entry.
+  promotion, schema/policy/configuration, and publisher files are committed as
+  a source payload plus file-level manifest under this issue memory. The
+  payload avoids exposing a second response shape to the old v1 model as
+  untrusted pull-request text.
+- `yarn shared-v2:check` verifies the payload digest, every archived file
+  entry, and that active v1 schema, policy, engine, and workflow do not
+  reference the dormant boundary. Its deterministic tests fail closed on a
+  changed/duplicate manifest entry.
 - The bootstrap v1 reviewer-to-publisher regression remains active. Issue #58
   now consumes committed files from main, not ephemeral branch history.

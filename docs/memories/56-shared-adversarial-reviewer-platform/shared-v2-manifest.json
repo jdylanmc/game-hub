@@ -10,6 +10,10 @@
     "protected-attestation",
     "protected-main-exact-head-fan-in-proof"
   ],
+  "payload": {
+    "path": "docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source.tar.gz",
+    "sha256": "7a42c3e89b07475a0e1c9785cdeca1a71dc554b323c8dfd123d8166c4d9ee86a"
+  },
   "files": [
     {
       "path": ".github/adversarial-agents/unit-test-reviewer/prompt-v2.md",

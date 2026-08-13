@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -14,7 +15,12 @@ function sha256(value) {
 function checkSharedV2Boundary(repoRoot = root, manifestValue) {
   const manifest =
     manifestValue ??
-    JSON.parse(fs.readFileSync(path.join(repoRoot, 'config/adversarial-agents/shared-v2/manifest.json'), 'utf8'));
+    JSON.parse(
+      fs.readFileSync(
+        path.join(repoRoot, 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-manifest.json'),
+        'utf8',
+      ),
+    );
   const errors = [];
   if (
     !manifest ||
@@ -23,10 +29,30 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
     manifest.activationIssue !== 58 ||
     manifest.activeReviewerContractVersion !== '1.0.0' ||
     manifest.v2ContractVersion !== '2.0.0' ||
+    !manifest.payload ||
+    typeof manifest.payload.path !== 'string' ||
+    typeof manifest.payload.sha256 !== 'string' ||
     !Array.isArray(manifest.files) ||
     manifest.files.length < 10
   ) {
     return { valid: false, errors: ['Shared v2 manifest identity is invalid.'] };
+  }
+  try {
+    const payloadPath = path.join(repoRoot, manifest.payload.path);
+    if (sha256(fs.readFileSync(payloadPath)) !== manifest.payload.sha256) {
+      errors.push('Shared v2 payload digest mismatch.');
+    }
+    const listing = spawnSync('tar', ['-tzf', payloadPath], { encoding: 'utf8' });
+    if (listing.status !== 0) {
+      errors.push('Shared v2 payload cannot be listed.');
+    } else {
+      const entries = new Set(listing.stdout.split('\n').filter(Boolean));
+      for (const required of manifest.files) {
+        if (!entries.has(required.path)) errors.push(`Shared v2 payload entry is missing: ${required.path}`);
+      }
+    }
+  } catch {
+    errors.push('Shared v2 payload is missing.');
   }
   const seen = new Set();
   for (const entry of manifest.files) {
@@ -43,13 +69,6 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
       continue;
     }
     seen.add(entry.path);
-    try {
-      if (sha256(fs.readFileSync(path.join(repoRoot, entry.path))) !== entry.sha256) {
-        errors.push(`Shared v2 manifest digest mismatch: ${entry.path}`);
-      }
-    } catch {
-      errors.push(`Shared v2 manifest file is missing: ${entry.path}`);
-    }
   }
   const activeSchema = JSON.parse(
     fs.readFileSync(path.join(repoRoot, 'config/adversarial-agents/schema.json'), 'utf8'),
