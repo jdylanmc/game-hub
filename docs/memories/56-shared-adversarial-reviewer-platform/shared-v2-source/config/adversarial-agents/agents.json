@@ -1,0 +1,235 @@
+{
+  "$schema": "http://json-schema.org/draft-2020-12/schema",
+  "$id": "https://github.com/jdylanmc/game-hub/config/adversarial-agents/agents.json",
+  "title": "Adversarial Agents Registry",
+  "description": "Registry of independent pull-request review agents, their versioning, and configuration.",
+  "version": "1.0.0",
+  "properties": {
+    "registryVersion": {
+      "type": "string",
+      "description": "Semantic version of this registry.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "agents": {
+      "type": "array",
+      "description": "List of configured adversarial review agents.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "version",
+          "enabled",
+          "promptFile",
+          "promptVersion",
+          "toolsConfigFile",
+          "contextConfigFile",
+          "contextConfigVersion",
+          "toolsVersion",
+          "description"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique agent identifier (kebab-case).",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "examples": ["unit-test-reviewer"]
+          },
+          "version": {
+            "type": "string",
+            "description": "Semantic version of the agent implementation.",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "examples": ["1.0.0"]
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this agent is active in CI.",
+            "examples": [true]
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of what this agent checks.",
+            "examples": ["Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns."]
+          },
+          "promptFile": {
+            "type": "string",
+            "description": "Relative path to the human-editable prompt file from repository root.",
+            "pattern": "^\\.github/adversarial-agents/[a-z0-9]+(-[a-z0-9]+)*/prompt\\.md$",
+            "examples": [".github/adversarial-agents/unit-test-reviewer/prompt.md"]
+          },
+          "promptVersion": {
+            "type": "string",
+            "description": "Current semantic version of the prompt. Updated when the prompt file changes.",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "examples": ["1.0.0"]
+          },
+          "toolsConfigFile": {
+            "type": "string",
+            "description": "Relative path to the agent-specific bounded-tools contract.",
+            "pattern": "^config/adversarial-agents/[a-z0-9]+(-[a-z0-9]+)*/tools\\.json$",
+            "examples": ["config/adversarial-agents/unit-test-reviewer/tools.json"]
+          },
+          "contextConfigFile": {
+            "type": "string",
+            "description": "Relative path to the agent-specific bounded context profile.",
+            "pattern": "^config/adversarial-agents/(?:[a-z0-9]+(?:-[a-z0-9]+)*/)?[a-z0-9-]+\\.json$",
+            "examples": ["config/adversarial-agents/context-collector.json"]
+          },
+          "contextConfigVersion": {
+            "type": "string",
+            "description": "Semantic version of the agent context profile.",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "examples": ["1.0.0"]
+          },
+          "modelDeployment": {
+            "type": "string",
+            "description": "Azure or cloud model deployment identifier.",
+            "examples": ["gpt-4.1-mini@2025-04-14/eastus/GlobalStandard"]
+          },
+          "modelVersion": {
+            "type": "string",
+            "description": "Semantic version or release date of the model, for compatibility tracking.",
+            "examples": ["2025-04-14"]
+          },
+          "toolsVersion": {
+            "type": "string",
+            "description": "Semantic version of agent tools and integrations.",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "examples": ["1.0.0"]
+          },
+          "executionConfig": {
+            "type": "object",
+            "description": "Per-agent execution overrides (timeouts, retries, token limits).",
+            "properties": {
+              "timeoutSeconds": {
+                "type": "integer",
+                "minimum": 1,
+                "examples": [60]
+              },
+              "retryAttempts": {
+                "type": "integer",
+                "minimum": 0,
+                "examples": [2]
+              },
+              "maxTokens": {
+                "type": "integer",
+                "minimum": 1000,
+                "examples": [8000]
+              },
+              "maxConcurrentReviews": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3,
+                "examples": [3]
+              },
+              "temperatureFraction": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 2,
+                "description": "LLM temperature for reproducibility tuning. 0 = deterministic, 1 = default, > 1 = exploratory.",
+                "examples": [0.3]
+              }
+            }
+          },
+          "targetScopes": {
+            "type": "array",
+            "description": "What parts of the repository this agent reviews (e.g., test files, production code).",
+            "items": {
+              "type": "string",
+              "enum": ["tests", "production", "all"]
+            },
+            "examples": [["tests"]]
+          },
+          "excludePatterns": {
+            "type": "array",
+            "description": "File glob patterns to exclude from review.",
+            "items": {
+              "type": "string"
+            },
+            "examples": [["**/fixtures/**", "**/node_modules/**"]]
+          },
+          "contactEmail": {
+            "type": "string",
+            "description": "Owner contact for questions, false positives, or tuning requests.",
+            "format": "email",
+            "examples": ["dylan@microsoft.com"]
+          },
+          "verdictRules": {
+            "type": "object",
+            "description": "Agent-specific rules for how findings translate to verdict.",
+            "properties": {
+              "blockingThreshold": {
+                "type": "integer",
+                "description": "Number of HIGH-confidence findings that trigger a BLOCKING verdict.",
+                "minimum": 1,
+                "examples": [1]
+              },
+              "allowHighConfidenceOnly": {
+                "type": "boolean",
+                "description": "If true, only HIGH-confidence findings can cause a FAIL. Security agents may use independently defined severity and control-bypass thresholds instead.",
+                "examples": [true]
+              }
+            }
+          }
+        }
+      },
+      "examples": [
+        {
+          "name": "unit-test-reviewer",
+          "version": "1.0.0",
+          "enabled": true,
+          "promptFile": ".github/adversarial-agents/unit-test-reviewer/prompt.md",
+          "promptVersion": "1.0.3",
+          "toolsConfigFile": "config/adversarial-agents/unit-test-reviewer/tools.json",
+          "contextConfigFile": "config/adversarial-agents/context-collector.json",
+          "contextConfigVersion": "1.0.1",
+          "modelDeployment": "gpt-4.1-mini@2025-04-14/eastus/GlobalStandard",
+          "modelVersion": "2025-04-14",
+          "toolsVersion": "1.0.0",
+          "description": "Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns.",
+          "targetScopes": ["tests"],
+          "verdictRules": {
+            "blockingThreshold": 1,
+            "allowHighConfidenceOnly": true
+          }
+        }
+      ]
+    },
+    "subscriptionId": {
+      "type": "string",
+      "description": "Default Azure subscription where agents are deployed.",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+      "examples": ["11213dbd-39fe-46ba-87db-5f5e8c449aed"]
+    },
+    "requirementsMet": {
+      "type": "object",
+      "description": "Track which US-01 contract requirements are met by this registry.",
+      "properties": {
+        "versionedJsonSchema": {
+          "type": "boolean",
+          "description": "Requirement 1: Strict versioned JSON schema for findings.",
+          "const": true
+        },
+        "dedicatedPromptFiles": {
+          "type": "boolean",
+          "description": "Requirement 2: Each agent has a dedicated human-editable prompt file with version and hash.",
+          "const": true
+        },
+        "independentVersioning": {
+          "type": "boolean",
+          "description": "Requirement 3: Prompt, policy, schema, model, and tool versions are independent.",
+          "const": true
+        },
+        "validationRequired": {
+          "type": "boolean",
+          "description": "Requirement 4: Invalid, incomplete, or unactionable results fail validation.",
+          "const": true
+        },
+        "agentRegistration": {
+          "type": "boolean",
+          "description": "Requirement 5: Contract supports registering additional agents without coupling.",
+          "const": true
+        }
+      }
+    }
+  }
+}

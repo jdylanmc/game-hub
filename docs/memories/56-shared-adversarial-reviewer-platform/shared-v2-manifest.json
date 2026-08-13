@@ -4,76 +4,287 @@
   "activationIssue": 58,
   "activeReviewerContractVersion": "1.0.0",
   "v2ContractVersion": "2.0.0",
-  "activationRequirements": [
-    "explicit-follow-up-transaction",
-    "fresh-real-azure-calibration",
-    "protected-attestation",
-    "protected-main-exact-head-fan-in-proof"
-  ],
-  "payload": {
-    "path": "docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source.tar.gz",
-    "sha256": "7a42c3e89b07475a0e1c9785cdeca1a71dc554b323c8dfd123d8166c4d9ee86a"
-  },
+  "aggregateSha256": "04c93490ac4de08716019a2bbbbf8c59fa039a99bc8700ab19d6a51c08b3612e",
   "files": [
     {
-      "path": ".github/adversarial-agents/unit-test-reviewer/prompt-v2.md",
+      "sourcePath": "shared-v2-source/.github/adversarial-agents/system-policy.md",
+      "destination": ".github/adversarial-agents/system-policy.md",
+      "sha256": "01ec5d3c5ea7fac5afe35d87a61051b3ebc25d7d7a880b6aeee236adb26c5386"
+    },
+    {
+      "sourcePath": "shared-v2-source/.github/adversarial-agents/unit-test-reviewer/prompt-v2.md",
+      "destination": ".github/adversarial-agents/unit-test-reviewer/prompt-v2.md",
       "sha256": "95db6cddd17acbb8acaf5e498d3c40e191c8cc258deed586105b57ae7df40843"
     },
     {
-      "path": "config/adversarial-agents/shared-v2/schema.json",
-      "sha256": "cd46bbd7d12fd7b257c2ee24304f673a6a79ab13bda0696247ebc2b9313e375a"
+      "sourcePath": "shared-v2-source/config/adversarial-agents/active-calibration-unit-test-reviewer.json",
+      "destination": "config/adversarial-agents/active-calibration-unit-test-reviewer.json",
+      "sha256": "9a0cb6d142620cbb6da9addfe825870c77ad4da965e73635df18920fa90eda92"
     },
     {
-      "path": "config/adversarial-agents/shared-v2/policy.json",
-      "sha256": "ed7e5906234a69d282c2102490fc3227703c049c97e63170ffb968c34b478286"
+      "sourcePath": "shared-v2-source/config/adversarial-agents/agent-registry-schema.json",
+      "destination": "config/adversarial-agents/agent-registry-schema.json",
+      "sha256": "a026c28fb562c11146fbe77d2f6b42f9eaa60f025acf62db63e1afb6abf3dc09"
     },
     {
-      "path": "config/adversarial-agents/shared-v2/reviewer-engine.json",
-      "sha256": "298a9eb95c8f20f5038505867ab6030add6432ea5ea8eeb430c8cc1c42672d3e"
+      "sourcePath": "shared-v2-source/config/adversarial-agents/agents-config.json",
+      "destination": "config/adversarial-agents/agents-config.json",
+      "sha256": "7cc644318c044debd73823c1c5824f7a63d82dc8a2f529c215d160cfc954d997"
     },
     {
-      "path": "config/adversarial-agents/shared-v2/agents-config.json",
+      "sourcePath": "shared-v2-source/config/adversarial-agents/agents.json",
+      "destination": "config/adversarial-agents/agents.json",
+      "sha256": "d820b8cab1510f53aa3b0fc75fd93a58e1f8c64b3b41ab28820660ffb7c70030"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/benchmarks.json",
+      "destination": "config/adversarial-agents/benchmarks.json",
+      "sha256": "f065d4fb3f684815955fd522f34e5317305a0789c62c51f4da33b917a0c88531"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/context-collector.json",
+      "destination": "config/adversarial-agents/context-collector.json",
+      "sha256": "07e048caf9224ef75c50f7f6b60d8796f53753d6ebbad65306d63ee2a27e1872"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/exception-schema.json",
+      "destination": "config/adversarial-agents/exception-schema.json",
+      "sha256": "1068822a7e43975b43140833ecc4279bdfec7808db2929ce74ffdeb469b64b0a"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/exceptions.json",
+      "destination": "config/adversarial-agents/exceptions.json",
+      "sha256": "0fd0fe3e0bad27734a83e579c32c131d50a0000c8e456d57dcadb6349c5bf6b6"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/gilfoyle-security-architect/benchmarks.json",
+      "destination": "config/adversarial-agents/gilfoyle-security-architect/benchmarks.json",
+      "sha256": "c435c030ff51fb0b87481e7b0716d2461a7c8b49f66d34a9e75397c340d1a395"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/gilfoyle-security-architect/calibration-attestation-policy.json",
+      "destination": "config/adversarial-agents/gilfoyle-security-architect/calibration-attestation-policy.json",
+      "sha256": "70e16d9acf0255037bff1ccff78523d1eb03456c634bb45116c096477b60e830"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/gilfoyle-security-architect/context.json",
+      "destination": "config/adversarial-agents/gilfoyle-security-architect/context.json",
+      "sha256": "c19ff4810b6d2464dd9219f2fb3a6cd09fb2ace4c61e58ef9f9308b8e2747f4a"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json",
+      "destination": "config/adversarial-agents/gilfoyle-security-architect/deterministic-evidence.json",
+      "sha256": "d67264c10983ef44b7ad88ec096e3ccbfe6f450f16f8f281d2e0582d878b46b6"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/gilfoyle-security-architect/policy.json",
+      "destination": "config/adversarial-agents/gilfoyle-security-architect/policy.json",
+      "sha256": "5f7579a4886f90015469e5c6862b2e9ae1151aa2fb3b4a4ca8e1ba75a266c39a"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/gilfoyle-security-architect/promotion-policy.json",
+      "destination": "config/adversarial-agents/gilfoyle-security-architect/promotion-policy.json",
+      "sha256": "d57161184560352048d734931e73d1b22623a2ed605c3e74da917a524d6ae8d9"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/gilfoyle-security-architect/reviewer-engine.json",
+      "destination": "config/adversarial-agents/gilfoyle-security-architect/reviewer-engine.json",
+      "sha256": "f2a5287e68c8486e4fd3cb4c35140775af0fcc89cbf35539d16223f9b64e0be2"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/gilfoyle-security-architect/schema.json",
+      "destination": "config/adversarial-agents/gilfoyle-security-architect/schema.json",
+      "sha256": "4f29e8ef057bc391df92e674f7408f4943c973b65bc878611337aa04c1069ce6"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/gilfoyle-security-architect/tools.json",
+      "destination": "config/adversarial-agents/gilfoyle-security-architect/tools.json",
+      "sha256": "1c2755b0430fb4c13ff0f5fcd7d6f13f0a7d90c372b080db760a055233b478cd"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/github-publisher.json",
+      "destination": "config/adversarial-agents/github-publisher.json",
+      "sha256": "d36dee2863bb60e33dcb61131650130910a1fd1af49747ddc97829a6e851a225"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/policy.json",
+      "destination": "config/adversarial-agents/policy.json",
+      "sha256": "ab35f1a23629f67a8f40008dbef3dcb8922062313e2ebd9a307bc1bcbb9f20ff"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/promotion-policy.json",
+      "destination": "config/adversarial-agents/promotion-policy.json",
+      "sha256": "d834db90a3c08b065ee578b84cb3dd1bd40c20bafce2237b51e6c9a3dcfda2a5"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/reviewer-engine.json",
+      "destination": "config/adversarial-agents/reviewer-engine.json",
+      "sha256": "e3eb9f8dc97cc24ac1990de9526a1cb6f72a0d1a8c285a590a99b7aeb3bd5059"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/schema.json",
+      "destination": "config/adversarial-agents/schema.json",
+      "sha256": "91b2df9d34fbbd50def12736639cb374a1b68d93da9120198eaf754ac1d9f726"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/active-calibration-unit-test-reviewer.json",
+      "destination": "config/adversarial-agents/shared-v2/active-calibration-unit-test-reviewer.json",
+      "sha256": "6c6529257f3fe9b6a4591ab2b38bebb5d108983d66aa3622c2f65a59e01f6c6e"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/agents-config.json",
+      "destination": "config/adversarial-agents/shared-v2/agents-config.json",
       "sha256": "35392a6eb1837b1a3a27f19bc2ac2f5c4b2cc827ad0c9ed6e1c2f40f865cab54"
     },
     {
-      "path": "scripts/shared-v2/validate-adversarial-finding.ts",
-      "sha256": "3804877f45c2bcb8be2570ffc2b1ca649e0b88a05ddcf5bf860a70e06ca8a142"
+      "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/policy.json",
+      "destination": "config/adversarial-agents/shared-v2/policy.json",
+      "sha256": "ed7e5906234a69d282c2102490fc3227703c049c97e63170ffb968c34b478286"
     },
     {
-      "path": "scripts/shared-v2/review-adversarial-context.ts",
-      "sha256": "e3130004f109596034109c75a1d235bd2f2fa95f1c65d11baf00766a69ef8a08"
+      "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/reviewer-engine.json",
+      "destination": "config/adversarial-agents/shared-v2/reviewer-engine.json",
+      "sha256": "298a9eb95c8f20f5038505867ab6030add6432ea5ea8eeb430c8cc1c42672d3e"
     },
     {
-      "path": "scripts/shared-v2/publish-adversarial-evidence.ts",
-      "sha256": "93769c09f224b350fbc1d0b4cc707d4cb5793223307a204fe66bbad49cb23b33"
+      "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/schema.json",
+      "destination": "config/adversarial-agents/shared-v2/schema.json",
+      "sha256": "cd46bbd7d12fd7b257c2ee24304f673a6a79ab13bda0696247ebc2b9313e375a"
     },
     {
-      "path": "scripts/shared-v2/evaluate-adversarial-reviewer.ts",
+      "sourcePath": "shared-v2-source/config/adversarial-agents/unit-test-reviewer/tools.json",
+      "destination": "config/adversarial-agents/unit-test-reviewer/tools.json",
+      "sha256": "79a2f012bfe880863360ff59b5ede296095abb601cae47f03c293c54a8874998"
+    },
+    {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/workflow.json",
+      "destination": "config/adversarial-agents/workflow.json",
+      "sha256": "caf5e9ddffe0c3d88032885e13d45a99f3a8a02b0bb7afdcc1d180abdb7f85fd"
+    },
+    {
+      "sourcePath": "shared-v2-source/docs/architecture.md",
+      "destination": "docs/architecture.md",
+      "sha256": "b85b56641242b96dc84ff198475570d09e3f75f71d5b71509a9100b116b6f714"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/apply-adversarial-exceptions.ts",
+      "destination": "scripts/apply-adversarial-exceptions.ts",
+      "sha256": "7bcfe68b3e45fc783721b76eaa522698f52b0e9b35f8c609857cf6bee9bf1b55"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/calibration-attestation.ts",
+      "destination": "scripts/calibration-attestation.ts",
+      "sha256": "569c9fee02fae885eb546b8e5b6045685a2c9f8401feb0ad9beb8c68f5c60aa3"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/collect-adversarial-context.ts",
+      "destination": "scripts/collect-adversarial-context.ts",
+      "sha256": "6d079eecbf874e13997d63e6a95f491daaf59a2ac86b375449544c9e9588f2a6"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/evaluate-adversarial-reviewer.test.mjs",
+      "destination": "scripts/shared-v2/evaluate-adversarial-reviewer.test.mjs",
+      "sha256": "10148644656b82f1aa0fe4f3c6efd787452f5838769c61ae73cc02c931759829"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/evaluate-adversarial-reviewer.ts",
+      "destination": "scripts/shared-v2/evaluate-adversarial-reviewer.ts",
       "sha256": "158df54799d1be88f80d951b9d643c7482d4e4a4f9c7a89f9271602690efd063"
     },
     {
-      "path": "scripts/shared-v2/validate-adversarial-agent-registry.ts",
-      "sha256": "3eb13ca5542347f94f88085bbda2134508ae29aaf9cca151c4fbf32916528ba2"
+      "sourcePath": "shared-v2-source/scripts/shared-v2/fan-in-adversarial-evidence.test.mjs",
+      "destination": "scripts/shared-v2/fan-in-adversarial-evidence.test.mjs",
+      "sha256": "d34d975cdc39fc2dfc54ce9d4741c38a3a3209bd80c7876dfb26490e96371d1b"
     },
     {
-      "path": "scripts/shared-v2/fan-in-adversarial-evidence.ts",
+      "sourcePath": "shared-v2-source/scripts/shared-v2/fan-in-adversarial-evidence.ts",
+      "destination": "scripts/shared-v2/fan-in-adversarial-evidence.ts",
       "sha256": "02c210f070805c40b29cdd8eeae9db7cf7d00cc33a8ce58eb95e524c585f827f"
     },
     {
-      "path": "scripts/shared-v2/validate-adversarial-waiver.ts",
-      "sha256": "b2fe06f32bc57583bfd623a5295aafaf75876c5af55eea62eb43b6889d671453"
+      "sourcePath": "shared-v2-source/scripts/shared-v2/promote-adversarial-branch-protection.test.mjs",
+      "destination": "scripts/shared-v2/promote-adversarial-branch-protection.test.mjs",
+      "sha256": "0cc9bf35f549c0c2f0aac09d66d980a02c57489d0b75f34fe6ce499d92ef0441"
     },
     {
-      "path": "scripts/shared-v2/promote-adversarial-branch-protection.ts",
+      "sourcePath": "shared-v2-source/scripts/shared-v2/promote-adversarial-branch-protection.ts",
+      "destination": "scripts/shared-v2/promote-adversarial-branch-protection.ts",
       "sha256": "415b1c135ad39a9237dfa2d69ae6c22ce3fb6d3c7d524709f4aeaccea883603e"
     },
     {
-      "path": "scripts/shared-v2/resolve-adversarial-reviewer-matrix.ts",
+      "sourcePath": "shared-v2-source/scripts/shared-v2/publish-adversarial-evidence.test.mjs",
+      "destination": "scripts/shared-v2/publish-adversarial-evidence.test.mjs",
+      "sha256": "5e94dacd8b9a356d75f201f4d604c36bb13b79aa386608fda62be0547e6ae7c5"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/publish-adversarial-evidence.ts",
+      "destination": "scripts/shared-v2/publish-adversarial-evidence.ts",
+      "sha256": "93769c09f224b350fbc1d0b4cc707d4cb5793223307a204fe66bbad49cb23b33"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/publish-adversarial-fan-in.ts",
+      "destination": "scripts/shared-v2/publish-adversarial-fan-in.ts",
+      "sha256": "3d6dbeb3877271a3fadbe02441b0e530cfcd14496415aeef5a2b566df2edbdf8"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/resolve-adversarial-reviewer-matrix.test.mjs",
+      "destination": "scripts/shared-v2/resolve-adversarial-reviewer-matrix.test.mjs",
+      "sha256": "ebab4ebb30ed3711708051319d076feeabe55d1273068dc8f36f0a0b7be7e052"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/resolve-adversarial-reviewer-matrix.ts",
+      "destination": "scripts/shared-v2/resolve-adversarial-reviewer-matrix.ts",
       "sha256": "7c1617c84557637c0b1c2353f2aa994e6420c9e1a34646bfb0ae3eeb9f9239e1"
     },
     {
-      "path": "scripts/shared-v2/publish-adversarial-fan-in.ts",
-      "sha256": "3d6dbeb3877271a3fadbe02441b0e530cfcd14496415aeef5a2b566df2edbdf8"
+      "sourcePath": "shared-v2-source/scripts/shared-v2/review-adversarial-context.test.mjs",
+      "destination": "scripts/shared-v2/review-adversarial-context.test.mjs",
+      "sha256": "46c3c08652e2d4d0c419f4369431cba2a325349899432293c87d366976221fbe"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/review-adversarial-context.ts",
+      "destination": "scripts/shared-v2/review-adversarial-context.ts",
+      "sha256": "5c9865281c80f79742cd273a3643146273aaa55298886f727a0955b4563ca5b5"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-agent-registry.test.mjs",
+      "destination": "scripts/shared-v2/validate-adversarial-agent-registry.test.mjs",
+      "sha256": "1a431247b13b89ede4b3db8b199a3752de24d1563582aa412e8ecf8833640c30"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-agent-registry.ts",
+      "destination": "scripts/shared-v2/validate-adversarial-agent-registry.ts",
+      "sha256": "3eb13ca5542347f94f88085bbda2134508ae29aaf9cca151c4fbf32916528ba2"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-finding.test.mjs",
+      "destination": "scripts/shared-v2/validate-adversarial-finding.test.mjs",
+      "sha256": "cebb8abd488bb004be7fffc8fac8e3e5137f161b94c9750d44255c9356fb3a92"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-finding.ts",
+      "destination": "scripts/shared-v2/validate-adversarial-finding.ts",
+      "sha256": "3804877f45c2bcb8be2570ffc2b1ca649e0b88a05ddcf5bf860a70e06ca8a142"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-waiver.test.mjs",
+      "destination": "scripts/shared-v2/validate-adversarial-waiver.test.mjs",
+      "sha256": "9d2abca7015e37d650348e5541bc229d173f98dce374e6863cfdbd35472a0875"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-waiver.ts",
+      "destination": "scripts/shared-v2/validate-adversarial-waiver.ts",
+      "sha256": "b2fe06f32bc57583bfd623a5295aafaf75876c5af55eea62eb43b6889d671453"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/validate-adversarial-agent-registry.ts",
+      "destination": "scripts/validate-adversarial-agent-registry.ts",
+      "sha256": "3eb13ca5542347f94f88085bbda2134508ae29aaf9cca151c4fbf32916528ba2"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/validate-adversarial-finding.ts",
+      "destination": "scripts/validate-adversarial-finding.ts",
+      "sha256": "3804877f45c2bcb8be2570ffc2b1ca649e0b88a05ddcf5bf860a70e06ca8a142"
     }
   ]
 }

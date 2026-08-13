@@ -4,23 +4,27 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const memoryRoot = 'docs/memories/56-shared-adversarial-reviewer-platform';
+const manifestPath = `${memoryRoot}/shared-v2-manifest.json`;
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
+function safePath(value) {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    !path.isAbsolute(value) &&
+    !value.includes('\\') &&
+    !value.split('/').some((part) => part === '' || part === '.' || part === '..')
+  );
+}
+
 function checkSharedV2Boundary(repoRoot = root, manifestValue) {
-  const manifest =
-    manifestValue ??
-    JSON.parse(
-      fs.readFileSync(
-        path.join(repoRoot, 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-manifest.json'),
-        'utf8',
-      ),
-    );
+  const manifest = manifestValue ?? JSON.parse(fs.readFileSync(path.join(repoRoot, manifestPath), 'utf8'));
   const errors = [];
   if (
     !manifest ||
@@ -29,47 +33,78 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
     manifest.activationIssue !== 58 ||
     manifest.activeReviewerContractVersion !== '1.0.0' ||
     manifest.v2ContractVersion !== '2.0.0' ||
-    !manifest.payload ||
-    typeof manifest.payload.path !== 'string' ||
-    typeof manifest.payload.sha256 !== 'string' ||
+    typeof manifest.aggregateSha256 !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(manifest.aggregateSha256) ||
     !Array.isArray(manifest.files) ||
-    manifest.files.length < 10
+    manifest.files.length < 30
   ) {
     return { valid: false, errors: ['Shared v2 manifest identity is invalid.'] };
   }
-  try {
-    const payloadPath = path.join(repoRoot, manifest.payload.path);
-    if (sha256(fs.readFileSync(payloadPath)) !== manifest.payload.sha256) {
-      errors.push('Shared v2 payload digest mismatch.');
-    }
-    const listing = spawnSync('tar', ['-tzf', payloadPath], { encoding: 'utf8' });
-    if (listing.status !== 0) {
-      errors.push('Shared v2 payload cannot be listed.');
-    } else {
-      const entries = new Set(listing.stdout.split('\n').filter(Boolean));
-      for (const required of manifest.files) {
-        if (!entries.has(required.path)) errors.push(`Shared v2 payload entry is missing: ${required.path}`);
-      }
-    }
-  } catch {
-    errors.push('Shared v2 payload is missing.');
-  }
-  const seen = new Set();
+
+  const canonicalEntries = [];
+  const sources = new Set();
+  const destinations = new Set();
   for (const entry of manifest.files) {
     if (
       !entry ||
-      typeof entry.path !== 'string' ||
+      !safePath(entry.sourcePath) ||
+      !safePath(entry.destination) ||
       typeof entry.sha256 !== 'string' ||
       !/^[a-f0-9]{64}$/.test(entry.sha256) ||
-      entry.path.startsWith('/') ||
-      entry.path.includes('..') ||
-      seen.has(entry.path)
+      !entry.sourcePath.startsWith('shared-v2-source/') ||
+      sources.has(entry.sourcePath) ||
+      destinations.has(entry.destination)
     ) {
       errors.push('Shared v2 manifest file entry is invalid.');
       continue;
     }
-    seen.add(entry.path);
+    sources.add(entry.sourcePath);
+    destinations.add(entry.destination);
+    canonicalEntries.push({
+      destination: entry.destination,
+      sha256: entry.sha256,
+      sourcePath: entry.sourcePath,
+    });
+    const sourcePath = path.join(repoRoot, memoryRoot, entry.sourcePath);
+    try {
+      if (fs.lstatSync(sourcePath).isSymbolicLink()) {
+        errors.push(`Shared v2 source must not be a symlink: ${entry.sourcePath}`);
+      } else if (sha256(fs.readFileSync(sourcePath)) !== entry.sha256) {
+        errors.push(`Shared v2 source digest mismatch: ${entry.sourcePath}`);
+      }
+    } catch {
+      errors.push(`Shared v2 source file is missing: ${entry.sourcePath}`);
+    }
   }
+  const aggregate = sha256(
+    JSON.stringify(canonicalEntries.sort((left, right) => left.sourcePath.localeCompare(right.sourcePath))),
+  );
+  if (aggregate !== manifest.aggregateSha256) errors.push('Shared v2 aggregate manifest digest mismatch.');
+
+  const sourceByDestination = new Map(manifest.files.map((entry) => [entry.destination, entry.sourcePath]));
+  for (const entry of manifest.files.filter((item) => item.destination.endsWith('.ts'))) {
+    const content = fs.readFileSync(path.join(repoRoot, memoryRoot, entry.sourcePath), 'utf8');
+    for (const match of content.matchAll(/from\s+['"](\.{1,2}\/[^'"]+)['"]/g)) {
+      const importedPath = match[1];
+      const resolved = path.posix.normalize(
+        path.posix.join(
+          path.posix.dirname(entry.destination),
+          importedPath.endsWith('.ts') ? importedPath : `${importedPath}.ts`,
+        ),
+      );
+      if (!sourceByDestination.has(resolved)) {
+        errors.push(`Shared v2 relative dependency is unmanifested: ${entry.destination} -> ${resolved}`);
+      }
+    }
+    for (const match of content.matchAll(
+      /['"]((?:config|\.github|docs|scripts)\/[A-Za-z0-9._/-]+\.(?:json|md|ts))['"]/g,
+    )) {
+      if (!sourceByDestination.has(match[1])) {
+        errors.push(`Shared v2 file dependency is unmanifested: ${entry.destination} -> ${match[1]}`);
+      }
+    }
+  }
+
   const activeSchema = JSON.parse(
     fs.readFileSync(path.join(repoRoot, 'config/adversarial-agents/schema.json'), 'utf8'),
   );

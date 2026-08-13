@@ -1,6 +1,8 @@
-# Shared reviewer v2 source payload
+# Shared reviewer v2 source tree
 
-The complete reviewed v2 source payload and fingerprint manifest are retained
-under `docs/memories/56-shared-adversarial-reviewer-platform/`. Run
-`yarn shared-v2:check` to verify its digest and archive contents. Issue #58
-extracts this payload into the active runtime only after explicit activation.
+The complete dormant v2 source is directly reviewable under
+`docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/`.
+Run `yarn shared-v2:check` to validate the text-tree manifest, source hashes,
+relative dependency closure, and active-v1 workflow isolation. Issue #58
+materializes the reviewed files into their listed destinations only during its
+explicit activation transaction.
