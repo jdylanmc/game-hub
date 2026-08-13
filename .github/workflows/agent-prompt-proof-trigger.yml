@@ -1,0 +1,19 @@
+name: Agent Prompt Proof Trigger
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: agent-prompt-proof-trigger-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Queue trusted agent prompt proofs
+        run: echo "Agent prompt proofs requested."
