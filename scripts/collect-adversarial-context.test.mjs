@@ -266,6 +266,156 @@ describe('adversarial context collector', () => {
     ]);
   });
 
+  it('records the narrow dormant-v2 path by hash without consuming its patch evidence budget', () => {
+    const dormantPath = 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts';
+    const fixture = createRepository((repo) => {
+      write(repo, dormantPath, `export const payload = '${'x'.repeat(200_000)}';\n`);
+      write(repo, 'src/feature.ts', 'export const score = 2;\n');
+      write(repo, 'src/feature.test.ts', 'expect(score).toBe(2);\n');
+    });
+    const packet = collect(fixture);
+
+    const dormant = packet.changes.other.find((change) => change.newPath === dormantPath);
+    expect(packet.status).toBe('READY');
+    expect(dormant).toMatchObject({
+      excluded: true,
+      includedBytes: 0,
+      hunks: [],
+      limitation: 'Dormant v2 source is metadata-only until explicit activation.',
+      evidenceSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+  });
+
+  it('rejects broad or active references to the inert evidence exclusion', () => {
+    const fixture = createRepository((repo) => {
+      write(repo, 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts', 'export {};\n');
+      write(
+        repo,
+        'package.json',
+        '{"source":"docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source"}\n',
+      );
+      write(repo, 'src/feature.ts', 'export const score = 2;\n');
+      write(repo, 'src/feature.test.ts', 'expect(score).toBe(2);\n');
+    });
+    const inertChangedEvidence = {
+      paths: ['docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**'],
+      limitation: 'Dormant v2 source is metadata-only until explicit activation.',
+    };
+    expect(collect(fixture, { inertChangedEvidence }).blockingReasons).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'INERT_EVIDENCE_UNSAFE' })]),
+    );
+    expect(() =>
+      collect(fixture, {
+        inertChangedEvidence: { ...inertChangedEvidence, paths: ['docs/**'] },
+      }),
+    ).toThrow(/inertChangedEvidence/);
+  });
+
+  it.each([
+    [
+      'static import',
+      "import '../docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts';\n",
+    ],
+    [
+      'dynamic import',
+      "import('../docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts');\n",
+    ],
+    ['require', "require('../docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts');\n"],
+    [
+      'path string',
+      "const dormant = 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts';\n",
+    ],
+  ])('blocks an executable-root %s reference to dormant evidence', (_label, content) => {
+    const fixture = createRepository((repo) => {
+      write(repo, 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts', 'export {};\n');
+      write(repo, 'scripts/activate.ts', content);
+      write(repo, 'src/feature.ts', 'export const score = 2;\n');
+      write(repo, 'src/feature.test.ts', 'expect(score).toBe(2);\n');
+    });
+
+    expect(collect(fixture).blockingReasons).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'INERT_EVIDENCE_UNSAFE' })]),
+    );
+  });
+
+  it('allows only the collector configuration declaration and rejects rename, deletion, or non-regular inert evidence', () => {
+    const configOnly = createRepository((repo) => {
+      write(repo, 'config/adversarial-agents/context-collector.json', JSON.stringify(config));
+      write(
+        repo,
+        'scripts/collect-adversarial-context.ts',
+        "const INERT_CHANGED_EVIDENCE_PATH =\n  'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**';\n",
+      );
+      write(
+        repo,
+        'scripts/check-adversarial-policy.mjs',
+        "const INERT_CHANGED_EVIDENCE_PATHS = [\n  'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**',\n];\n",
+      );
+      write(repo, 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts', 'export {};\n');
+      write(repo, 'src/feature.ts', 'export const score = 2;\n');
+      write(repo, 'src/feature.test.ts', 'expect(score).toBe(2);\n');
+    });
+    expect(collect(configOnly).status).toBe('READY');
+
+    const executable = createRepository((repo) => {
+      const inert = 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts';
+      write(repo, inert, 'export {};\n');
+      fs.chmodSync(path.join(repo, inert), 0o755);
+      write(repo, 'src/feature.ts', 'export const score = 2;\n');
+      write(repo, 'src/feature.test.ts', 'expect(score).toBe(2);\n');
+    });
+    expect(collect(executable).blockingReasons).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'INERT_EVIDENCE_UNSAFE' })]),
+    );
+
+    const renamed = createRepository((repo) => {
+      const original = 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/old.ts';
+      write(repo, original, 'export {};\n');
+      git(repo, 'add', original);
+      git(
+        repo,
+        '-c',
+        'user.name=Context Test',
+        '-c',
+        'user.email=context@example.invalid',
+        'commit',
+        '-m',
+        'old inert',
+      );
+      fs.renameSync(
+        path.join(repo, original),
+        path.join(repo, 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/new.ts'),
+      );
+      write(repo, 'src/feature.ts', 'export const score = 2;\n');
+      write(repo, 'src/feature.test.ts', 'expect(score).toBe(2);\n');
+    });
+    renamed.baseSha = git(renamed.repo, 'rev-parse', 'HEAD~1');
+    expect(collect(renamed).blockingReasons).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'INERT_EVIDENCE_UNSAFE' })]),
+    );
+  });
+
+  it.each([
+    [
+      'scripts/collect-adversarial-context.ts',
+      "const INERT_CHANGED_EVIDENCE_PATH =\n  'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**';\nimport '../docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts';\n",
+    ],
+    [
+      'scripts/check-adversarial-policy.mjs',
+      "const INERT_CHANGED_EVIDENCE_PATHS = [\n  'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**',\n];\nrequire('../docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts');\n",
+    ],
+  ])('blocks an activation reference added to canonical declaration file %s', (filePath, content) => {
+    const fixture = createRepository((repo) => {
+      write(repo, 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts', 'export {};\n');
+      write(repo, filePath, content);
+      write(repo, 'src/feature.ts', 'export const score = 2;\n');
+      write(repo, 'src/feature.test.ts', 'expect(score).toBe(2);\n');
+    });
+    expect(collect(fixture).blockingReasons).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'INERT_EVIDENCE_UNSAFE' })]),
+    );
+  });
+
   it('blocks when mandatory repository context is missing', () => {
     const fixture = createRepository((repo) => {
       remove(repo, '.github/workflows/ci.yml');

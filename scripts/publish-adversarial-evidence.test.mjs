@@ -147,6 +147,7 @@ function options(transport, result = reviewResult([finding()]), outputName = 'de
     repoRoot,
     repository,
     issueNumber: 30,
+    pullRequestNumber: 35,
     headSha,
     result,
     calibration,
@@ -201,6 +202,54 @@ afterEach(async () => {
 });
 
 describe('publishAdversarialEvidence', () => {
+  it('publishes schema-valid platform ERROR evidence without inventing a missing summary mismatch', async () => {
+    const transport = new FakeGitHubTransport();
+    const result = reviewResult([], {
+      verdict: {
+        decision: 'ERROR',
+        severity: 'ERROR',
+        blockingFindingsCount: 0,
+        advisoryFindingsCount: 0,
+        errorMessage: 'CONTEXT_IDENTITY_INVALID: packet attribution is missing.',
+        policyDecisionRationale: 'Review failed before a policy verdict was available.',
+      },
+    });
+    delete result.summary;
+
+    const publication = await publishAdversarialEvidence(options(transport, result, 'platform-error'));
+    const manifest = await readJson(publication.manifestPath);
+
+    expect(publication).toMatchObject({ conclusion: 'failure', created: true });
+    expect(manifest).toMatchObject({ issueNumber: 30, pullRequestNumber: 35 });
+    expect(transport.createCalls).toHaveLength(1);
+  });
+
+  it('requires an explicit pull request number for platform errors and rejects summary disagreement', async () => {
+    const errorTransport = new FakeGitHubTransport();
+    const errorResult = reviewResult([], {
+      verdict: {
+        decision: 'ERROR',
+        severity: 'ERROR',
+        blockingFindingsCount: 0,
+        advisoryFindingsCount: 0,
+        errorMessage: 'PLATFORM_FAILURE',
+        policyDecisionRationale: 'Platform failure.',
+      },
+    });
+    delete errorResult.summary;
+    const missing = options(errorTransport, errorResult, 'missing-pr');
+    delete missing.pullRequestNumber;
+    await expect(publishAdversarialEvidence(missing)).rejects.toThrow(/pullRequestNumber/);
+
+    const mismatchTransport = new FakeGitHubTransport();
+    await expect(
+      publishAdversarialEvidence({
+        ...options(mismatchTransport, reviewResult(), 'mismatched-pr'),
+        pullRequestNumber: 36,
+      }),
+    ).rejects.toThrow(/pull-request head SHA/);
+  });
+
   it('publishes an exact exception as a warning and neutral check while retaining immutable audit evidence', async () => {
     const transport = new FakeGitHubTransport();
     const result = reviewResult([finding()]);
