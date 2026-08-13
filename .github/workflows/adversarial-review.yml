@@ -234,14 +234,12 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
           ISSUE_NUMBER: ${{ needs.resolve.outputs.issue_number }}
-          PULL_REQUEST_NUMBER: ${{ needs.resolve.outputs.pull_request_number }}
         run: |
           set -euo pipefail
           yarn publish:adversarial \
             --result reviewer-result.json \
             --repository "$GITHUB_REPOSITORY" \
             --issue "$ISSUE_NUMBER" \
-            --pull-request "$PULL_REQUEST_NUMBER" \
             --head "$HEAD_SHA" \
             --calibration-report "$ACTIVE_CALIBRATION_REPORT" \
             --exceptions config/adversarial-agents/exceptions.json \

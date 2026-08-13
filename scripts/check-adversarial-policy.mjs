@@ -53,7 +53,6 @@ const workflowSources = await Promise.all(
     .map((name) => fs.readFile(path.join(workflowDirectory, name), 'utf8')),
 );
 const violations = [];
-const INERT_CHANGED_EVIDENCE_PATHS = ['docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**'];
 
 const requiredWorkflowFragments = [
   'workflow_dispatch:',
@@ -128,20 +127,13 @@ for (const section of requiredContextSections) {
   }
 }
 if (
-  collectorConfig.version !== '1.0.2' ||
+  collectorConfig.version !== '1.0.1' ||
   collectorConfig.limits?.maxPacketBytes > 2097152 ||
   collectorConfig.limits?.maxEvidenceBytes > 786432 ||
   collectorConfig.limits?.maxFileBytes > 32768 ||
   collectorConfig.limits?.maxPatchBytes > 65536
 ) {
   violations.push('Context collector version or reviewed byte limits were weakened.');
-}
-if (
-  JSON.stringify(collectorConfig.inertChangedEvidence?.paths) !== JSON.stringify(INERT_CHANGED_EVIDENCE_PATHS) ||
-  typeof collectorConfig.inertChangedEvidence?.limitation !== 'string' ||
-  collectorConfig.inertChangedEvidence.limitation.length < 20
-) {
-  violations.push('Inert evidence exclusion must remain narrow, explicit, and documented.');
 }
 const requiredCollectorFragments = [
   "classification: 'UNTRUSTED_DATA_ONLY'",
@@ -153,13 +145,6 @@ const requiredCollectorFragments = [
   "'MANDATORY_CONTEXT_TRUNCATED'",
   "'GLOBAL_EVIDENCE_LIMIT'",
   "'PACKET_SIZE_LIMIT'",
-  "'INERT_EVIDENCE_UNSAFE'",
-  "'inertChangedEvidence configuration is malformed'",
-  'activeInertReference',
-  "filePath.startsWith('scripts/')",
-  "filePath.startsWith('src/')",
-  "filePath.startsWith('games/')",
-  "filePath.startsWith('packages/')",
 ];
 for (const fragment of requiredCollectorFragments) {
   if (!collector.includes(fragment)) {
