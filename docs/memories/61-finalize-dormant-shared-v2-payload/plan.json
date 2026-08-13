@@ -1,0 +1,58 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 61,
+  "issueTitle": "Finalize the dormant shared-v2 adversarial platform payload",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/61",
+  "branchName": "ralph/issue-61-finalize-dormant-shared-v2-payload",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 1,
+    "dependencies": [57, 60],
+    "changeScopes": [
+      "docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source",
+      "docs/memories/56-shared-adversarial-reviewer-platform",
+      "docs/memories/61-finalize-dormant-shared-v2-payload",
+      "scripts/check-shared-v2-boundary.mjs",
+      "scripts/check-shared-v2-boundary.test.mjs",
+      "scripts/shared-v2-activation-smoke.test.mjs",
+      "scripts/check-lint-scope.mjs",
+      "scripts/collect-adversarial-context.test.mjs",
+      "package.json"
+    ]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Restoring reviewable v2 source",
+      "description": "Recover the complete reviewed v2 runtime, configs, helpers, and tests as normal text under the exact inert path.",
+      "priority": 1,
+      "passes": true,
+      "notes": "Seam: source-tree inventory and safe activation destinations."
+    },
+    {
+      "id": "US-002",
+      "title": "Validating v2 closure",
+      "description": "Fail closed on source hash, destination, external dependency, relative import, config-read, permission, symlink, and aggregate-manifest drift.",
+      "priority": 2,
+      "passes": true,
+      "notes": "Seam: shared-v2 boundary checker CLI and tests."
+    },
+    {
+      "id": "US-003",
+      "title": "Proving isolated activation",
+      "description": "Materialize the dormant tree in a fixture and run targeted v2 type, registry, policy, runtime, publisher, matrix, fan-in, waiver, promotion, evaluator, and calibration validation without touching active v1.",
+      "priority": 3,
+      "passes": true,
+      "notes": "Seam: activation smoke test."
+    },
+    {
+      "id": "US-004",
+      "title": "Publishing durable activation handoff",
+      "description": "Document committed-main activation input for #58 and pass full deterministic plus exact-head checks.",
+      "priority": 4,
+      "passes": true,
+      "notes": "Seam: documented handoff, collector metadata-only packet, and check evidence."
+    }
+  ]
+}
