@@ -46,6 +46,7 @@ concurrency:
   cancel-in-progress: true
 safe-outputs:
   report-failed-jobs: false
+  threat-detection: false
   jobs:
     prompt-output:
       description: Record the exact prompt response in the Actions log
