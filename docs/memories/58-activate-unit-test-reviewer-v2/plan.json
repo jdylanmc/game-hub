@@ -1,0 +1,56 @@
+{
+  "repoNameWithOwner": "jdylanmc/game-hub",
+  "issueNumber": 58,
+  "issueTitle": "Activate unit-test reviewer shared v2 contract after bootstrap",
+  "issueUrl": "https://github.com/jdylanmc/game-hub/issues/58",
+  "branchName": "ralph/issue-58-activate-unit-test-reviewer-v2",
+  "baseBranch": "main",
+  "continuousByBestJudgment": true,
+  "orchestration": {
+    "priority": 1,
+    "dependencies": [59, 61],
+    "changeScopes": [
+      ".github/adversarial-agents",
+      ".github/workflows/adversarial-review.yml",
+      "config/adversarial-agents",
+      "scripts",
+      "package.json",
+      "docs/memories/56-shared-adversarial-reviewer-platform",
+      "docs/memories/58-activate-unit-test-reviewer-v2"
+    ]
+  },
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Materializing the reviewed v2 transaction",
+      "description": "Add a deterministic, fail-closed activation command that validates and copies the committed v2 manifest sources into their reviewed destinations without enabling Gilfoyle.",
+      "priority": 1,
+      "passes": false,
+      "notes": "Seam: activation command output and resulting destination hashes."
+    },
+    {
+      "id": "US-002",
+      "title": "Activating v2 reviewer execution",
+      "description": "Switch the active unit-test reviewer runtime, registry, workflow, package scripts, and policies to the materialized v2 contract while retaining the established required check identity.",
+      "priority": 2,
+      "passes": false,
+      "notes": "Seam: registry validation and protected workflow matrix."
+    },
+    {
+      "id": "US-003",
+      "title": "Calibrating the activated reviewer",
+      "description": "Generate a fresh real Azure calibration and required attestation for the exact activated fingerprint without weakening thresholds or reusing dormant evidence.",
+      "priority": 3,
+      "passes": false,
+      "notes": "Seam: calibration validator and attestation validator."
+    },
+    {
+      "id": "US-004",
+      "title": "Retiring the dormant staging boundary",
+      "description": "Remove inert staging artifacts only after active materialization is verified, document the #22 proof boundary, and publish passing exact-head evidence.",
+      "priority": 4,
+      "passes": false,
+      "notes": "Seam: active policy, workflow, and documentation checks."
+    }
+  ]
+}
