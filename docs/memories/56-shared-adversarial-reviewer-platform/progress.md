@@ -236,9 +236,9 @@
   their v1-compatible protected-main values.
 - The first compatibility attempt still exposed v2-shaped prompt/test evidence
   to the old model, which imitated an unsupported extra structured field.
-  Bootstrap now carries no v2 execution or structured-contract payload in its
-  final tree; the reviewed v2 implementation remains recoverable from this
-  branch history for the activation work.
+  The v2 deliverables are now restored under committed dormant paths with a
+  fingerprinted activation manifest; the active v1 workflow has no reference
+  to them.
 - The active publisher now emits a truthful platform-ERROR failure even when
   a legacy error result has no summary, rather than misreporting a head
   mismatch.
@@ -247,3 +247,14 @@
 - Follow-up issue #58 owns explicit activation of this boundary, a fresh v2
   real-Azure calibration, attestation, and protected-main fan-in proof after
   bootstrap merges.
+
+## Final-review durable dormant-platform repair
+
+- Complete reviewed v2 result/critic/persona runtime, matrix, fan-in, waiver,
+  promotion, schema/policy/configuration, and publisher files are committed
+  under `scripts/shared-v2/` and `config/adversarial-agents/shared-v2/`.
+- `yarn shared-v2:check` verifies every manifest digest and that active v1
+  schema, policy, engine, and workflow do not reference the dormant boundary.
+  Its deterministic tests fail closed on a changed or duplicate manifest entry.
+- The bootstrap v1 reviewer-to-publisher regression remains active. Issue #58
+  now consumes committed files from main, not ephemeral branch history.

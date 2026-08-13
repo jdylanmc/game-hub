@@ -1,0 +1,75 @@
+{
+  "manifestVersion": "2.0.0",
+  "state": "dormant-bootstrap-boundary",
+  "activationIssue": 58,
+  "activeReviewerContractVersion": "1.0.0",
+  "v2ContractVersion": "2.0.0",
+  "activationRequirements": [
+    "explicit-follow-up-transaction",
+    "fresh-real-azure-calibration",
+    "protected-attestation",
+    "protected-main-exact-head-fan-in-proof"
+  ],
+  "files": [
+    {
+      "path": ".github/adversarial-agents/unit-test-reviewer/prompt-v2.md",
+      "sha256": "95db6cddd17acbb8acaf5e498d3c40e191c8cc258deed586105b57ae7df40843"
+    },
+    {
+      "path": "config/adversarial-agents/shared-v2/schema.json",
+      "sha256": "cd46bbd7d12fd7b257c2ee24304f673a6a79ab13bda0696247ebc2b9313e375a"
+    },
+    {
+      "path": "config/adversarial-agents/shared-v2/policy.json",
+      "sha256": "ed7e5906234a69d282c2102490fc3227703c049c97e63170ffb968c34b478286"
+    },
+    {
+      "path": "config/adversarial-agents/shared-v2/reviewer-engine.json",
+      "sha256": "298a9eb95c8f20f5038505867ab6030add6432ea5ea8eeb430c8cc1c42672d3e"
+    },
+    {
+      "path": "config/adversarial-agents/shared-v2/agents-config.json",
+      "sha256": "35392a6eb1837b1a3a27f19bc2ac2f5c4b2cc827ad0c9ed6e1c2f40f865cab54"
+    },
+    {
+      "path": "scripts/shared-v2/validate-adversarial-finding.ts",
+      "sha256": "3804877f45c2bcb8be2570ffc2b1ca649e0b88a05ddcf5bf860a70e06ca8a142"
+    },
+    {
+      "path": "scripts/shared-v2/review-adversarial-context.ts",
+      "sha256": "e3130004f109596034109c75a1d235bd2f2fa95f1c65d11baf00766a69ef8a08"
+    },
+    {
+      "path": "scripts/shared-v2/publish-adversarial-evidence.ts",
+      "sha256": "93769c09f224b350fbc1d0b4cc707d4cb5793223307a204fe66bbad49cb23b33"
+    },
+    {
+      "path": "scripts/shared-v2/evaluate-adversarial-reviewer.ts",
+      "sha256": "158df54799d1be88f80d951b9d643c7482d4e4a4f9c7a89f9271602690efd063"
+    },
+    {
+      "path": "scripts/shared-v2/validate-adversarial-agent-registry.ts",
+      "sha256": "3eb13ca5542347f94f88085bbda2134508ae29aaf9cca151c4fbf32916528ba2"
+    },
+    {
+      "path": "scripts/shared-v2/fan-in-adversarial-evidence.ts",
+      "sha256": "02c210f070805c40b29cdd8eeae9db7cf7d00cc33a8ce58eb95e524c585f827f"
+    },
+    {
+      "path": "scripts/shared-v2/validate-adversarial-waiver.ts",
+      "sha256": "b2fe06f32bc57583bfd623a5295aafaf75876c5af55eea62eb43b6889d671453"
+    },
+    {
+      "path": "scripts/shared-v2/promote-adversarial-branch-protection.ts",
+      "sha256": "415b1c135ad39a9237dfa2d69ae6c22ce3fb6d3c7d524709f4aeaccea883603e"
+    },
+    {
+      "path": "scripts/shared-v2/resolve-adversarial-reviewer-matrix.ts",
+      "sha256": "7c1617c84557637c0b1c2353f2aa994e6420c9e1a34646bfb0ae3eeb9f9239e1"
+    },
+    {
+      "path": "scripts/shared-v2/publish-adversarial-fan-in.ts",
+      "sha256": "3d6dbeb3877271a3fadbe02441b0e530cfcd14496415aeef5a2b566df2edbdf8"
+    }
+  ]
+}
