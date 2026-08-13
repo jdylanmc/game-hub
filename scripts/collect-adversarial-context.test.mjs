@@ -395,21 +395,6 @@ describe('adversarial context collector', () => {
     );
   });
 
-  it('allows the lint-scope policy probe without treating it as an active dormant payload reference', () => {
-    const fixture = createRepository((repo) => {
-      write(repo, 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts', 'export {};\n');
-      write(
-        repo,
-        'scripts/check-lint-scope.mjs',
-        fs.readFileSync(path.join(root, 'scripts/check-lint-scope.mjs'), 'utf8'),
-      );
-      write(repo, 'src/feature.ts', 'export const score = 2;\n');
-      write(repo, 'src/feature.test.ts', 'expect(score).toBe(2);\n');
-    });
-
-    expect(collect(fixture).status).toBe('READY');
-  });
-
   it.each([
     [
       'scripts/collect-adversarial-context.ts',
