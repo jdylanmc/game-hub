@@ -261,3 +261,28 @@
   changed/duplicate manifest entry.
 - The bootstrap v1 reviewer-to-publisher regression remains active. Issue #58
   now consumes committed files from main, not ephemeral branch history.
+
+## Ratcheted prerequisite slice
+
+- Final review correctly identified that directly staging the full 526,209-byte
+  v2 text tree exhausts the current v1 collector's fixed global evidence
+  budget before review. PR #57 no longer claims to complete or close #56.
+- This slice adds only the narrow collector capability required for the next
+  human-reviewed PR: exact inert changed-file metadata for
+  `docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**`.
+  It remains fail-closed for broad exclusions, executable files, active
+  workflow/package/config references, and missing mandatory production/test
+  evidence.
+- The full reviewable text tree, manifest, activation smoke, and #56 completion
+  move to the follow-up human-reviewed PR after this prerequisite merges.
+
+## Current prerequisite state
+
+- PR #57 tracks #56; it deliberately does not close the issue or mark the
+  seven platform stories complete. Its only platform behavior is the narrow
+  inert-path collector capability plus the v1 exact-head publisher regression.
+- Once this prerequisite is merged, the second human-reviewed PR can add the
+  complete text tree at the exact inert path. The merged collector will then
+  retain filename, byte count, SHA-256, and limitation metadata without
+  consuming dormant source patch text, while refusing broad, executable, or
+  active-path exclusions.

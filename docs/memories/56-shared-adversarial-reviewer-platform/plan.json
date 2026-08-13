@@ -38,7 +38,7 @@
         "Targeted validator tests prove critic REJECT downgrades a proposed blocker and critic INCONCLUSIVE follows the configured calibrated-confidence threshold."
       ],
       "priority": 1,
-      "passes": true,
+      "passes": false,
       "notes": "Public test seam: scripts/validate-adversarial-finding.ts command and exported validator behavior."
     },
     {
@@ -51,7 +51,7 @@
         "Targeted engine tests prove persona rendering cannot alter the authoritative verdict and a failed persona render publishes the validated neutral presentation."
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": "Public test seam: scripts/review-adversarial-context.ts command with injected transports and clocks."
     },
     {
@@ -63,7 +63,7 @@
         "Workflow policy tests prove the primary matrix is registry-driven, runs only after successful exact-head Continuous Integration, preserves protected-main checkout and least privilege, and retains the existing unit-test reviewer check."
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "notes": "Public test seams: registry validation CLI and adversarial workflow policy CLI. Workflow YAML is non-executable configuration covered by deterministic policy tests."
     },
     {
@@ -76,7 +76,7 @@
         "Workflow policy tests prove publication and fan-in are deterministic protected-base jobs and every enabled reviewer remains independently attributable."
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "notes": "Public test seams: publish-adversarial-evidence CLI/library and a new fan-in CLI with fake GitHub/evidence transports."
     },
     {
@@ -88,7 +88,7 @@
         "Targeted tests reject unauthorized authors, edited mismatches, changed heads, wrong reviewers, missing outage evidence, excessive or expired lifetimes, FAIL results, platform failures, and promotion use."
       ],
       "priority": 5,
-      "passes": true,
+      "passes": false,
       "notes": "Public test seam: a new waiver-validation CLI/library over supplied pull-request comment metadata."
     },
     {
@@ -101,7 +101,7 @@
         "The command emits a bounded non-secret evidence record and never rolls protection back after a partial failure."
       ],
       "priority": 6,
-      "passes": true,
+      "passes": false,
       "notes": "Public test seam: a new branch-protection promotion CLI/library with a fake GitHub transport."
     },
     {
@@ -114,7 +114,7 @@
         "The issue's required format, lint, policy, type, and targeted adversarial tests pass."
       ],
       "priority": 7,
-      "passes": true,
+      "passes": false,
       "notes": "Non-behavioral integration story; deterministic policy commands and documentation review provide the verification seam."
     }
   ]

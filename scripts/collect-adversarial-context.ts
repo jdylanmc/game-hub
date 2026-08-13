@@ -54,6 +54,10 @@ interface CollectorConfig {
   productionRoots: string[];
   testPatterns: string[];
   sections: Record<string, SectionConfig>;
+  inertChangedEvidence: {
+    paths: string[];
+    limitation: string;
+  };
 }
 
 interface BlockingReason {
@@ -102,6 +106,9 @@ interface ChangeEvidence {
   includedBytes: number;
   truncated: boolean;
   hunks: DiffHunk[];
+  excluded?: boolean;
+  limitation?: string;
+  evidenceSha256?: string;
 }
 
 interface ContextPacket {
@@ -279,8 +286,19 @@ function validateInput(value: unknown): CollectorInput {
 }
 
 function validateConfig(value: unknown): CollectorConfig {
-  if (!isObject(value) || !isObject(value.limits) || !isObject(value.sections)) {
+  const inertPath = 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**';
+  if (!isObject(value) || value.version !== '1.0.2' || !isObject(value.limits) || !isObject(value.sections)) {
     throw new Error('Collector configuration is malformed');
+  }
+  if (
+    !isObject(value.inertChangedEvidence) ||
+    !Array.isArray(value.inertChangedEvidence.paths) ||
+    value.inertChangedEvidence.paths.length !== 1 ||
+    value.inertChangedEvidence.paths[0] !== inertPath ||
+    typeof value.inertChangedEvidence.limitation !== 'string' ||
+    value.inertChangedEvidence.limitation.trim() === ''
+  ) {
+    throw new Error('inertChangedEvidence configuration is malformed');
   }
   return value as unknown as CollectorConfig;
 }
@@ -428,6 +446,53 @@ function collectChanges(
     const filePath = change.newPath ?? change.oldPath;
     if (!filePath) continue;
     const category = classifyChange(filePath, config);
+    const inert = matchesAny(filePath, config.inertChangedEvidence.paths);
+    if (inert) {
+      const treeEntry = runGit(repoRoot, ['ls-tree', input.pullRequest.headSha, '--', filePath])
+        .toString('utf8')
+        .trim()
+        .match(/^(\d+) blob ([a-f0-9]{40})\t/);
+      const activeReference = runGit(
+        repoRoot,
+        [
+          'grep',
+          '-n',
+          '-F',
+          'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source',
+          input.pullRequest.headSha,
+          '--',
+          '.github/workflows',
+          'package.json',
+          'config',
+        ],
+        true,
+      );
+      if (!treeEntry || treeEntry[1] !== '100644' || activeReference.length > 0) {
+        blockingReasons.push({
+          code: 'INERT_EVIDENCE_UNSAFE',
+          section: 'inertChangedEvidence',
+          path: filePath,
+          message: 'Inert evidence is executable, unresolved, or referenced by active configuration.',
+        });
+      }
+      const blob = treeEntry ? readBlob(repoRoot, treeEntry[2]) : Buffer.alloc(0);
+      result.other.push({
+        status: change.status,
+        oldPath: change.oldPath,
+        newPath: change.newPath,
+        category: 'other',
+        origin: 'untrusted-pr-diff',
+        binary: blob.includes(0),
+        byteLength: blob.length,
+        includedBytes: 0,
+        truncated: false,
+        hunks: [],
+        excluded: true,
+        limitation: config.inertChangedEvidence.limitation,
+        evidenceSha256: sha256(blob),
+      });
+      continue;
+    }
     const patchResult = runGitLimited(
       repoRoot,
       [

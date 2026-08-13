@@ -266,6 +266,52 @@ describe('adversarial context collector', () => {
     ]);
   });
 
+  it('records the narrow dormant-v2 path by hash without consuming its patch evidence budget', () => {
+      const dormantPath = 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts';
+      const fixture = createRepository((repo) => {
+        write(repo, dormantPath, `export const payload = '${'x'.repeat(200_000)}';\n`);
+        write(repo, 'src/feature.ts', 'export const score = 2;\n');
+        write(repo, 'src/feature.test.ts', 'expect(score).toBe(2);\n');
+      });
+      const packet = collect(fixture, {
+        inertChangedEvidence: {
+          paths: ['docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**'],
+          limitation: 'Dormant v2 source is metadata-only until explicit activation.',
+        },
+      });
+
+      const dormant = packet.changes.other.find((change) => change.newPath === dormantPath);
+      expect(packet.status).toBe('READY');
+      expect(dormant).toMatchObject({
+        excluded: true,
+        includedBytes: 0,
+        hunks: [],
+        limitation: 'Dormant v2 source is metadata-only until explicit activation.',
+        evidenceSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      });
+  });
+
+  it('rejects broad or active references to the inert evidence exclusion', () => {
+      const fixture = createRepository((repo) => {
+        write(repo, 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts', 'export {};\n');
+        write(repo, 'package.json', '{"source":"docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source"}\n');
+        write(repo, 'src/feature.ts', 'export const score = 2;\n');
+        write(repo, 'src/feature.test.ts', 'expect(score).toBe(2);\n');
+      });
+      const inertChangedEvidence = {
+        paths: ['docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**'],
+        limitation: 'Dormant v2 source is metadata-only until explicit activation.',
+      };
+      expect(collect(fixture, { inertChangedEvidence }).blockingReasons).toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: 'INERT_EVIDENCE_UNSAFE' })]),
+      );
+      expect(() =>
+        collect(fixture, {
+          inertChangedEvidence: { ...inertChangedEvidence, paths: ['docs/**'] },
+        }),
+      ).toThrow(/inertChangedEvidence/);
+  });
+
   it('blocks when mandatory repository context is missing', () => {
     const fixture = createRepository((repo) => {
       remove(repo, '.github/workflows/ci.yml');
