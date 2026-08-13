@@ -44,25 +44,31 @@ network:
 concurrency:
   group: mad-max-prompt-proof-${{ github.event.workflow_run.id }}
   cancel-in-progress: true
-jobs:
-  finalize:
-    needs: [agent]
-    if: always()
-    runs-on: ubuntu-latest
-    permissions: {}
-    steps:
-      - name: Download prompt response
-        if: needs.agent.result == 'success'
-        uses: actions/download-artifact@v8
-        with:
-          name: agent
-          path: ${{ runner.temp }}/prompt-response
-      - name: Print prompt response
-        if: needs.agent.result == 'success'
-        run: cat "${RUNNER_TEMP}/prompt-response/agent_output.json"
-      - name: Require successful prompt run
-        if: needs.agent.result != 'success'
-        run: exit 1
+safe-outputs:
+  report-failed-jobs: false
+  jobs:
+    prompt-output:
+      description: Record the exact prompt response in the Actions log
+      runs-on: ubuntu-latest
+      permissions: {}
+      inputs:
+        response:
+          description: The exact response to the stub prompt
+          type: string
+          required: true
+      steps:
+        - name: Print prompt response
+          uses: actions/github-script@v9
+          with:
+            script: |
+              const fs = require('fs');
+              const data = JSON.parse(fs.readFileSync(process.env.GH_AW_AGENT_OUTPUT, 'utf8'));
+              const items = (data.items || []).filter(item => item.type === 'prompt_output');
+              if (items.length !== 1 || !items[0].response?.trim()) {
+                core.setFailed(`Expected exactly one prompt_output response, received ${items.length}.`);
+                return;
+              }
+              core.info(items[0].response);
 ---
 
 To prove this works, I want you to output the following: Hello World! How are you?
