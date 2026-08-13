@@ -4,10 +4,10 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stableStringify } from '../collect-adversarial-context.ts';
+import { stableStringify } from './collect-adversarial-context.ts';
 import { validatePromotionReport } from './evaluate-adversarial-reviewer.ts';
 import { AdversarialFindingValidator } from './validate-adversarial-finding.ts';
-import { evaluateAdversarialExceptions, type ExceptionEvaluation } from '../apply-adversarial-exceptions.ts';
+import { evaluateAdversarialExceptions, type ExceptionEvaluation } from './apply-adversarial-exceptions.ts';
 import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
 
 type JsonObject = Record<string, unknown>;

@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AdversarialFindingValidator } from './validate-adversarial-finding.ts';
 import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
-import { stableStringify } from '../collect-adversarial-context.ts';
+import { stableStringify } from './collect-adversarial-context.ts';
 
 const ENGINE_VERSION = '2.0.0';
 

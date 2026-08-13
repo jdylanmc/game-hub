@@ -36,7 +36,8 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
     typeof manifest.aggregateSha256 !== 'string' ||
     !/^[a-f0-9]{64}$/.test(manifest.aggregateSha256) ||
     !Array.isArray(manifest.files) ||
-    manifest.files.length < 30
+    !Array.isArray(manifest.externalDependencies) ||
+    manifest.files.length < 10
   ) {
     return { valid: false, errors: ['Shared v2 manifest identity is invalid.'] };
   }
@@ -76,12 +77,37 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
       errors.push(`Shared v2 source file is missing: ${entry.sourcePath}`);
     }
   }
+  const sourceByDestination = new Map(
+    [...manifest.files, ...manifest.externalDependencies].map((entry) => [entry.destination, entry.sourcePath]),
+  );
+  for (const dependency of manifest.externalDependencies) {
+    if (
+      !dependency ||
+      !safePath(dependency.destination) ||
+      typeof dependency.sha256 !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(dependency.sha256) ||
+      destinations.has(dependency.destination)
+    ) {
+      errors.push('Shared v2 external dependency entry is invalid.');
+      continue;
+    }
+    destinations.add(dependency.destination);
+    canonicalEntries.push({
+      destination: dependency.destination,
+      sha256: dependency.sha256,
+    });
+    try {
+      if (sha256(fs.readFileSync(path.join(repoRoot, dependency.destination))) !== dependency.sha256) {
+        errors.push(`Shared v2 external dependency drifted: ${dependency.destination}`);
+      }
+    } catch {
+      errors.push(`Shared v2 external dependency is missing: ${dependency.destination}`);
+    }
+  }
   const aggregate = sha256(
-    JSON.stringify(canonicalEntries.sort((left, right) => left.sourcePath.localeCompare(right.sourcePath))),
+    JSON.stringify(canonicalEntries.sort((left, right) => left.destination.localeCompare(right.destination))),
   );
   if (aggregate !== manifest.aggregateSha256) errors.push('Shared v2 aggregate manifest digest mismatch.');
-
-  const sourceByDestination = new Map(manifest.files.map((entry) => [entry.destination, entry.sourcePath]));
   for (const entry of manifest.files.filter((item) => item.destination.endsWith('.ts'))) {
     const content = fs.readFileSync(path.join(repoRoot, memoryRoot, entry.sourcePath), 'utf8');
     for (const match of content.matchAll(/from\s+['"](\.{1,2}\/[^'"]+)['"]/g)) {

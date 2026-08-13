@@ -4,7 +4,7 @@
   "activationIssue": 58,
   "activeReviewerContractVersion": "1.0.0",
   "v2ContractVersion": "2.0.0",
-  "aggregateSha256": "04c93490ac4de08716019a2bbbbf8c59fa039a99bc8700ab19d6a51c08b3612e",
+  "aggregateSha256": "bf75b7e940c16857eab38bbd781269f8750de6817ef06f7193221b5cbfda3dc4",
   "files": [
     {
       "sourcePath": "shared-v2-source/.github/adversarial-agents/system-policy.md",
@@ -134,7 +134,7 @@
     {
       "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/agents-config.json",
       "destination": "config/adversarial-agents/shared-v2/agents-config.json",
-      "sha256": "35392a6eb1837b1a3a27f19bc2ac2f5c4b2cc827ad0c9ed6e1c2f40f865cab54"
+      "sha256": "1402b6d47f758df56629c99e98278c836bc91a98b0dace8aa44e2693f6f152fc"
     },
     {
       "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/policy.json",
@@ -182,99 +182,74 @@
       "sha256": "6d079eecbf874e13997d63e6a95f491daaf59a2ac86b375449544c9e9588f2a6"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/evaluate-adversarial-reviewer.test.mjs",
-      "destination": "scripts/shared-v2/evaluate-adversarial-reviewer.test.mjs",
+      "sourcePath": "shared-v2-source/scripts/evaluate-adversarial-reviewer.test.mjs",
+      "destination": "scripts/evaluate-adversarial-reviewer.test.mjs",
       "sha256": "10148644656b82f1aa0fe4f3c6efd787452f5838769c61ae73cc02c931759829"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/evaluate-adversarial-reviewer.ts",
-      "destination": "scripts/shared-v2/evaluate-adversarial-reviewer.ts",
-      "sha256": "158df54799d1be88f80d951b9d643c7482d4e4a4f9c7a89f9271602690efd063"
+      "sourcePath": "shared-v2-source/scripts/evaluate-adversarial-reviewer.ts",
+      "destination": "scripts/evaluate-adversarial-reviewer.ts",
+      "sha256": "364a236b01ad404ed9777e0843c4e2a30262cad273196ff4df45d0d3f0e51784"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/fan-in-adversarial-evidence.test.mjs",
-      "destination": "scripts/shared-v2/fan-in-adversarial-evidence.test.mjs",
+      "sourcePath": "shared-v2-source/scripts/fan-in-adversarial-evidence.test.mjs",
+      "destination": "scripts/fan-in-adversarial-evidence.test.mjs",
       "sha256": "d34d975cdc39fc2dfc54ce9d4741c38a3a3209bd80c7876dfb26490e96371d1b"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/fan-in-adversarial-evidence.ts",
-      "destination": "scripts/shared-v2/fan-in-adversarial-evidence.ts",
+      "sourcePath": "shared-v2-source/scripts/fan-in-adversarial-evidence.ts",
+      "destination": "scripts/fan-in-adversarial-evidence.ts",
       "sha256": "02c210f070805c40b29cdd8eeae9db7cf7d00cc33a8ce58eb95e524c585f827f"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/promote-adversarial-branch-protection.test.mjs",
-      "destination": "scripts/shared-v2/promote-adversarial-branch-protection.test.mjs",
+      "sourcePath": "shared-v2-source/scripts/promote-adversarial-branch-protection.test.mjs",
+      "destination": "scripts/promote-adversarial-branch-protection.test.mjs",
       "sha256": "0cc9bf35f549c0c2f0aac09d66d980a02c57489d0b75f34fe6ce499d92ef0441"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/promote-adversarial-branch-protection.ts",
-      "destination": "scripts/shared-v2/promote-adversarial-branch-protection.ts",
+      "sourcePath": "shared-v2-source/scripts/promote-adversarial-branch-protection.ts",
+      "destination": "scripts/promote-adversarial-branch-protection.ts",
       "sha256": "415b1c135ad39a9237dfa2d69ae6c22ce3fb6d3c7d524709f4aeaccea883603e"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/publish-adversarial-evidence.test.mjs",
-      "destination": "scripts/shared-v2/publish-adversarial-evidence.test.mjs",
+      "sourcePath": "shared-v2-source/scripts/publish-adversarial-evidence.test.mjs",
+      "destination": "scripts/publish-adversarial-evidence.test.mjs",
       "sha256": "5e94dacd8b9a356d75f201f4d604c36bb13b79aa386608fda62be0547e6ae7c5"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/publish-adversarial-evidence.ts",
-      "destination": "scripts/shared-v2/publish-adversarial-evidence.ts",
-      "sha256": "93769c09f224b350fbc1d0b4cc707d4cb5793223307a204fe66bbad49cb23b33"
+      "sourcePath": "shared-v2-source/scripts/publish-adversarial-evidence.ts",
+      "destination": "scripts/publish-adversarial-evidence.ts",
+      "sha256": "013a44fb643b50221b251a2ec056e75a3cc5bc822b000f24e3b96ec35f27561d"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/publish-adversarial-fan-in.ts",
-      "destination": "scripts/shared-v2/publish-adversarial-fan-in.ts",
+      "sourcePath": "shared-v2-source/scripts/publish-adversarial-fan-in.ts",
+      "destination": "scripts/publish-adversarial-fan-in.ts",
       "sha256": "3d6dbeb3877271a3fadbe02441b0e530cfcd14496415aeef5a2b566df2edbdf8"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/resolve-adversarial-reviewer-matrix.test.mjs",
-      "destination": "scripts/shared-v2/resolve-adversarial-reviewer-matrix.test.mjs",
+      "sourcePath": "shared-v2-source/scripts/resolve-adversarial-reviewer-matrix.test.mjs",
+      "destination": "scripts/resolve-adversarial-reviewer-matrix.test.mjs",
       "sha256": "ebab4ebb30ed3711708051319d076feeabe55d1273068dc8f36f0a0b7be7e052"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/resolve-adversarial-reviewer-matrix.ts",
-      "destination": "scripts/shared-v2/resolve-adversarial-reviewer-matrix.ts",
+      "sourcePath": "shared-v2-source/scripts/resolve-adversarial-reviewer-matrix.ts",
+      "destination": "scripts/resolve-adversarial-reviewer-matrix.ts",
       "sha256": "7c1617c84557637c0b1c2353f2aa994e6420c9e1a34646bfb0ae3eeb9f9239e1"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/review-adversarial-context.test.mjs",
-      "destination": "scripts/shared-v2/review-adversarial-context.test.mjs",
+      "sourcePath": "shared-v2-source/scripts/review-adversarial-context.test.mjs",
+      "destination": "scripts/review-adversarial-context.test.mjs",
       "sha256": "46c3c08652e2d4d0c419f4369431cba2a325349899432293c87d366976221fbe"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/review-adversarial-context.ts",
-      "destination": "scripts/shared-v2/review-adversarial-context.ts",
-      "sha256": "5c9865281c80f79742cd273a3643146273aaa55298886f727a0955b4563ca5b5"
+      "sourcePath": "shared-v2-source/scripts/review-adversarial-context.ts",
+      "destination": "scripts/review-adversarial-context.ts",
+      "sha256": "d81823d31bc9e4cbf61d2b983ebae44c39afd21c27fcfdc17909ee42ca95a4c2"
     },
     {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-agent-registry.test.mjs",
-      "destination": "scripts/shared-v2/validate-adversarial-agent-registry.test.mjs",
+      "sourcePath": "shared-v2-source/scripts/validate-adversarial-agent-registry.test.mjs",
+      "destination": "scripts/validate-adversarial-agent-registry.test.mjs",
       "sha256": "1a431247b13b89ede4b3db8b199a3752de24d1563582aa412e8ecf8833640c30"
-    },
-    {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-agent-registry.ts",
-      "destination": "scripts/shared-v2/validate-adversarial-agent-registry.ts",
-      "sha256": "3eb13ca5542347f94f88085bbda2134508ae29aaf9cca151c4fbf32916528ba2"
-    },
-    {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-finding.test.mjs",
-      "destination": "scripts/shared-v2/validate-adversarial-finding.test.mjs",
-      "sha256": "cebb8abd488bb004be7fffc8fac8e3e5137f161b94c9750d44255c9356fb3a92"
-    },
-    {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-finding.ts",
-      "destination": "scripts/shared-v2/validate-adversarial-finding.ts",
-      "sha256": "3804877f45c2bcb8be2570ffc2b1ca649e0b88a05ddcf5bf860a70e06ca8a142"
-    },
-    {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-waiver.test.mjs",
-      "destination": "scripts/shared-v2/validate-adversarial-waiver.test.mjs",
-      "sha256": "9d2abca7015e37d650348e5541bc229d173f98dce374e6863cfdbd35472a0875"
-    },
-    {
-      "sourcePath": "shared-v2-source/scripts/shared-v2/validate-adversarial-waiver.ts",
-      "destination": "scripts/shared-v2/validate-adversarial-waiver.ts",
-      "sha256": "b2fe06f32bc57583bfd623a5295aafaf75876c5af55eea62eb43b6889d671453"
     },
     {
       "sourcePath": "shared-v2-source/scripts/validate-adversarial-agent-registry.ts",
@@ -282,9 +257,30 @@
       "sha256": "3eb13ca5542347f94f88085bbda2134508ae29aaf9cca151c4fbf32916528ba2"
     },
     {
+      "sourcePath": "shared-v2-source/scripts/validate-adversarial-finding.test.mjs",
+      "destination": "scripts/validate-adversarial-finding.test.mjs",
+      "sha256": "cebb8abd488bb004be7fffc8fac8e3e5137f161b94c9750d44255c9356fb3a92"
+    },
+    {
       "sourcePath": "shared-v2-source/scripts/validate-adversarial-finding.ts",
       "destination": "scripts/validate-adversarial-finding.ts",
       "sha256": "3804877f45c2bcb8be2570ffc2b1ca649e0b88a05ddcf5bf860a70e06ca8a142"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/validate-adversarial-waiver.test.mjs",
+      "destination": "scripts/validate-adversarial-waiver.test.mjs",
+      "sha256": "9d2abca7015e37d650348e5541bc229d173f98dce374e6863cfdbd35472a0875"
+    },
+    {
+      "sourcePath": "shared-v2-source/scripts/validate-adversarial-waiver.ts",
+      "destination": "scripts/validate-adversarial-waiver.ts",
+      "sha256": "b2fe06f32bc57583bfd623a5295aafaf75876c5af55eea62eb43b6889d671453"
+    }
+  ],
+  "externalDependencies": [
+    {
+      "destination": "package.json",
+      "sha256": "c28b69ff43ee5e469b237f43ac10e1dda38fdbecbf42fb49e900637f5f136f40"
     }
   ]
 }

@@ -44,16 +44,15 @@ describe('shared v2 activation smoke', () => {
     const registry = JSON.parse(
       await fsp.readFile(path.join(fixtureRoot, 'config/adversarial-agents/shared-v2/agents-config.json'), 'utf8'),
     );
-    expect(registry.agents).toHaveLength(1);
+    const unitReviewer = registry.agents.find((agent) => agent.name === 'unit-test-reviewer');
+    expect(unitReviewer).toBeDefined();
     for (const [fileField, hashField] of [
       ['promptFile', 'promptContentHash'],
       ['schemaFile', 'schemaContentHash'],
       ['policyFile', 'policyContentHash'],
       ['engineConfigFile', 'engineConfigContentHash'],
     ]) {
-      expect(sha256(await fsp.readFile(path.join(fixtureRoot, registry.agents[0][fileField])))).toBe(
-        registry.agents[0][hashField],
-      );
+      expect(sha256(await fsp.readFile(path.join(fixtureRoot, unitReviewer[fileField])))).toBe(unitReviewer[hashField]);
     }
 
     execFileSync(
@@ -69,11 +68,10 @@ describe('shared v2 activation smoke', () => {
         'nodenext',
         '--allowImportingTsExtensions',
         '--skipLibCheck',
-        path.join(fixtureRoot, 'scripts/shared-v2/review-adversarial-context.ts'),
+        path.join(fixtureRoot, 'scripts/review-adversarial-context.ts'),
       ],
       { cwd: repoRoot, stdio: 'pipe' },
     );
-
     for (const [activePath, before] of activeBefore) {
       expect(await fsp.readFile(path.join(repoRoot, activePath))).toEqual(before);
     }

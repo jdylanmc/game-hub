@@ -5,8 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AdversarialReviewerEngine, createReviewerFromEnvironment } from './review-adversarial-context.ts';
-import { stableStringify } from '../collect-adversarial-context.ts';
-import { expectedReportFingerprintComponents } from '../calibration-attestation.ts';
+import { stableStringify } from './collect-adversarial-context.ts';
+import { expectedReportFingerprintComponents } from './calibration-attestation.ts';
 import { loadAgentRegistration } from './validate-adversarial-agent-registry.ts';
 
 const REPORT_SCHEMA_VERSION = '1.0.0';
