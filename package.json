@@ -62,8 +62,7 @@
     "preview": "vite preview",
     "storybook": "yarn generate:games && storybook dev -p 6006",
     "typecheck": "yarn generate:games && tsc -b",
-    "validate": "yarn install:check && yarn format:check && yarn lint && yarn policy:check && yarn test:ci-fail-closed && yarn security:audit && yarn test:ci && yarn generate:check && yarn typecheck && yarn build && yarn bundle:check && yarn build-storybook",
-    "shared-v2:check": "node scripts/check-shared-v2-boundary.mjs"
+    "validate": "yarn install:check && yarn format:check && yarn lint && yarn policy:check && yarn test:ci-fail-closed && yarn security:audit && yarn test:ci && yarn generate:check && yarn typecheck && yarn build && yarn bundle:check && yarn build-storybook"
   },
   "dependencies": {
     "@game-hub/game-contract": "workspace:*",

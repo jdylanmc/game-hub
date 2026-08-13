@@ -1,9 +1,0 @@
-{
-  "version": "1.0.1",
-  "agentName": "unit-test-reviewer",
-  "modelTools": [],
-  "repositoryCodeExecution": false,
-  "writeCapabilities": [],
-  "allowedNetworkDestinations": ["https://*.openai.azure.com"],
-  "evidenceSource": "bounded-context-packet"
-}

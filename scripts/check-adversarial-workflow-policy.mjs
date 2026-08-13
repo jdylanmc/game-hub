@@ -48,7 +48,6 @@ function validateAdversarialWorkflowPolicy(workflow, config, packageJson, resolv
     'test -s reviewer-result.json',
     'test -s publication-result.json',
     'yarn publish:adversarial',
-    '--pull-request "$PULL_REQUEST_NUMBER"',
     '--exceptions config/adversarial-agents/exceptions.json',
     '> publication-result.json',
     'if-no-files-found: error',

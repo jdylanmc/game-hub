@@ -181,7 +181,7 @@
           "promptVersion": "1.0.3",
           "toolsConfigFile": "config/adversarial-agents/unit-test-reviewer/tools.json",
           "contextConfigFile": "config/adversarial-agents/context-collector.json",
-          "contextConfigVersion": "1.0.2",
+          "contextConfigVersion": "1.0.1",
           "modelDeployment": "gpt-4.1-mini@2025-04-14/eastus/GlobalStandard",
           "modelVersion": "2025-04-14",
           "toolsVersion": "1.0.0",

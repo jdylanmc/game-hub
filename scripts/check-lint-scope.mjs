@@ -7,14 +7,6 @@ const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 const workspaceProbeSource = 'const lintCoverageProbe = 1;\n';
 const fixProbeSource =
   "const lintFixBoundaryProbe = 'unchanged';\nimport path from 'node:path';\nvoid lintFixBoundaryProbe;\nvoid path;\n";
-const inertSourceProbePath = [
-  'docs',
-  'memories',
-  '56-shared-adversarial-reviewer-platform',
-  'shared-v2-source',
-  'runtime.ts',
-].join('/');
-const inertSourceDirectory = path.dirname(inertSourceProbePath);
 const cleanupTasks = [];
 let runError;
 
@@ -82,27 +74,17 @@ try {
     'src/storybook/mamba/source/lint-scope-probe/index.mjs',
     'storybook-static/lint-scope-probe/index.mjs',
     'test-results/lint-scope-probe/index.mjs',
-    inertSourceProbePath,
   ];
 
   for (const ignoredPath of ignoredPaths) {
     if (!(await eslint.isPathIgnored(ignoredPath))) {
       throw new Error(`Generated, imported, dependency, or output path is unexpectedly linted: ${ignoredPath}`);
     }
-    const futureMemoryPath = 'docs/memories/future-reviewer/shared-v2-source/runtime.ts';
-    if (await eslint.isPathIgnored(futureMemoryPath)) {
-      throw new Error(`Future memory source path is unexpectedly ignored: ${futureMemoryPath}`);
-    }
   }
 
   const fixProbePaths = await Promise.all(
     ignoredPaths
-      .filter(
-        (ignoredPath) =>
-          !ignoredPath.startsWith('.yarn/') &&
-          !ignoredPath.startsWith('node_modules/') &&
-          !ignoredPath.startsWith(inertSourceDirectory),
-      )
+      .filter((ignoredPath) => !ignoredPath.startsWith('.yarn/') && !ignoredPath.startsWith('node_modules/'))
       .map((ignoredPath) => createScratchFile(path.dirname(ignoredPath), path.basename(ignoredPath), fixProbeSource)),
   );
   const fixingEslint = new ESLint({
