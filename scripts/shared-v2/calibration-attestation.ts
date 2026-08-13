@@ -106,7 +106,9 @@ type CommandExecutor = (command: string, args: string[]) => CommandResult;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const HEAD_SHA_PATTERN = /^[a-f0-9]{40}$/;
 const UUID_PATTERN = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
-const POLICY_PATH = 'config/adversarial-agents/gilfoyle-security-architect/calibration-attestation-policy.json';
+const GILFOYLE_POLICY_PATH =
+  'config/adversarial-agents/gilfoyle-security-architect/calibration-attestation-policy.json';
+const UNIT_TEST_REVIEWER_POLICY_PATH = 'config/adversarial-agents/shared-v2/calibration-attestation-policy.json';
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -122,8 +124,14 @@ function loadJson(filePath: string): JsonObject {
   return value;
 }
 
-function loadCalibrationAttestationPolicy(repoRoot: string): CalibrationAttestationPolicy {
-  return loadJson(path.join(repoRoot, POLICY_PATH)) as unknown as CalibrationAttestationPolicy;
+function attestationPolicyPath(agentName: string): string {
+  if (agentName === 'unit-test-reviewer') return UNIT_TEST_REVIEWER_POLICY_PATH;
+  if (agentName === 'gilfoyle-security-architect') return GILFOYLE_POLICY_PATH;
+  throw new Error(`No agent-specific attestation policy is registered: ${agentName}`);
+}
+
+function loadCalibrationAttestationPolicy(repoRoot: string, agentName: string): CalibrationAttestationPolicy {
+  return loadJson(path.join(repoRoot, attestationPolicyPath(agentName))) as unknown as CalibrationAttestationPolicy;
 }
 
 function parseIsoTimestamp(value: unknown, label: string): number {
@@ -173,7 +181,7 @@ function registeredAgent(
   registry: JsonObject;
   registration: JsonObject;
 } {
-  const registryPath = path.join(repoRoot, 'config/adversarial-agents/agents-config.json');
+  const registryPath = path.join(repoRoot, 'config/adversarial-agents/shared-v2/agents-config.json');
   const registry = loadJson(registryPath);
   const validation = validateAgentRegistry(repoRoot, registry);
   if (!validation.valid) {
@@ -230,8 +238,8 @@ function agentConfigurationFingerprint(repoRoot: string, agentName: string): Jso
     engineConfigFile: registration.engineConfigFile,
     benchmarkCorpusFile: registration.benchmarkCorpusFile,
     promotionPolicyFile: registration.promotionPolicyFile,
-    attestationPolicyFile: POLICY_PATH,
-    attestationPolicySha256: sha256(fs.readFileSync(path.join(repoRoot, POLICY_PATH))),
+    attestationPolicyFile: attestationPolicyPath(agentName),
+    attestationPolicySha256: sha256(fs.readFileSync(path.join(repoRoot, attestationPolicyPath(agentName)))),
     components,
   };
   return { ...value, sha256: sha256(stableStringify(value)) };
@@ -293,7 +301,7 @@ function validateCalibrationReport(
     throw new Error('Calibration report fingerprint is invalid.');
   }
   const expectedComponents = expectedReportFingerprintComponents(repoRoot, agentName);
-  const policy = loadCalibrationAttestationPolicy(repoRoot);
+  const policy = loadCalibrationAttestationPolicy(repoRoot, agentName);
   if (
     stableStringify(Object.keys(expectedComponents).sort()) !==
     stableStringify([...policy.requiredReportFingerprintComponents].sort())
@@ -318,8 +326,12 @@ function validateCalibrationReport(
 
 function validateRunContext(policy: CalibrationAttestationPolicy, context: AttestationRunContext): void {
   const expectedWorkflowRef = `${policy.repository.nameWithOwner}/${policy.trustedBuilder.workflowPath}@${policy.repository.protectedRef}`;
+  const expectedAgent =
+    policy.azureDeployment.deploymentId === 'game-hub-unit-test-reviewer'
+      ? 'unit-test-reviewer'
+      : 'gilfoyle-security-architect';
   if (
-    context.agentName !== 'gilfoyle-security-architect' ||
+    context.agentName !== expectedAgent ||
     context.repository !== policy.repository.nameWithOwner ||
     context.repositoryId !== policy.repository.repositoryId ||
     context.repositoryOwnerId !== policy.repository.ownerId ||
@@ -364,7 +376,7 @@ function replayNonce(value: JsonObject): string {
 }
 
 function buildCalibrationAttestationPredicate(options: CreatePredicateOptions): JsonObject {
-  const policy = loadCalibrationAttestationPolicy(options.repoRoot);
+  const policy = loadCalibrationAttestationPolicy(options.repoRoot, options.agentName);
   validateRunContext(policy, options);
   const report = validateCalibrationReport(options.repoRoot, options.reportPath, options.agentName);
   const workflowStartedAt = parseIsoTimestamp(options.workflowStartedAt, 'workflowStartedAt');
@@ -524,7 +536,7 @@ function validateVerifiedAttestation(
   options: VerifyOptions,
   verifiedOutput: unknown,
 ): { valid: true; attestationSha256: string; verifiedAt: string } {
-  const policy = loadCalibrationAttestationPolicy(options.repoRoot);
+  const policy = loadCalibrationAttestationPolicy(options.repoRoot, options.agentName);
   validateRunContext(policy, options);
   if (!Array.isArray(verifiedOutput) || verifiedOutput.length !== 1 || !isObject(verifiedOutput[0])) {
     throw new Error('Exactly one verified attestation is required; duplicates and replay are rejected.');
@@ -589,7 +601,7 @@ function verifyCalibrationAttestation(
   options: VerifyOptions,
   executor: CommandExecutor = defaultExecutor,
 ): { valid: true; attestationSha256: string; verifiedAt: string } {
-  const policy = loadCalibrationAttestationPolicy(options.repoRoot);
+  const policy = loadCalibrationAttestationPolicy(options.repoRoot, options.agentName);
   const result = executor('gh', [
     'attestation',
     'verify',
@@ -660,13 +672,14 @@ function ensureInsideRepository(repoRoot: string, value: string, label: string):
 }
 
 function contextFromEnvironment(repoRoot: string, values: Map<string, string>): AttestationRunContext {
-  const policy = loadCalibrationAttestationPolicy(repoRoot);
+  const agentName = requiredValue(values, '--agent');
+  const policy = loadCalibrationAttestationPolicy(repoRoot, agentName);
   if (process.env.GITHUB_ACTIONS !== 'true' || process.env.GITHUB_SERVER_URL !== 'https://github.com') {
     throw new Error('Calibration attestations may only run in GitHub Actions.');
   }
   const workflowPath = policy.trustedBuilder.workflowPath;
   return {
-    agentName: requiredValue(values, '--agent'),
+    agentName,
     reportPath: ensureInsideRepository(repoRoot, requiredValue(values, '--report'), 'report'),
     artifactId: requiredValue(values, '--artifact-id'),
     artifactName: requiredValue(values, '--artifact-name'),
@@ -693,7 +706,7 @@ function contextFromEnvironment(repoRoot: string, values: Map<string, string>): 
 }
 
 function main(): void {
-  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
   const { command, values } = parseArguments(process.argv.slice(2));
   const context = contextFromEnvironment(repoRoot, values);
   if (command === 'create') {

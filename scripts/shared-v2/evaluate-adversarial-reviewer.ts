@@ -811,7 +811,7 @@ function parseArguments(args: string[]): {
 }
 
 async function main(): Promise<void> {
-  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
   const args = parseArguments(process.argv.slice(2));
   if (args.mode === 'check') {
     if (!args.reportPath) throw new Error('--report is required in check mode');

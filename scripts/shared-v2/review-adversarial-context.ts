@@ -852,6 +852,7 @@ class AdversarialReviewerEngine {
         ],
       });
       let critic: JsonObject | undefined;
+      let synthesizedComputeFallback = false;
       const delays: number[] = [];
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
@@ -873,6 +874,7 @@ class AdversarialReviewerEngine {
               rationale: `Critic compute was unavailable after three attempts: ${error.code}.`,
               citations: finding.citations,
             };
+            synthesizedComputeFallback = true;
             break;
           }
           throw new Error(`CRITIC_FAILURE: ${error instanceof Error ? error.message : String(error)}`);
@@ -887,7 +889,9 @@ class AdversarialReviewerEngine {
       }
       critic = {
         ...critic,
-        citations: canonicalizeCriticCitations(critic.citations, finding.citations),
+        citations: synthesizedComputeFallback
+          ? finding.citations
+          : canonicalizeCriticCitations(critic.citations, finding.citations),
       };
       const severity =
         critic.decision === 'CONFIRM' || (critic.decision === 'INCONCLUSIVE' && finding.confidence === 'HIGH')
@@ -1209,23 +1213,50 @@ function createReviewerFromEnvironment(
   });
 }
 
-function parseArguments(args: string[]): { inputPath: string; outputPath?: string } {
+function parseArguments(args: string[]): { inputPath: string; outputPath?: string; fixture: boolean } {
   let inputPath = '';
   let outputPath: string | undefined;
+  let fixture = false;
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === '--input') inputPath = args[++index] ?? '';
     else if (args[index] === '--output') outputPath = args[++index];
+    else if (args[index] === '--fixture') fixture = true;
     else throw new Error(`Unknown argument: ${args[index]}`);
   }
   if (!inputPath) throw new Error('--input is required');
-  return { inputPath, outputPath };
+  return { inputPath, outputPath, fixture };
 }
 
 async function main(): Promise<void> {
   const args = parseArguments(process.argv.slice(2));
-  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
   const packet: unknown = JSON.parse(fs.readFileSync(path.resolve(repoRoot, args.inputPath), 'utf8'));
-  const result = await createReviewerFromEnvironment(repoRoot).review(packet);
+  const reviewer = args.fixture
+    ? new AdversarialReviewerEngine({
+        repoRoot,
+        endpoint: 'https://fixture.openai.azure.com',
+        deploymentId: 'game-hub-unit-test-reviewer',
+        transport: {
+          complete: () =>
+            Promise.resolve({
+              content: JSON.stringify({
+                verdict: {
+                  decision: 'PASS',
+                  kind: 'POLICY',
+                  severity: 'INFO',
+                  blockingFindingsCount: 0,
+                  advisoryFindingsCount: 0,
+                  policyDecisionRationale: 'Fixture response has no findings.',
+                },
+                findings: [],
+              }),
+              promptTokens: 1,
+              completionTokens: 1,
+            }),
+        },
+      })
+    : createReviewerFromEnvironment(repoRoot);
+  const result = await reviewer.review(packet);
   const serialized = `${stableStringify(result, 2)}\n`;
   if (args.outputPath) {
     const outputPath = path.resolve(repoRoot, args.outputPath);
