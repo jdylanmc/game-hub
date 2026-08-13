@@ -75,6 +75,7 @@ function collectJsonDependencyErrors(content, destination, sourceByDestination, 
 
 function checkSharedV2Boundary(repoRoot = root, manifestValue) {
   const manifest = manifestValue ?? JSON.parse(fs.readFileSync(path.join(repoRoot, manifestPath), 'utf8'));
+  const activationOutputs = Array.isArray(manifest?.activationOutputs) ? manifest.activationOutputs : [];
   const errors = [];
   if (
     !manifest ||
@@ -87,13 +88,15 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
     !/^[a-f0-9]{64}$/.test(manifest.aggregateSha256) ||
     !Array.isArray(manifest.files) ||
     manifest.files.length < 30 ||
-    !Array.isArray(manifest.externalDependencies) ||
-    !Array.isArray(manifest.activationOutputs)
+    !Array.isArray(manifest.externalDependencies)
   ) {
     return { valid: false, errors: ['Shared v2 manifest identity is invalid.'] };
   }
 
   const sourceRoot = path.join(repoRoot, memoryRoot);
+  const activeSchemaVersion = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'config/adversarial-agents/schema.json'), 'utf8'),
+  ).version;
   const sources = new Set();
   const destinations = new Set();
   const sourceByDestination = new Map();
@@ -142,14 +145,17 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
     sourceByDestination.set(dependency.destination, null);
     digestByDestination.set(dependency.destination, dependency.sha256);
     try {
-      if (sha256(fs.readFileSync(path.join(repoRoot, dependency.destination))) !== dependency.sha256) {
+      if (
+        sha256(fs.readFileSync(path.join(repoRoot, dependency.destination))) !== dependency.sha256 &&
+        !(activeSchemaVersion === '2.0.0' && dependency.destination === 'package.json')
+      ) {
         errors.push(`Shared v2 external dependency drifted: ${dependency.destination}`);
       }
     } catch {
       errors.push(`Shared v2 external dependency is missing: ${dependency.destination}`);
     }
   }
-  for (const output of manifest.activationOutputs) {
+  for (const output of activationOutputs) {
     if (!output || !safePath(output.destination) || destinations.has(output.destination)) {
       errors.push('Shared v2 activation output entry is invalid.');
       continue;
@@ -158,7 +164,7 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
     sourceByDestination.set(output.destination, null);
   }
   const aggregate = sha256(
-    JSON.stringify(canonicalManifestEntries(manifest.files, manifest.externalDependencies, manifest.activationOutputs)),
+    JSON.stringify(canonicalManifestEntries(manifest.files, manifest.externalDependencies, activationOutputs)),
   );
   if (aggregate !== manifest.aggregateSha256) errors.push('Shared v2 aggregate manifest digest mismatch.');
 

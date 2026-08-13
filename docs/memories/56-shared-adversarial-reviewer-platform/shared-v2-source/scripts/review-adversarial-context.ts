@@ -622,120 +622,6 @@ function canonicalizeCriticCitations(value: unknown, primaryValue: unknown): Jso
   return authoritative;
 }
 
-function canonicalizePrimaryCitations(value: unknown, packet: unknown): JsonObject {
-  if (Array.isArray(value)) {
-    if (
-      value.length === 1 &&
-      isObject(value[0]) &&
-      (Array.isArray(value[0].productionFiles) || Array.isArray(value[0].testFiles))
-    ) {
-      return canonicalizePrimaryCitations(value[0], packet);
-    }
-    const grouped: JsonObject = { productionFiles: [], testFiles: [] };
-    for (const candidate of value) {
-      const pathValue = typeof candidate === 'string' ? candidate : isObject(candidate) ? candidate.path : undefined;
-      if (typeof pathValue !== 'string') throw new Error('PRIMARY_CITATIONS_INVALID');
-      const target = /\.test\.[cm]?[jt]sx?$/.test(pathValue) ? 'testFiles' : 'productionFiles';
-      (grouped[target] as unknown[]).push(candidate);
-    }
-    return canonicalizePrimaryCitations(grouped, packet);
-  }
-  const isCanonical = (candidate: unknown): candidate is JsonObject =>
-    isObject(candidate) && Object.keys(candidate).sort().join(',') === 'endLine,path,snippet,startLine';
-  if (
-    isObject(value) &&
-    Array.isArray(value.productionFiles) &&
-    Array.isArray(value.testFiles) &&
-    value.productionFiles.every(isCanonical) &&
-    value.testFiles.every(isCanonical)
-  ) {
-    return value;
-  }
-  if (!isObject(value) || !isObject(packet) || !isObject(packet.changes)) throw new Error('PRIMARY_CITATIONS_INVALID');
-  const authoritative: JsonObject = { productionFiles: [], testFiles: [] };
-  const quote = value.quote;
-  const normalize = (text: string) =>
-    text
-      .replace(/^(?:Production|Test):\s*/gm, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  const citationFor = (section: 'production' | 'tests', candidate: unknown): JsonObject => {
-    const pathValue = typeof candidate === 'string' ? candidate : isObject(candidate) ? candidate.path : undefined;
-    const changes = packet.changes?.[section];
-    const change =
-      typeof pathValue === 'string' && Array.isArray(changes)
-        ? changes.find((entry) => isObject(entry) && entry.path === pathValue)
-        : undefined;
-    if (!isObject(change) || typeof change.patch !== 'string') throw new Error('PRIMARY_CITATIONS_INVALID');
-    const lines = isObject(candidate) ? candidate.lines : undefined;
-    const line = Array.isArray(lines) ? lines[0] : lines;
-    const startLine = Number.isInteger(line)
-      ? line
-      : typeof line === 'string' && /^\d+$/.test(line)
-        ? Number(line)
-        : change.startLine;
-    const endLine = startLine;
-    const quoteText = typeof quote === 'string' ? normalize(quote) : undefined;
-    const citedSnippet = isObject(candidate) && typeof candidate.snippet === 'string' ? candidate.snippet : undefined;
-    const snippet =
-      citedSnippet ??
-      change.patch
-        .split('\n')
-        .map((line) => line.trim())
-        .find((line) => line.length >= 8 && quoteText?.includes(normalize(line))) ??
-      change.patch;
-    if (
-      !Number.isInteger(startLine) ||
-      !Number.isInteger(endLine) ||
-      startLine < Number(change.startLine) ||
-      endLine > Number(change.endLine) ||
-      !change.patch.includes(snippet) ||
-      (quoteText !== undefined && !quoteText.includes(normalize(snippet)) && !normalize(snippet).includes(quoteText))
-    ) {
-      throw new Error('PRIMARY_CITATIONS_INVALID');
-    }
-    return { path: pathValue, startLine, endLine, snippet };
-  };
-  for (const [section, target] of [
-    ['production', 'productionFiles'],
-    ['tests', 'testFiles'],
-  ] as const) {
-    const candidates = value[target];
-    if (!Array.isArray(candidates)) throw new Error('PRIMARY_CITATIONS_INVALID');
-    for (const candidate of candidates) {
-      (authoritative[target] as unknown[]).push(citationFor(section, candidate));
-    }
-  }
-  if (
-    (authoritative.productionFiles as unknown[]).length === 0 &&
-    (authoritative.testFiles as unknown[]).length === 0
-  ) {
-    throw new Error('PRIMARY_CITATIONS_INVALID_EMPTY');
-  }
-  return authoritative;
-}
-
-function canonicalizePrimaryFindings(value: unknown, packet: unknown): unknown[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((candidate) => {
-    if (!isObject(candidate)) return candidate;
-    const { identifier, verification, ...finding } = candidate;
-    const category = typeof finding.category === 'string' ? finding.category : 'other';
-    return {
-      ...finding,
-      id: typeof finding.id === 'string' ? finding.id : identifier,
-      title: typeof finding.title === 'string' && finding.title.length > 0 ? finding.title : `${category} test gap`,
-      citations: canonicalizePrimaryCitations(finding.citations, packet),
-      verificationGuidance:
-        typeof finding.verificationGuidance === 'string' && finding.verificationGuidance.length > 0
-          ? finding.verificationGuidance
-          : typeof verification === 'string' && verification.length > 0
-            ? verification
-            : 'Verify the cited regression makes the test fail.',
-    };
-  });
-}
-
 function withProvisionalCritics(findings: unknown[]): unknown[] {
   return findings.map((finding) => {
     if (!isObject(finding) || finding.proposedSeverity !== 'BLOCKING' || finding.critic !== undefined) {
@@ -1217,30 +1103,11 @@ class AdversarialReviewerEngine {
     if (!isObject(modelResult)) {
       return fail('SCHEMA_VALIDATION_FAILED', 'Model output is not a JSON object');
     }
-    let primaryFindings: unknown[];
-    try {
-      primaryFindings = canonicalizeFindingIds(
-        withProvisionalCritics(canonicalizePrimaryFindings(modelResult.findings, packet)),
-      );
-    } catch (error) {
-      return fail('SCHEMA_VALIDATION_FAILED', error instanceof Error ? error.message : String(error));
-    }
-    const primaryVerdict = isObject(modelResult.verdict) ? modelResult.verdict : undefined;
-    if (!primaryVerdict || !['PASS', 'FAIL'].includes(String(primaryVerdict.decision))) {
-      return fail('SCHEMA_VALIDATION_FAILED', 'Primary verdict must be a PASS or FAIL policy decision');
-    }
     const candidate = {
       ...modelResult,
-      findings: primaryFindings,
-      verdict: {
-        ...primaryVerdict,
-        severity:
-          typeof primaryVerdict.severity === 'string'
-            ? primaryVerdict.severity
-            : primaryVerdict.decision === 'FAIL'
-              ? 'BLOCKING'
-              : 'INFO',
-      },
+      findings: canonicalizeFindingIds(
+        withProvisionalCritics(Array.isArray(modelResult.findings) ? modelResult.findings : []),
+      ),
       schemaVersion: '2.0.0',
       findingVersion: `${runtime.agentConfig.name}@${timestamp}`,
       attribution: runtimeAttribution(

@@ -11,7 +11,7 @@ describe('resolveAdversarialReviewerMatrix', () => {
       {
         agentName: 'unit-test-reviewer',
         checkName: 'Adversarial Review / unit-test-reviewer',
-        calibrationReport: 'config/adversarial-agents/shared-v2/active-calibration-unit-test-reviewer.json',
+        calibrationReport: 'config/adversarial-agents/active-calibration-unit-test-reviewer.json',
         deploymentId: 'game-hub-unit-test-reviewer',
       },
     ]);
