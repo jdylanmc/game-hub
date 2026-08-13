@@ -32,3 +32,9 @@
   `yarn policy:check`, `yarn shared-v2:check`, the targeted v2/collector
   suite, `yarn test` (380 deterministic tests), and
   `yarn test:ci-fail-closed` (23 probes) pass locally.
+- **Exact-head evidence:** after `d4d9418881737705dd3d5ef47d72f2aaa4238258`,
+  [Continuous integration](https://github.com/jdylanmc/game-hub/actions/runs/31670211253)
+  and the protected-main
+  [unit-test reviewer](https://github.com/jdylanmc/game-hub/actions/runs/31670659000)
+  passed. The latter collected metadata-only inert evidence, invoked the
+  active v1 reviewer, and published its exact-head check successfully.
