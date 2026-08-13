@@ -1,0 +1,68 @@
+{
+  "version": "1.0.0",
+  "predicateType": "https://jdylanmc.github.io/game-hub/attestations/adversarial-calibration/v1",
+  "digestAlgorithm": "sha256",
+  "minimumGitHubCliVersion": "2.92.0",
+  "attestationAction": {
+    "repository": "actions/attest",
+    "version": "v4.2.2",
+    "commit": "1e69f48acb82d1966a394da916b4c1698aa569d6"
+  },
+  "repository": {
+    "nameWithOwner": "jdylanmc/game-hub",
+    "ownerId": "6954990",
+    "repositoryId": "1330993568",
+    "visibility": "public",
+    "protectedRef": "refs/heads/main"
+  },
+  "trustedBuilder": {
+    "workflowName": "Adversarial calibration",
+    "workflowPath": ".github/workflows/adversarial-calibration.yml",
+    "signerWorkflow": "jdylanmc/game-hub/.github/workflows/adversarial-calibration.yml",
+    "subjectAlternativeName": "https://github.com/jdylanmc/game-hub/.github/workflows/adversarial-calibration.yml@refs/heads/main",
+    "environment": "adversarial-review",
+    "event": "workflow_dispatch",
+    "runnerEnvironment": "github-hosted",
+    "oidcIssuer": "https://token.actions.githubusercontent.com",
+    "workloadIdentitySubject": "repo:jdylanmc@6954990/game-hub@1330993568:environment:adversarial-review"
+  },
+  "azureDeployment": {
+    "subscriptionId": "11213dbd-39fe-46ba-87db-5f5e8c449aed",
+    "resourceId": "/subscriptions/11213dbd-39fe-46ba-87db-5f5e8c449aed/resourceGroups/game-hub-adversarial-agents-prod/providers/Microsoft.CognitiveServices/accounts/game-hub-adversarial-openai/deployments/game-hub-gilfoyle-security-architect",
+    "endpoint": "https://game-hub-adversarial-openai.openai.azure.com",
+    "deploymentId": "game-hub-gilfoyle-security-architect",
+    "modelName": "gpt-4.1-mini",
+    "modelVersion": "2025-04-14",
+    "modelSku": "GlobalStandard",
+    "region": "eastus",
+    "credentialScope": "https://cognitiveservices.azure.com/.default"
+  },
+  "freshness": {
+    "maximumAttestationAgeSeconds": 1800,
+    "maximumClockSkewSeconds": 300,
+    "maximumWorkflowDurationSeconds": 14400
+  },
+  "requiredReportFingerprintComponents": [
+    "modelDeployment",
+    "modelVersion",
+    "promptVersion",
+    "promptContentHash",
+    "toolsVersion",
+    "toolsConfigContentHash",
+    "contextConfigVersion",
+    "contextConfigContentHash",
+    "schemaVersion",
+    "schemaContentHash",
+    "policyVersion",
+    "policyContentHash",
+    "systemPolicyVersion",
+    "systemPolicyContentHash",
+    "reviewerEngineConfigVersion",
+    "reviewerEngineConfigContentHash",
+    "benchmarkCorpusVersion",
+    "benchmarkCorpusContentHash",
+    "promotionPolicyVersion",
+    "promotionPolicyContentHash",
+    "architectureContentHash"
+  ]
+}

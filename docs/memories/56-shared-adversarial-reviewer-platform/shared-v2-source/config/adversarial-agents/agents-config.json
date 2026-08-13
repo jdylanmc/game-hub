@@ -1,0 +1,103 @@
+{
+  "registryVersion": "1.0.0",
+  "agents": [
+    {
+      "name": "unit-test-reviewer",
+      "version": "1.0.0",
+      "enabled": true,
+      "promoted": true,
+      "promptFile": ".github/adversarial-agents/unit-test-reviewer/prompt.md",
+      "promptVersion": "1.0.5",
+      "promptContentHash": "95db6cddd17acbb8acaf5e498d3c40e191c8cc258deed586105b57ae7df40843",
+      "toolsConfigFile": "config/adversarial-agents/unit-test-reviewer/tools.json",
+      "toolsConfigContentHash": "79a2f012bfe880863360ff59b5ede296095abb601cae47f03c293c54a8874998",
+      "contextConfigFile": "config/adversarial-agents/context-collector.json",
+      "contextConfigVersion": "1.0.1",
+      "contextConfigContentHash": "07e048caf9224ef75c50f7f6b60d8796f53753d6ebbad65306d63ee2a27e1872",
+      "schemaFile": "config/adversarial-agents/schema.json",
+      "schemaContentHash": "cd46bbd7d12fd7b257c2ee24304f673a6a79ab13bda0696247ebc2b9313e375a",
+      "policyFile": "config/adversarial-agents/policy.json",
+      "policyContentHash": "ed7e5906234a69d282c2102490fc3227703c049c97e63170ffb968c34b478286",
+      "engineConfigFile": "config/adversarial-agents/reviewer-engine.json",
+      "engineConfigContentHash": "298a9eb95c8f20f5038505867ab6030add6432ea5ea8eeb430c8cc1c42672d3e",
+      "benchmarkCorpusFile": "config/adversarial-agents/benchmarks.json",
+      "benchmarkCorpusContentHash": "f065d4fb3f684815955fd522f34e5317305a0789c62c51f4da33b917a0c88531",
+      "promotionPolicyFile": "config/adversarial-agents/promotion-policy.json",
+      "promotionPolicyContentHash": "d834db90a3c08b065ee578b84cb3dd1bd40c20bafce2237b51e6c9a3dcfda2a5",
+      "activeCalibrationReportFile": "config/adversarial-agents/active-calibration-unit-test-reviewer.json",
+      "checkName": "Adversarial Review / unit-test-reviewer",
+      "stateNamespace": "adversarial/unit-test-reviewer",
+      "modelDeployment": "gpt-4.1-mini@2025-04-14/eastus/GlobalStandard",
+      "modelVersion": "2025-04-14",
+      "toolsVersion": "1.0.1",
+      "description": "Detects weak unit tests, missing edge cases, tautologies, and unsafe mocking patterns.",
+      "targetScopes": ["tests"],
+      "contactEmail": "dylan@microsoft.com",
+      "verdictRules": {
+        "blockingThreshold": 1,
+        "allowHighConfidenceOnly": true
+      },
+      "executionConfig": {
+        "maxConcurrentReviews": 3
+      }
+    },
+    {
+      "name": "gilfoyle-security-architect",
+      "version": "1.0.0",
+      "enabled": false,
+      "promoted": false,
+      "promptFile": ".github/adversarial-agents/gilfoyle-security-architect/prompt.md",
+      "promptVersion": "1.1.0",
+      "promptContentHash": "a2a1d0d33a985041fa25d48d1474a51fc7dcb5b6bcf255899092a971231c6d18",
+      "toolsConfigFile": "config/adversarial-agents/gilfoyle-security-architect/tools.json",
+      "toolsConfigContentHash": "1c2755b0430fb4c13ff0f5fcd7d6f13f0a7d90c372b080db760a055233b478cd",
+      "contextConfigFile": "config/adversarial-agents/gilfoyle-security-architect/context.json",
+      "contextConfigVersion": "1.1.0",
+      "contextConfigContentHash": "c19ff4810b6d2464dd9219f2fb3a6cd09fb2ace4c61e58ef9f9308b8e2747f4a",
+      "schemaFile": "config/adversarial-agents/gilfoyle-security-architect/schema.json",
+      "schemaContentHash": "4f29e8ef057bc391df92e674f7408f4943c973b65bc878611337aa04c1069ce6",
+      "policyFile": "config/adversarial-agents/gilfoyle-security-architect/policy.json",
+      "policyContentHash": "5f7579a4886f90015469e5c6862b2e9ae1151aa2fb3b4a4ca8e1ba75a266c39a",
+      "engineConfigFile": "config/adversarial-agents/gilfoyle-security-architect/reviewer-engine.json",
+      "engineConfigContentHash": "2dc978cff3406ffa9051416e03968ac45337c7423c9d4786ef8435d3bd815d88",
+      "benchmarkCorpusFile": "config/adversarial-agents/gilfoyle-security-architect/benchmarks.json",
+      "benchmarkCorpusContentHash": "c435c030ff51fb0b87481e7b0716d2461a7c8b49f66d34a9e75397c340d1a395",
+      "promotionPolicyFile": "config/adversarial-agents/gilfoyle-security-architect/promotion-policy.json",
+      "promotionPolicyContentHash": "d57161184560352048d734931e73d1b22623a2ed605c3e74da917a524d6ae8d9",
+      "activeCalibrationReportFile": "config/adversarial-agents/active-calibration-gilfoyle-security-architect.json",
+      "checkName": "Adversarial Review / gilfoyle-security-architect",
+      "stateNamespace": "adversarial/gilfoyle-security-architect",
+      "modelDeployment": "gpt-4.1-mini@2025-04-14/eastus/GlobalStandard",
+      "modelVersion": "2025-04-14",
+      "toolsVersion": "1.0.0",
+      "description": "Finds exploitable security weaknesses and unresolved security-control bypasses across repository trust boundaries.",
+      "targetScopes": [
+        "application",
+        "games",
+        "infrastructure",
+        "workflows",
+        "dependencies",
+        "containers",
+        "contracts",
+        "manifests",
+        "configuration"
+      ],
+      "contactEmail": "dylan@microsoft.com",
+      "verdictRules": {
+        "blockingThreshold": 1,
+        "allowHighConfidenceOnly": false
+      },
+      "executionConfig": {
+        "maxConcurrentReviews": 1
+      }
+    }
+  ],
+  "subscriptionId": "11213dbd-39fe-46ba-87db-5f5e8c449aed",
+  "requirementsMet": {
+    "versionedJsonSchema": true,
+    "dedicatedPromptFiles": true,
+    "independentVersioning": true,
+    "validationRequired": true,
+    "agentRegistration": true
+  }
+}
