@@ -17,10 +17,10 @@ engine:
   version: 1.0.79
   bare: true
   env:
-    COPILOT_PROVIDER_BASE_URL: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+    COPILOT_PROVIDER_BASE_URL: ${{ vars.AZURE_OPENAI_ENDPOINT }}/openai/v1
     COPILOT_PROVIDER_MODEL_ID: gpt-4.1-mini
     COPILOT_PROVIDER_WIRE_MODEL: game-hub-unit-test-reviewer
-    COPILOT_PROVIDER_WIRE_API: responses
+    COPILOT_PROVIDER_WIRE_API: completions
   auth:
     type: github-oidc
     provider: azure
