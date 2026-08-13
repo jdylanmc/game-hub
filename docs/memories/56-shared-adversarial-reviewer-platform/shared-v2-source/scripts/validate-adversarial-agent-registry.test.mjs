@@ -55,7 +55,7 @@ describe('validateAgentRegistry', () => {
     second.name = 'second-reviewer';
     second.checkName = 'Adversarial Review / second-reviewer';
     second.stateNamespace = 'adversarial/second-reviewer';
-    second.activeCalibrationReportFile = 'config/adversarial-agents/active-calibration-second-reviewer.json';
+    second.activeCalibrationReportFile = 'config/adversarial-agents/shared-v2/active-calibration-second-reviewer.json';
     second.executionConfig.maxConcurrentReviews = 1;
     const fileContent = new Map();
     for (const [fileField, hashField] of [

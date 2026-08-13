@@ -36,6 +36,38 @@ function canonicalManifestEntries(files, externalDependencies) {
     .sort((left, right) => left.destination.localeCompare(right.destination));
 }
 
+function collectJsonDependencyErrors(content, destination, sourceByDestination, digestByDestination) {
+  const errors = [];
+  const visit = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (!value || typeof value !== 'object') return;
+    for (const [key, child] of Object.entries(value)) {
+      if (typeof child === 'string' && (key.endsWith('File') || key.endsWith('Path'))) {
+        if (!safePath(child) || !sourceByDestination.has(child)) {
+          errors.push(`Shared v2 JSON dependency is unmanifested: ${destination} -> ${child}`);
+        }
+      }
+      if (key.endsWith('ContentHash')) {
+        const fileField = `${key.slice(0, -'ContentHash'.length)}File`;
+        const file = value[fileField];
+        if (typeof child !== 'string' || !/^[a-f0-9]{64}$/.test(child)) continue;
+        if (
+          (typeof file === 'string' && digestByDestination.get(file) !== child) ||
+          (typeof file !== 'string' && ![...digestByDestination.values()].includes(child))
+        ) {
+          errors.push(`Shared v2 JSON content hash is inconsistent: ${destination} -> ${fileField}`);
+        }
+      }
+      visit(child);
+    }
+  };
+  visit(content);
+  return errors;
+}
+
 function checkSharedV2Boundary(repoRoot = root, manifestValue) {
   const manifest = manifestValue ?? JSON.parse(fs.readFileSync(path.join(repoRoot, manifestPath), 'utf8'));
   const errors = [];
@@ -59,6 +91,7 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
   const sources = new Set();
   const destinations = new Set();
   const sourceByDestination = new Map();
+  const digestByDestination = new Map();
   for (const entry of manifest.files) {
     if (
       !entry ||
@@ -76,6 +109,7 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
     sources.add(entry.sourcePath);
     destinations.add(entry.destination);
     sourceByDestination.set(entry.destination, entry.sourcePath);
+    digestByDestination.set(entry.destination, entry.sha256);
     const sourcePath = path.join(sourceRoot, entry.sourcePath);
     try {
       if (fs.lstatSync(sourcePath).isSymbolicLink()) {
@@ -100,6 +134,7 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
     }
     destinations.add(dependency.destination);
     sourceByDestination.set(dependency.destination, null);
+    digestByDestination.set(dependency.destination, dependency.sha256);
     try {
       if (sha256(fs.readFileSync(path.join(repoRoot, dependency.destination))) !== dependency.sha256) {
         errors.push(`Shared v2 external dependency drifted: ${dependency.destination}`);
@@ -123,6 +158,21 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
       );
       if (!sourceByDestination.has(resolved)) {
         errors.push(`Shared v2 relative dependency is unmanifested: ${entry.destination} -> ${resolved}`);
+      }
+    }
+    for (const entry of manifest.files.filter((item) => item.destination.endsWith('.json'))) {
+      const sourcePath = path.join(sourceRoot, entry.sourcePath);
+      try {
+        errors.push(
+          ...collectJsonDependencyErrors(
+            JSON.parse(fs.readFileSync(sourcePath, 'utf8')),
+            entry.destination,
+            sourceByDestination,
+            digestByDestination,
+          ),
+        );
+      } catch {
+        errors.push(`Shared v2 JSON source cannot be parsed: ${entry.sourcePath}`);
       }
     }
     for (const match of content.matchAll(

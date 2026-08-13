@@ -4,7 +4,7 @@
   "activationIssue": 58,
   "activeReviewerContractVersion": "1.0.0",
   "v2ContractVersion": "2.0.0",
-  "aggregateSha256": "cab913e9897934a7bdeb7f45a7fa6ea9bbdc290054e2cead2e65aabd6176a064",
+  "aggregateSha256": "86d140b2a2653b1d92e74261365db466e26de73789a095a9348c72535d5783fc",
   "files": [
     {
       "sourcePath": "shared-v2-source/.github/adversarial-agents/system-policy.md",
@@ -19,7 +19,7 @@
     {
       "sourcePath": "shared-v2-source/config/adversarial-agents/agents-config.json",
       "destination": "config/adversarial-agents/agents-config.json",
-      "sha256": "7dfe77b852adf6610dd7979d007196dda195462ff55dbc6510d398112fdbbadd"
+      "sha256": "35392a6eb1837b1a3a27f19bc2ac2f5c4b2cc827ad0c9ed6e1c2f40f865cab54"
     },
     {
       "sourcePath": "shared-v2-source/config/adversarial-agents/benchmarks.json",
@@ -79,7 +79,7 @@
     {
       "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/agents-config.json",
       "destination": "config/adversarial-agents/shared-v2/agents-config.json",
-      "sha256": "1402b6d47f758df56629c99e98278c836bc91a98b0dace8aa44e2693f6f152fc"
+      "sha256": "35392a6eb1837b1a3a27f19bc2ac2f5c4b2cc827ad0c9ed6e1c2f40f865cab54"
     },
     {
       "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/policy.json",
@@ -189,7 +189,7 @@
     {
       "sourcePath": "shared-v2-source/scripts/validate-adversarial-agent-registry.test.mjs",
       "destination": "scripts/validate-adversarial-agent-registry.test.mjs",
-      "sha256": "1a431247b13b89ede4b3db8b199a3752de24d1563582aa412e8ecf8833640c30"
+      "sha256": "d0a61bd64c5765df73ff9d28f708df2e53ac787341084499c82d8bddba74b88e"
     },
     {
       "sourcePath": "shared-v2-source/scripts/validate-adversarial-agent-registry.ts",
@@ -221,6 +221,10 @@
     {
       "destination": "package.json",
       "sha256": "e566e393e98d1fe8711574970cb6a549752d59c15e5b0bfb13ea3aa1bd5ebb04"
+    },
+    {
+      "destination": ".github/workflows/adversarial-calibration.yml",
+      "sha256": "db376c308bfad6169dc923a929a4e15ec29ccc48597dd8e0eaab979793546f68"
     }
   ]
 }

@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -41,23 +41,49 @@ describe('shared v2 activation smoke', () => {
       expect(sha256(await fs.readFile(destination))).toBe(entry.sha256);
     }
 
+    const validator = await import(
+      pathToFileURL(path.join(fixtureRoot, 'scripts/validate-adversarial-agent-registry.ts')).href
+    );
+    const matrix = await import(
+      pathToFileURL(path.join(fixtureRoot, 'scripts/resolve-adversarial-reviewer-matrix.ts')).href
+    );
+    for (const registryPath of [
+      'config/adversarial-agents/agents-config.json',
+      'config/adversarial-agents/shared-v2/agents-config.json',
+    ]) {
+      const registry = JSON.parse(await fs.readFile(path.join(fixtureRoot, registryPath), 'utf8'));
+      expect(validator.validateAgentRegistry(fixtureRoot, registry)).toEqual({
+        valid: true,
+        errors: [],
+        agents: registry.agents,
+      });
+    }
+    expect(matrix.resolveAdversarialReviewerMatrix(fixtureRoot)).toEqual([
+      expect.objectContaining({
+        agentName: 'unit-test-reviewer',
+        calibrationReport: expect.stringContaining('/shared-v2/'),
+      }),
+    ]);
+
     const registry = JSON.parse(
       await fs.readFile(path.join(fixtureRoot, 'config/adversarial-agents/shared-v2/agents-config.json'), 'utf8'),
     );
-    const unit = registry.agents.find((agent) => agent.name === 'unit-test-reviewer');
-    expect(unit).toBeDefined();
-    for (const [fileField, hashField] of [
-      ['promptFile', 'promptContentHash'],
-      ['schemaFile', 'schemaContentHash'],
-      ['policyFile', 'policyContentHash'],
-      ['engineConfigFile', 'engineConfigContentHash'],
+    for (const [field, value, expectedError] of [
+      ['engineConfigContentHash', '0'.repeat(64), /engineConfigContentHash/],
+      ['promptFile', '.github/adversarial-agents/system-policy.md', /promptContentHash/],
+      [
+        'activeCalibrationReportFile',
+        'config/adversarial-agents/active-calibration-unit-test-reviewer.json',
+        /agent-specific/,
+      ],
     ]) {
-      expect(sha256(await fs.readFile(path.join(fixtureRoot, unit[fileField])))).toBe(unit[hashField]);
+      const invalid = structuredClone(registry);
+      invalid.agents[0][field] = value;
+      expect(validator.validateAgentRegistry(fixtureRoot, invalid)).toMatchObject({
+        valid: false,
+        errors: expect.arrayContaining([expect.stringMatching(expectedError)]),
+      });
     }
-    const policy = JSON.parse(
-      await fs.readFile(path.join(fixtureRoot, 'config/adversarial-agents/shared-v2/policy.json'), 'utf8'),
-    );
-    expect(policy.version).toBe('2.0.0');
 
     execFileSync(
       'yarn',

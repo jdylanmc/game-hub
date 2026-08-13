@@ -38,3 +38,22 @@
   [unit-test reviewer](https://github.com/jdylanmc/game-hub/actions/runs/31670659000)
   passed. The latter collected metadata-only inert evidence, invoked the
   active v1 reviewer, and published its exact-head check successfully.
+
+## Activation registry repair
+
+- The activation-smoke public seam now materializes both intended registry
+  destinations and invokes the dormant exported registry validator and reviewer
+  matrix resolver. Its initial red run,
+  `yarn vitest run scripts/shared-v2-activation-smoke.test.mjs --coverage.enabled=false`,
+  reproduced the invalid prompt/calibration paths and stale Gilfoyle
+  registration.
+- Both dormant registries now use the canonical `prompt-v2.md` and
+  agent-specific shared-v2 calibration report. Gilfoyle is absent from this
+  v2 activation registry until it has a complete independent payload.
+- The boundary checker now resolves JSON `*File`/`*Path` dependencies and
+  `*ContentHash` values against manifest destinations, including the
+  calibration workflow as an explicitly pinned external dependency. Regression
+  coverage fails on stale engine hash, prompt/hash mismatch, non-agent-specific
+  calibration, missing JSON destination, and JSON hash drift.
+- Green evidence: `yarn shared-v2:check` and the targeted activation/boundary
+  suite pass after the repair.
