@@ -8,7 +8,7 @@
       "promoted": true,
       "promptFile": ".github/adversarial-agents/unit-test-reviewer/prompt-v2.md",
       "promptVersion": "1.0.5",
-      "promptContentHash": "95db6cddd17acbb8acaf5e498d3c40e191c8cc258deed586105b57ae7df40843",
+      "promptContentHash": "9d5667c8233da813b06adc93eba7daf832339653b44c617a006df51b21697c68",
       "toolsConfigFile": "config/adversarial-agents/unit-test-reviewer/tools.json",
       "toolsConfigContentHash": "79a2f012bfe880863360ff59b5ede296095abb601cae47f03c293c54a8874998",
       "contextConfigFile": "config/adversarial-agents/shared-v2/context-collector.json",
