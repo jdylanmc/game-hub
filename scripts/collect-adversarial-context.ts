@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const COLLECTOR_VERSION = '1.0.1';
 const PACKET_SCHEMA_VERSION = '1.0.0';
+const INERT_CHANGED_EVIDENCE_PATH = 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**';
 
 type JsonObject = Record<string, unknown>;
 
@@ -286,7 +287,6 @@ function validateInput(value: unknown): CollectorInput {
 }
 
 function validateConfig(value: unknown): CollectorConfig {
-  const inertPath = 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**';
   if (!isObject(value) || value.version !== '1.0.2' || !isObject(value.limits) || !isObject(value.sections)) {
     throw new Error('Collector configuration is malformed');
   }
@@ -294,7 +294,7 @@ function validateConfig(value: unknown): CollectorConfig {
     !isObject(value.inertChangedEvidence) ||
     !Array.isArray(value.inertChangedEvidence.paths) ||
     value.inertChangedEvidence.paths.length !== 1 ||
-    value.inertChangedEvidence.paths[0] !== inertPath ||
+    value.inertChangedEvidence.paths[0] !== INERT_CHANGED_EVIDENCE_PATH ||
     typeof value.inertChangedEvidence.limitation !== 'string' ||
     value.inertChangedEvidence.limitation.trim() === ''
   ) {
@@ -378,6 +378,21 @@ function classifyChange(filePath: string, config: CollectorConfig): 'production'
   return 'other';
 }
 
+function stripCanonicalInertDeclaration(filePath: string, content: string, inertRoot: string): string | undefined {
+  const inertGlob = `${inertRoot}/**`;
+  const declarations =
+    filePath === 'scripts/collect-adversarial-context.ts'
+      ? [`const INERT_CHANGED_EVIDENCE_PATH =\n  '${inertGlob}';`]
+      : filePath === 'scripts/check-adversarial-policy.mjs'
+        ? [`const INERT_CHANGED_EVIDENCE_PATHS = [\n  '${inertGlob}',\n];`]
+        : [];
+  if (declarations.length === 0) return content;
+  const declaration = declarations[0];
+  const count = content.split(declaration).length - 1;
+  if (count !== 1) return undefined;
+  return content.replace(declaration, '');
+}
+
 function activeInertReference(repoRoot: string, headSha: string, inertRoot: string): boolean {
   const activePaths = listTree(repoRoot, headSha)
     .map((entry) => entry.path)
@@ -410,10 +425,10 @@ function activeInertReference(repoRoot: string, headSha: string, inertRoot: stri
         return true;
       }
     }
-    if (
-      content.includes(inertRoot) &&
-      !['scripts/collect-adversarial-context.ts', 'scripts/check-adversarial-policy.mjs'].includes(filePath)
-    ) {
+    const normalizedContent = stripCanonicalInertDeclaration(filePath, content, inertRoot);
+    if (normalizedContent === undefined) return true;
+    content = normalizedContent;
+    if (content.includes(inertRoot)) {
       return true;
     }
     for (const match of content.matchAll(

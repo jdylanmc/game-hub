@@ -53,6 +53,7 @@ const workflowSources = await Promise.all(
     .map((name) => fs.readFile(path.join(workflowDirectory, name), 'utf8')),
 );
 const violations = [];
+const INERT_CHANGED_EVIDENCE_PATHS = ['docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**'];
 
 const requiredWorkflowFragments = [
   'workflow_dispatch:',
@@ -136,8 +137,7 @@ if (
   violations.push('Context collector version or reviewed byte limits were weakened.');
 }
 if (
-  JSON.stringify(collectorConfig.inertChangedEvidence?.paths) !==
-    JSON.stringify(['docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**']) ||
+  JSON.stringify(collectorConfig.inertChangedEvidence?.paths) !== JSON.stringify(INERT_CHANGED_EVIDENCE_PATHS) ||
   typeof collectorConfig.inertChangedEvidence?.limitation !== 'string' ||
   collectorConfig.inertChangedEvidence.limitation.length < 20
 ) {
