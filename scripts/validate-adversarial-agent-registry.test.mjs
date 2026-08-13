@@ -16,6 +16,17 @@ describe('validateAgentRegistry', () => {
     expect(validateAgentRegistry(repoRoot, registry)).toMatchObject({ valid: true, errors: [] });
   });
 
+  it('requires explicit enabled and promoted state and refuses promotion of a disabled reviewer', () => {
+    const missingPromotion = structuredClone(registry);
+    delete missingPromotion.agents[0].promoted;
+    expect(validateAgentRegistry(repoRoot, missingPromotion).valid).toBe(false);
+
+    const weakened = structuredClone(registry);
+    weakened.agents[0].enabled = false;
+    weakened.agents[0].promoted = true;
+    expect(validateAgentRegistry(repoRoot, weakened).valid).toBe(false);
+  });
+
   it('rejects tampered registered policy content', () => {
     const validation = validateAgentRegistry(repoRoot, registry, (filePath) => {
       if (filePath.endsWith('/policy.json')) return Buffer.from('tampered policy');
@@ -45,7 +56,7 @@ describe('validateAgentRegistry', () => {
     second.name = 'second-reviewer';
     second.checkName = 'Adversarial Review / second-reviewer';
     second.stateNamespace = 'adversarial/second-reviewer';
-    second.activeCalibrationReportFile = 'config/adversarial-agents/active-calibration-second-reviewer.json';
+    second.activeCalibrationReportFile = 'config/adversarial-agents/shared-v2/active-calibration-second-reviewer.json';
     second.executionConfig.maxConcurrentReviews = 1;
     const fileContent = new Map();
     for (const [fileField, hashField] of [

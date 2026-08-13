@@ -135,12 +135,24 @@ calibration, protected-environment OpenID Connect identity, restricted Azure
 endpoint, and revalidated structured output are mandatory before publication.
 The downstream model check never replaces the deterministic CI check.
 
+Reviewer output uses a shared versioned PASS, FAIL, and compute-only
+INCONCLUSIVE contract. Proposed blockers receive a separate critic pass;
+persona text is non-authoritative and falls back to a neutral validated
+summary. Enabled reviewers publish independent checks from a registry-driven
+matrix, and deterministic fan-in validates their exact-head structural
+evidence without replacing them.
+
 Protected `main` requires both `Continuous integration` and
 `Adversarial Review / unit-test-reviewer`. Ralph reads the same versioned
 required-check configuration and cannot complete or prioritize past a missing,
 pending, canceled, timed-out, stale, duplicated, malformed, or unsuccessful
 adversarial result. Each required result must be uniquely bound to the current
 pull-request head SHA.
+
+Fan-in is published during the bootstrap but is deliberately not required by
+live branch protection until a later protected-main proof publishes it on an
+exact head. INCONCLUSIVE is neutral only for check publication; autonomous
+merge requires a separately validated, exact-head, time-limited owner waiver.
 
 ### Azure infrastructure uses Bicep
 

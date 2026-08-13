@@ -53,7 +53,6 @@ const workflowSources = await Promise.all(
     .map((name) => fs.readFile(path.join(workflowDirectory, name), 'utf8')),
 );
 const violations = [];
-const INERT_CHANGED_EVIDENCE_PATHS = ['docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**'];
 
 const requiredWorkflowFragments = [
   'workflow_dispatch:',
@@ -128,20 +127,13 @@ for (const section of requiredContextSections) {
   }
 }
 if (
-  collectorConfig.version !== '1.0.2' ||
+  collectorConfig.version !== '1.0.1' ||
   collectorConfig.limits?.maxPacketBytes > 2097152 ||
   collectorConfig.limits?.maxEvidenceBytes > 786432 ||
   collectorConfig.limits?.maxFileBytes > 32768 ||
   collectorConfig.limits?.maxPatchBytes > 65536
 ) {
   violations.push('Context collector version or reviewed byte limits were weakened.');
-}
-if (
-  JSON.stringify(collectorConfig.inertChangedEvidence?.paths) !== JSON.stringify(INERT_CHANGED_EVIDENCE_PATHS) ||
-  typeof collectorConfig.inertChangedEvidence?.limitation !== 'string' ||
-  collectorConfig.inertChangedEvidence.limitation.length < 20
-) {
-  violations.push('Inert evidence exclusion must remain narrow, explicit, and documented.');
 }
 const requiredCollectorFragments = [
   "classification: 'UNTRUSTED_DATA_ONLY'",
@@ -153,13 +145,8 @@ const requiredCollectorFragments = [
   "'MANDATORY_CONTEXT_TRUNCATED'",
   "'GLOBAL_EVIDENCE_LIMIT'",
   "'PACKET_SIZE_LIMIT'",
-  "'INERT_EVIDENCE_UNSAFE'",
-  "'inertChangedEvidence configuration is malformed'",
-  'activeInertReference',
-  "filePath.startsWith('scripts/')",
-  "filePath.startsWith('src/')",
-  "filePath.startsWith('games/')",
-  "filePath.startsWith('packages/')",
+  'GIT_LITERAL_PATHSPECS',
+  'core.hooksPath=/dev/null',
 ];
 for (const fragment of requiredCollectorFragments) {
   if (!collector.includes(fragment)) {
@@ -189,16 +176,23 @@ if (
   violations.push('Reviewer must use the pinned Azure Identity client and canonical command.');
 }
 if (
-  reviewerConfig.version !== '1.0.1' ||
+  reviewerConfig.version !== '2.0.0' ||
   reviewerConfig.expectedDeploymentId !== 'game-hub-unit-test-reviewer' ||
   reviewerConfig.credentialScope !== 'https://cognitiveservices.azure.com/.default' ||
   JSON.stringify(reviewerConfig.allowedEndpointSuffixes) !== JSON.stringify(['.openai.azure.com']) ||
   reviewerConfig.limits?.maxConcurrentReviews !== 3 ||
+  reviewerConfig.limits?.maxContextBytes > 2097152 ||
+  reviewerConfig.limits?.maxInputTokens > 500000 ||
   reviewerConfig.limits?.maxOutputTokens > 8000 ||
   reviewerConfig.limits?.maxOutputBytes > 131072 ||
   reviewerConfig.limits?.maxRetries > 2 ||
   reviewerConfig.limits?.maxEstimatedCostUsd > 0.25 ||
-  reviewerConfig.allowedTools?.length !== 0
+  reviewerConfig.allowedTools?.length !== 0 ||
+  reviewerConfig.critic?.maxConcurrentReviews !== 3 ||
+  reviewerConfig.critic?.inconclusiveBlocksAtConfidence !== 'HIGH' ||
+  typeof reviewerConfig.persona?.fallbackTitle !== 'string' ||
+  reviewerConfig.persona.fallbackTitle.length < 1 ||
+  JSON.stringify(reviewerConfig.allowedNetworkDestinations) !== JSON.stringify(['https://*.openai.azure.com'])
 ) {
   violations.push('Reviewer engine identity, destination, or execution limits were weakened.');
 }
@@ -327,7 +321,7 @@ if (
   packageJson.scripts?.['calibrate:adversarial'] !== 'node scripts/evaluate-adversarial-reviewer.ts' ||
   packageJson.scripts?.['calibration:check'] !== 'node scripts/evaluate-adversarial-reviewer.ts --mode check' ||
   packageJson.scripts?.['policy:calibration'] !==
-    'node scripts/evaluate-adversarial-reviewer.ts --mode check --report config/adversarial-agents/active-calibration-unit-test-reviewer.json' ||
+    'node scripts/evaluate-adversarial-reviewer.ts --mode check --report config/adversarial-agents/shared-v2/active-calibration-unit-test-reviewer.json' ||
   !packageJson.scripts?.['policy:check']?.includes('yarn policy:calibration')
 ) {
   violations.push('Missing canonical calibration evaluation or mandatory promotion-check command.');

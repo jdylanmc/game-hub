@@ -23,14 +23,19 @@ function safePath(value) {
   );
 }
 
-function canonicalManifestEntries(files, externalDependencies) {
-  return [...files, ...externalDependencies]
+function canonicalManifestEntries(files, externalDependencies, activationOutputs) {
+  return [
+    ...files,
+    ...externalDependencies,
+    ...activationOutputs.map((entry) => ({ destination: entry.destination, generated: true })),
+  ]
     .map((entry) => {
       const result = {
         destination: entry.destination,
         sha256: entry.sha256,
       };
       if (typeof entry.sourcePath === 'string') result.sourcePath = entry.sourcePath;
+      if (entry.generated === true) result.generated = true;
       return result;
     })
     .sort((left, right) => left.destination.localeCompare(right.destination));
@@ -82,7 +87,8 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
     !/^[a-f0-9]{64}$/.test(manifest.aggregateSha256) ||
     !Array.isArray(manifest.files) ||
     manifest.files.length < 30 ||
-    !Array.isArray(manifest.externalDependencies)
+    !Array.isArray(manifest.externalDependencies) ||
+    !Array.isArray(manifest.activationOutputs)
   ) {
     return { valid: false, errors: ['Shared v2 manifest identity is invalid.'] };
   }
@@ -143,7 +149,17 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
       errors.push(`Shared v2 external dependency is missing: ${dependency.destination}`);
     }
   }
-  const aggregate = sha256(JSON.stringify(canonicalManifestEntries(manifest.files, manifest.externalDependencies)));
+  for (const output of manifest.activationOutputs) {
+    if (!output || !safePath(output.destination) || destinations.has(output.destination)) {
+      errors.push('Shared v2 activation output entry is invalid.');
+      continue;
+    }
+    destinations.add(output.destination);
+    sourceByDestination.set(output.destination, null);
+  }
+  const aggregate = sha256(
+    JSON.stringify(canonicalManifestEntries(manifest.files, manifest.externalDependencies, manifest.activationOutputs)),
+  );
   if (aggregate !== manifest.aggregateSha256) errors.push('Shared v2 aggregate manifest digest mismatch.');
 
   for (const entry of manifest.files.filter((item) => item.destination.endsWith('.ts'))) {
@@ -160,27 +176,27 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
         errors.push(`Shared v2 relative dependency is unmanifested: ${entry.destination} -> ${resolved}`);
       }
     }
-    for (const entry of manifest.files.filter((item) => item.destination.endsWith('.json'))) {
-      const sourcePath = path.join(sourceRoot, entry.sourcePath);
-      try {
-        errors.push(
-          ...collectJsonDependencyErrors(
-            JSON.parse(fs.readFileSync(sourcePath, 'utf8')),
-            entry.destination,
-            sourceByDestination,
-            digestByDestination,
-          ),
-        );
-      } catch {
-        errors.push(`Shared v2 JSON source cannot be parsed: ${entry.sourcePath}`);
-      }
-    }
     for (const match of content.matchAll(
       /['"]((?:config|\.github|docs|scripts)\/[A-Za-z0-9._/-]+\.(?:json|md|ts))['"]/g,
     )) {
       if (!sourceByDestination.has(match[1])) {
         errors.push(`Shared v2 file dependency is unmanifested: ${entry.destination} -> ${match[1]}`);
       }
+    }
+  }
+  for (const entry of manifest.files.filter((item) => item.destination.endsWith('.json'))) {
+    const sourcePath = path.join(sourceRoot, entry.sourcePath);
+    try {
+      errors.push(
+        ...collectJsonDependencyErrors(
+          JSON.parse(fs.readFileSync(sourcePath, 'utf8')),
+          entry.destination,
+          sourceByDestination,
+          digestByDestination,
+        ),
+      );
+    } catch {
+      errors.push(`Shared v2 JSON source cannot be parsed: ${entry.sourcePath}`);
     }
   }
 
@@ -193,14 +209,24 @@ function checkSharedV2Boundary(repoRoot = root, manifestValue) {
   const activeEngine = JSON.parse(
     fs.readFileSync(path.join(repoRoot, 'config/adversarial-agents/reviewer-engine.json'), 'utf8'),
   );
-  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/adversarial-review.yml'), 'utf8');
-  if (
-    activeSchema.version !== '1.0.0' ||
-    activePolicy.version !== '1.0.0' ||
-    activeEngine.version !== '1.0.1' ||
-    workflow.includes('shared-v2')
-  ) {
-    errors.push('Active v1 reviewer is not isolated from dormant v2 source.');
+  const activeRegistry = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'config/adversarial-agents/agents-config.json'), 'utf8'),
+  );
+  const unit = Array.isArray(activeRegistry.agents)
+    ? activeRegistry.agents.find((agent) => agent?.name === 'unit-test-reviewer')
+    : undefined;
+  const activeV1 =
+    activeSchema.version === '1.0.0' &&
+    activePolicy.version === '1.0.0' &&
+    activeEngine.version === '1.0.1' &&
+    unit?.promptFile === '.github/adversarial-agents/unit-test-reviewer/prompt.md';
+  const activeV2 =
+    activeSchema.version === '2.0.0' &&
+    activePolicy.version === '2.0.0' &&
+    activeEngine.version === '2.0.0' &&
+    unit?.promptFile === '.github/adversarial-agents/unit-test-reviewer/prompt-v2.md';
+  if (!activeV1 && !activeV2) {
+    errors.push('Active reviewer is neither the reviewed v1 baseline nor the staged v2 contract.');
   }
 
   return { valid: errors.length === 0, errors };

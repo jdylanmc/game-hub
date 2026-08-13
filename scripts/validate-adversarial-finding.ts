@@ -90,7 +90,7 @@ class AdversarialFindingValidator {
     const registration = loadAgentRegistration(repoRoot, agentName, { allowDisabledForCalibration });
     this.schema = this.loadJson(path.join(repoRoot, registration.schemaFile));
     this.policy = this.loadJson(path.join(repoRoot, registration.policyFile));
-    this.registry = this.loadJson(path.join(repoRoot, 'config/adversarial-agents/agents-config.json'));
+    this.registry = this.loadJson(path.join(repoRoot, 'config/adversarial-agents/shared-v2/agents-config.json'));
   }
 
   private loadJson(filePath: string): JsonObject {
@@ -146,6 +146,9 @@ class AdversarialFindingValidator {
   }
 
   validate(input: unknown): ValidationResult {
+    if (isObject(input) && input.schemaVersion === '2.0.0') {
+      return this.validateSharedContract(input);
+    }
     const errors: ValidationError[] = [];
     const warnings: ValidationError[] = [];
     const root = this.requireObject(input, 'result', errors);
@@ -162,7 +165,7 @@ class AdversarialFindingValidator {
     this.requireFields(root, ['schemaVersion', 'findingVersion', 'attribution', 'verdict', 'findings'], '', errors);
 
     const schemaVersion = root.schemaVersion;
-    if (schemaVersion !== SUPPORTED_SCHEMA_VERSION || this.schema.version !== SUPPORTED_SCHEMA_VERSION) {
+    if (schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
       this.addError(errors, 2, 'schemaVersion', `schemaVersion must be ${SUPPORTED_SCHEMA_VERSION}`);
     }
 
@@ -201,6 +204,360 @@ class AdversarialFindingValidator {
     }
 
     return this.result(errors, warnings, attribution, findings, blockingCount, advisoryCount);
+  }
+
+  private validateSharedContract(root: JsonObject): ValidationResult {
+    const errors: ValidationError[] = [];
+    const warnings: ValidationError[] = [];
+    const required = [
+      'schemaVersion',
+      'findingVersion',
+      'attribution',
+      'provenance',
+      'artifactDigest',
+      'verdict',
+      'findings',
+    ];
+    this.rejectUnknownProperties(root, [...required, 'summary', 'presentation'], '', errors);
+    this.requireFields(root, required, '', errors);
+    if (root.schemaVersion !== '2.0.0') {
+      this.addError(errors, 2, 'schemaVersion', 'schemaVersion must be 2.0.0');
+    }
+    if (
+      typeof root.findingVersion !== 'string' ||
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*@\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(root.findingVersion)
+    ) {
+      this.addError(errors, 2, 'findingVersion', 'findingVersion must use agent-name@YYYY-MM-DDTHH:MM:SSZ');
+    }
+
+    const attribution = this.requireObject(root.attribution, 'attribution', errors);
+    const provenance = this.requireObject(root.provenance, 'provenance', errors);
+    const digest = this.requireObject(root.artifactDigest, 'artifactDigest', errors);
+    const findings = Array.isArray(root.findings) ? root.findings : [];
+    if (!Array.isArray(root.findings)) this.addError(errors, 1, 'findings', 'findings must be an array');
+
+    this.validateSharedAttribution(attribution, errors);
+    this.validateSharedProvenance(provenance, attribution, errors);
+    this.validateSharedDigest(digest, errors);
+    if (root.summary !== undefined) this.validateSummary(root.summary, errors);
+    if (root.presentation !== undefined) this.validateSharedPresentation(root.presentation, errors);
+
+    let blockingCount = 0;
+    let advisoryCount = 0;
+    for (const [index, finding] of findings.entries()) {
+      const effectiveSeverity = this.validateSharedFinding(finding, index, errors);
+      if (effectiveSeverity === 'BLOCKING') blockingCount += 1;
+      else if (effectiveSeverity === 'ADVISORY') advisoryCount += 1;
+    }
+    this.validateSharedVerdict(root.verdict, findings.length, blockingCount, advisoryCount, errors);
+    return this.result(errors, warnings, attribution, findings, blockingCount, advisoryCount);
+  }
+
+  private validateSharedPresentation(value: unknown, errors: ValidationError[]): void {
+    const presentation = this.requireObject(value, 'presentation', errors);
+    if (!presentation) return;
+    this.rejectUnknownProperties(presentation, ['title', 'summary', 'mode'], 'presentation', errors);
+    this.requireFields(presentation, ['title', 'summary', 'mode'], 'presentation', errors);
+    if (
+      !isNonEmptyString(presentation.title) ||
+      !isNonEmptyString(presentation.summary) ||
+      !['PERSONA', 'NEUTRAL_FALLBACK'].includes(String(presentation.mode))
+    ) {
+      this.addError(errors, 3, 'presentation', 'presentation must be a validated persona or neutral fallback');
+    }
+  }
+
+  private validateSharedAttribution(value: JsonObject | undefined, errors: ValidationError[]): JsonObject | undefined {
+    if (!value) return undefined;
+    const required = [
+      'agentName',
+      'agentVersion',
+      'modelDeployment',
+      'modelVersion',
+      'promptVersion',
+      'promptContentHash',
+      'schemaVersion',
+      'schemaContentHash',
+      'policyVersion',
+      'policyContentHash',
+      'toolsVersion',
+      'subscriptionId',
+      'repositoryCommit',
+      'contextFingerprint',
+      'calibrationFingerprint',
+      'timestamp',
+    ];
+    this.rejectUnknownProperties(value, required, 'attribution', errors);
+    this.requireFields(value, required, 'attribution', errors);
+    const agents = Array.isArray(this.registry.agents) ? this.registry.agents : [];
+    const registered = agents.find(
+      (candidate): candidate is JsonObject => isObject(candidate) && candidate.name === value.agentName,
+    );
+    if (!registered) {
+      this.addError(errors, 3, 'attribution.agentName', 'agentName is not a registered reviewer');
+      return value;
+    }
+    const exactFields: Array<[string, string]> = [
+      ['agentVersion', 'version'],
+      ['modelDeployment', 'modelDeployment'],
+      ['modelVersion', 'modelVersion'],
+      ['promptVersion', 'promptVersion'],
+      ['promptContentHash', 'promptContentHash'],
+      ['schemaContentHash', 'schemaContentHash'],
+      ['policyContentHash', 'policyContentHash'],
+      ['toolsVersion', 'toolsVersion'],
+      ['subscriptionId', 'subscriptionId'],
+    ];
+    for (const [field, registrationField] of exactFields) {
+      const expected =
+        registrationField === 'subscriptionId' ? this.registry.subscriptionId : registered[registrationField];
+      if (value[field] !== expected) {
+        this.addError(errors, 3, `attribution.${field}`, `${field} does not match the registered configuration`);
+      }
+    }
+    if (value.schemaVersion !== '2.0.0') {
+      this.addError(errors, 3, 'attribution.schemaVersion', 'schemaVersion must be 2.0.0');
+    }
+    if (value.policyVersion !== this.policy.version) {
+      this.addError(errors, 3, 'attribution.policyVersion', 'policyVersion does not match the reviewed policy');
+    }
+    for (const field of [
+      'promptContentHash',
+      'schemaContentHash',
+      'policyContentHash',
+      'contextFingerprint',
+      'calibrationFingerprint',
+    ]) {
+      if (typeof value[field] !== 'string' || !/^[a-f0-9]{64}$/.test(value[field])) {
+        this.addError(errors, 2, `attribution.${field}`, `${field} must be a SHA-256 digest`);
+      }
+    }
+    if (typeof value.repositoryCommit !== 'string' || !/^[a-f0-9]{40}$/.test(value.repositoryCommit)) {
+      this.addError(errors, 2, 'attribution.repositoryCommit', 'repositoryCommit must be a full commit SHA');
+    }
+    if (typeof value.timestamp !== 'string' || !Number.isFinite(Date.parse(value.timestamp))) {
+      this.addError(errors, 2, 'attribution.timestamp', 'timestamp must be an ISO 8601 date-time');
+    }
+    return value;
+  }
+
+  private validateSharedProvenance(
+    value: JsonObject | undefined,
+    attribution: JsonObject | undefined,
+    errors: ValidationError[],
+  ): void {
+    if (!value) return;
+    const required = [
+      'repository',
+      'pullRequestNumber',
+      'sourceIssueNumber',
+      'baseCommit',
+      'headCommit',
+      'workflowRunId',
+      'workflowRunAttempt',
+      'contextSha256',
+      'configurationFingerprint',
+    ];
+    this.rejectUnknownProperties(value, required, 'provenance', errors);
+    this.requireFields(value, required, 'provenance', errors);
+    if (typeof value.repository !== 'string' || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value.repository)) {
+      this.addError(errors, 2, 'provenance.repository', 'repository must use owner/name format');
+    }
+    for (const field of ['pullRequestNumber', 'sourceIssueNumber', 'workflowRunId', 'workflowRunAttempt']) {
+      if (!Number.isInteger(value[field]) || Number(value[field]) < 1) {
+        this.addError(errors, 2, `provenance.${field}`, `${field} must be a positive integer`);
+      }
+    }
+    for (const field of ['baseCommit', 'headCommit']) {
+      if (typeof value[field] !== 'string' || !/^[a-f0-9]{40}$/.test(value[field])) {
+        this.addError(errors, 2, `provenance.${field}`, `${field} must be a full commit SHA`);
+      }
+    }
+    for (const field of ['contextSha256', 'configurationFingerprint']) {
+      if (typeof value[field] !== 'string' || !/^[a-f0-9]{64}$/.test(value[field])) {
+        this.addError(errors, 2, `provenance.${field}`, `${field} must be a SHA-256 digest`);
+      }
+    }
+    if (attribution?.repositoryCommit !== value.headCommit) {
+      this.addError(errors, 3, 'provenance.headCommit', 'headCommit must match attribution.repositoryCommit');
+    }
+    if (attribution?.contextFingerprint !== value.contextSha256) {
+      this.addError(errors, 3, 'provenance.contextSha256', 'contextSha256 must match attribution.contextFingerprint');
+    }
+  }
+
+  private validateSharedDigest(value: JsonObject | undefined, errors: ValidationError[]): void {
+    if (!value) return;
+    this.rejectUnknownProperties(value, ['algorithm', 'value'], 'artifactDigest', errors);
+    this.requireFields(value, ['algorithm', 'value'], 'artifactDigest', errors);
+    if (value.algorithm !== 'sha256' || typeof value.value !== 'string' || !/^[a-f0-9]{64}$/.test(value.value)) {
+      this.addError(errors, 2, 'artifactDigest', 'artifactDigest must contain a SHA-256 value');
+    }
+  }
+
+  private validateSharedFinding(
+    value: unknown,
+    index: number,
+    errors: ValidationError[],
+  ): 'BLOCKING' | 'ADVISORY' | undefined {
+    const field = `findings[${index}]`;
+    const finding = this.requireObject(value, field, errors);
+    if (!finding) return undefined;
+    const required = [
+      'id',
+      'title',
+      'category',
+      'proposedSeverity',
+      'severity',
+      'confidence',
+      'description',
+      'citations',
+      'policyRule',
+      'failureScenario',
+      'impact',
+      'remediation',
+      'verificationGuidance',
+    ];
+    this.rejectUnknownProperties(finding, [...required, 'critic'], field, errors);
+    this.requireFields(finding, required, field, errors);
+    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/.test(finding.id)) {
+      this.addError(errors, 2, `${field}.id`, 'id must match CATEGORY-001');
+    }
+    for (const name of [
+      'title',
+      'category',
+      'description',
+      'policyRule',
+      'failureScenario',
+      'impact',
+      'verificationGuidance',
+    ]) {
+      if (!isNonEmptyString(finding[name])) this.addError(errors, 3, `${field}.${name}`, `${name} must be non-empty`);
+    }
+    if (!['BLOCKING', 'ADVISORY'].includes(String(finding.proposedSeverity))) {
+      this.addError(errors, 2, `${field}.proposedSeverity`, 'proposedSeverity must be BLOCKING or ADVISORY');
+    }
+    if (!['BLOCKING', 'ADVISORY'].includes(String(finding.severity))) {
+      this.addError(errors, 2, `${field}.severity`, 'severity must be BLOCKING or ADVISORY');
+    }
+    if (!['HIGH', 'MEDIUM', 'LOW'].includes(String(finding.confidence))) {
+      this.addError(errors, 2, `${field}.confidence`, 'confidence must be HIGH, MEDIUM, or LOW');
+    }
+    if (
+      !Array.isArray(finding.remediation) ||
+      finding.remediation.length === 0 ||
+      finding.remediation.some((item) => !isNonEmptyString(item))
+    ) {
+      this.addError(errors, 3, `${field}.remediation`, 'remediation must contain actionable non-empty steps');
+    }
+    this.validateCitations(finding.citations, field, errors);
+    if (finding.proposedSeverity === 'ADVISORY' && finding.critic === undefined) return 'ADVISORY';
+    const critic = this.requireObject(finding.critic, `${field}.critic`, errors);
+    if (!critic) {
+      if (finding.proposedSeverity === 'BLOCKING') {
+        this.addError(errors, 1, `${field}.critic`, 'every proposed blocker requires separate critic evidence');
+      }
+      return undefined;
+    }
+    this.rejectUnknownProperties(critic, ['decision', 'rationale', 'citations'], `${field}.critic`, errors);
+    this.requireFields(critic, ['decision', 'rationale', 'citations'], `${field}.critic`, errors);
+    if (!['CONFIRM', 'REJECT', 'INCONCLUSIVE'].includes(String(critic.decision))) {
+      this.addError(errors, 2, `${field}.critic.decision`, 'critic decision is invalid');
+    }
+    if (!isNonEmptyString(critic.rationale)) {
+      this.addError(errors, 3, `${field}.critic.rationale`, 'critic rationale is required');
+    }
+    this.validateCitations(critic.citations, `${field}.critic`, errors);
+    const expected =
+      finding.proposedSeverity === 'BLOCKING'
+        ? critic.decision === 'CONFIRM' || (critic.decision === 'INCONCLUSIVE' && finding.confidence === 'HIGH')
+          ? 'BLOCKING'
+          : 'ADVISORY'
+        : 'ADVISORY';
+    if (finding.severity !== expected) {
+      this.addError(errors, 3, `${field}.severity`, `critic semantics derive ${expected} severity`);
+    }
+    return expected;
+  }
+
+  private validateSharedVerdict(
+    value: unknown,
+    findingCount: number,
+    blockingCount: number,
+    advisoryCount: number,
+    errors: ValidationError[],
+  ): void {
+    const verdict = this.requireObject(value, 'verdict', errors);
+    if (!verdict) return;
+    const common = [
+      'decision',
+      'kind',
+      'severity',
+      'blockingFindingsCount',
+      'advisoryFindingsCount',
+      'policyDecisionRationale',
+    ];
+    this.rejectUnknownProperties(verdict, [...common, 'platformError', 'compute'], 'verdict', errors);
+    this.requireFields(verdict, common, 'verdict', errors);
+    if (!isNonEmptyString(verdict.policyDecisionRationale)) {
+      this.addError(errors, 3, 'verdict.policyDecisionRationale', 'policyDecisionRationale is required');
+    }
+    if (verdict.blockingFindingsCount !== blockingCount || verdict.advisoryFindingsCount !== advisoryCount) {
+      this.addError(errors, 3, 'verdict', 'finding counts must match critic-adjusted findings');
+    }
+    if (verdict.kind === 'POLICY') {
+      const expectedDecision = blockingCount > 0 ? 'FAIL' : 'PASS';
+      const expectedSeverity = blockingCount > 0 ? 'BLOCKING' : advisoryCount > 0 ? 'ADVISORY' : 'INFO';
+      if (
+        verdict.decision !== expectedDecision ||
+        verdict.severity !== expectedSeverity ||
+        verdict.platformError ||
+        verdict.compute
+      ) {
+        this.addError(errors, 3, 'verdict', 'policy verdict does not match critic-adjusted findings');
+      }
+      return;
+    }
+    if (verdict.kind === 'PLATFORM') {
+      const platformError = this.requireObject(verdict.platformError, 'verdict.platformError', errors);
+      if (
+        verdict.decision !== 'FAIL' ||
+        verdict.severity !== 'ERROR' ||
+        findingCount !== 0 ||
+        blockingCount !== 0 ||
+        advisoryCount !== 0 ||
+        verdict.compute ||
+        !platformError ||
+        !isNonEmptyString(platformError.code) ||
+        !isNonEmptyString(platformError.message)
+      ) {
+        this.addError(errors, 3, 'verdict', 'platform failures require zero findings and platform error evidence');
+      }
+      return;
+    }
+    if (verdict.kind === 'COMPUTE') {
+      const compute = this.requireObject(verdict.compute, 'verdict.compute', errors);
+      const delays = compute && Array.isArray(compute.retryDelaysMs) ? compute.retryDelaysMs : [];
+      if (
+        verdict.decision !== 'INCONCLUSIVE' ||
+        verdict.severity !== 'INCONCLUSIVE' ||
+        findingCount !== 0 ||
+        blockingCount !== 0 ||
+        advisoryCount !== 0 ||
+        verdict.platformError ||
+        !compute ||
+        !isNonEmptyString(compute.code) ||
+        !isNonEmptyString(compute.message) ||
+        compute.attempts !== 3 ||
+        delays.length !== 2 ||
+        delays.some((delay) => !Number.isInteger(delay) || Number(delay) < 1 || Number(delay) > 30000) ||
+        Number(delays[1]) < Number(delays[0])
+      ) {
+        this.addError(errors, 3, 'verdict', 'compute-only INCONCLUSIVE requires three bounded attempts');
+      }
+      return;
+    }
+    this.addError(errors, 2, 'verdict.kind', 'verdict kind must be POLICY, PLATFORM, or COMPUTE');
   }
 
   private validateAttribution(value: unknown, errors: ValidationError[]): JsonObject | undefined {
@@ -286,7 +643,7 @@ class AdversarialFindingValidator {
       promptVersion: agent.promptVersion,
       promptContentHash: agent.promptContentHash,
       toolsVersion: agent.toolsVersion,
-      policyVersion: this.policy.version,
+      policyVersion: SUPPORTED_SCHEMA_VERSION,
     };
     for (const [field, expectedValue] of Object.entries(expected)) {
       if (attribution[field] !== expectedValue) {
@@ -327,7 +684,7 @@ class AdversarialFindingValidator {
     this.rejectUnknownProperties(finding, [...required, 'additionalContext'], field, errors);
     this.requireFields(finding, required, field, errors);
 
-    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+-\d+$/.test(finding.id)) {
+    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/.test(finding.id)) {
       this.addError(errors, 2, `${field}.id`, 'id must match CATEGORY-001');
     }
     for (const property of ['title', 'description', 'missingScenario', 'expectedFailureSignal', 'suggestedTest']) {
@@ -393,7 +750,7 @@ class AdversarialFindingValidator {
     this.rejectUnknownProperties(finding, [...required, 'evidenceLimitations'], field, errors);
     this.requireFields(finding, required, field, errors);
 
-    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+-\d+$/.test(finding.id)) {
+    if (typeof finding.id !== 'string' || !/^[A-Z0-9]+(?:-[A-Z0-9]+)*-\d+$/.test(finding.id)) {
       this.addError(errors, 2, `${field}.id`, 'id must match CATEGORY-001');
     }
     for (const property of [
@@ -528,20 +885,7 @@ class AdversarialFindingValidator {
     }
 
     if (verdict.decision === 'ERROR') {
-      if (
-        verdict.severity !== 'ERROR' ||
-        suppliedFindingCount !== 0 ||
-        verdict.blockingFindingsCount !== 0 ||
-        verdict.advisoryFindingsCount !== 0 ||
-        !isNonEmptyString(verdict.errorMessage)
-      ) {
-        this.addError(
-          errors,
-          3,
-          'verdict',
-          'ERROR requires severity ERROR, no findings, zero counts, and a non-empty errorMessage',
-        );
-      }
+      this.addError(errors, 3, 'verdict.decision', 'ERROR was replaced by platform FAIL or compute-only INCONCLUSIVE');
       return;
     }
 

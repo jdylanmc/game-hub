@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.1",
   "limits": {
     "maxPacketBytes": 2097152,
     "maxEvidenceBytes": 786432,
@@ -10,10 +10,6 @@
   },
   "productionRoots": ["src/", "games/", "packages/", "scripts/"],
   "testPatterns": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.js", "**/*.test.mjs", "**/*.spec.ts", "**/*.spec.tsx"],
-  "inertChangedEvidence": {
-    "paths": ["docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**"],
-    "limitation": "Dormant v2 source is metadata-only until explicit activation."
-  },
   "sections": {
     "contracts": {
       "mandatory": true,

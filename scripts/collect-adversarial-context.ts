@@ -8,7 +8,6 @@ import { fileURLToPath } from 'node:url';
 
 const COLLECTOR_VERSION = '1.0.1';
 const PACKET_SCHEMA_VERSION = '1.0.0';
-const INERT_CHANGED_EVIDENCE_PATH = 'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**';
 
 type JsonObject = Record<string, unknown>;
 
@@ -55,10 +54,6 @@ interface CollectorConfig {
   productionRoots: string[];
   testPatterns: string[];
   sections: Record<string, SectionConfig>;
-  inertChangedEvidence: {
-    paths: string[];
-    limitation: string;
-  };
 }
 
 interface BlockingReason {
@@ -107,9 +102,6 @@ interface ChangeEvidence {
   includedBytes: number;
   truncated: boolean;
   hunks: DiffHunk[];
-  excluded?: boolean;
-  limitation?: string;
-  evidenceSha256?: string;
 }
 
 interface ContextPacket {
@@ -287,18 +279,8 @@ function validateInput(value: unknown): CollectorInput {
 }
 
 function validateConfig(value: unknown): CollectorConfig {
-  if (!isObject(value) || value.version !== '1.0.2' || !isObject(value.limits) || !isObject(value.sections)) {
+  if (!isObject(value) || !isObject(value.limits) || !isObject(value.sections)) {
     throw new Error('Collector configuration is malformed');
-  }
-  if (
-    !isObject(value.inertChangedEvidence) ||
-    !Array.isArray(value.inertChangedEvidence.paths) ||
-    value.inertChangedEvidence.paths.length !== 1 ||
-    value.inertChangedEvidence.paths[0] !== INERT_CHANGED_EVIDENCE_PATH ||
-    typeof value.inertChangedEvidence.limitation !== 'string' ||
-    value.inertChangedEvidence.limitation.trim() === ''
-  ) {
-    throw new Error('inertChangedEvidence configuration is malformed');
   }
   return value as unknown as CollectorConfig;
 }
@@ -378,71 +360,6 @@ function classifyChange(filePath: string, config: CollectorConfig): 'production'
   return 'other';
 }
 
-function stripCanonicalInertDeclaration(filePath: string, content: string, inertRoot: string): string | undefined {
-  const inertGlob = `${inertRoot}/**`;
-  const declarations =
-    filePath === 'scripts/collect-adversarial-context.ts'
-      ? [`const INERT_CHANGED_EVIDENCE_PATH = '${inertGlob}';`]
-      : filePath === 'scripts/check-adversarial-policy.mjs'
-        ? [`const INERT_CHANGED_EVIDENCE_PATHS = ['${inertGlob}'];`]
-        : [];
-  if (declarations.length === 0) return content;
-  const declaration = declarations[0];
-  const count = content.split(declaration).length - 1;
-  if (count !== 1) return undefined;
-  return content.replace(declaration, '');
-}
-
-function activeInertReference(repoRoot: string, headSha: string, inertRoot: string): boolean {
-  const activePaths = listTree(repoRoot, headSha)
-    .map((entry) => entry.path)
-    .filter(
-      (filePath) =>
-        filePath === 'package.json' ||
-        filePath.startsWith('.github/workflows/') ||
-        filePath.startsWith('config/') ||
-        ((filePath.startsWith('scripts/') ||
-          filePath.startsWith('src/') ||
-          filePath.startsWith('games/') ||
-          filePath.startsWith('packages/')) &&
-          !/\.test\.[cm]?[jt]sx?$/.test(filePath)),
-    );
-  for (const filePath of activePaths) {
-    const treeEntry = runGit(repoRoot, ['ls-tree', headSha, '--', filePath])
-      .toString('utf8')
-      .trim()
-      .match(/^\d+ blob ([a-f0-9]{40})\t/);
-    if (!treeEntry) continue;
-    let content = readBlob(repoRoot, treeEntry[1]).toString('utf8');
-    if (filePath === 'config/adversarial-agents/context-collector.json') {
-      try {
-        const parsed: unknown = JSON.parse(content);
-        if (isObject(parsed)) {
-          delete parsed.inertChangedEvidence;
-          content = stableStringify(parsed);
-        }
-      } catch {
-        return true;
-      }
-    }
-    const normalizedContent = stripCanonicalInertDeclaration(filePath, content, inertRoot);
-    if (normalizedContent === undefined) return true;
-    content = normalizedContent;
-    if (content.includes(inertRoot)) {
-      return true;
-    }
-    for (const match of content.matchAll(
-      /(?:import\s*(?:[^'"]*\s+from\s*)?|require|import)\s*\(?\s*['"]([^'"]+)['"]/g,
-    )) {
-      const importedPath = match[1];
-      if (!importedPath.startsWith('.')) continue;
-      const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(filePath), importedPath));
-      if (resolved === inertRoot || resolved.startsWith(`${inertRoot}/`)) return true;
-    }
-  }
-  return false;
-}
-
 function listTree(repoRoot: string, headSha: string): Array<{ path: string; objectId: string }> {
   return runGit(repoRoot, ['ls-tree', '-r', '-z', headSha])
     .toString('utf8')
@@ -511,45 +428,6 @@ function collectChanges(
     const filePath = change.newPath ?? change.oldPath;
     if (!filePath) continue;
     const category = classifyChange(filePath, config);
-    const inert = matchesAny(filePath, config.inertChangedEvidence.paths);
-    if (inert) {
-      const treeEntry = runGit(repoRoot, ['ls-tree', input.pullRequest.headSha, '--', filePath])
-        .toString('utf8')
-        .trim()
-        .match(/^(\d+) blob ([a-f0-9]{40})\t/);
-      const inertRoot = config.inertChangedEvidence.paths[0].slice(0, -3);
-      const safeStatus = ['A', 'M'].includes(change.status);
-      if (
-        !treeEntry ||
-        treeEntry[1] !== '100644' ||
-        !safeStatus ||
-        activeInertReference(repoRoot, input.pullRequest.headSha, inertRoot)
-      ) {
-        blockingReasons.push({
-          code: 'INERT_EVIDENCE_UNSAFE',
-          section: 'inertChangedEvidence',
-          path: filePath,
-          message: 'Inert evidence is executable, unresolved, or referenced by active configuration.',
-        });
-      }
-      const blob = treeEntry ? readBlob(repoRoot, treeEntry[2]) : Buffer.alloc(0);
-      result.other.push({
-        status: change.status,
-        oldPath: change.oldPath,
-        newPath: change.newPath,
-        category: 'other',
-        origin: 'untrusted-pr-diff',
-        binary: blob.includes(0),
-        byteLength: blob.length,
-        includedBytes: 0,
-        truncated: false,
-        hunks: [],
-        excluded: true,
-        limitation: config.inertChangedEvidence.limitation,
-        evidenceSha256: sha256(blob),
-      });
-      continue;
-    }
     const patchResult = runGitLimited(
       repoRoot,
       [

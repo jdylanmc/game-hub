@@ -1,47 +1,62 @@
-import path from 'node:path';
 import fs from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { AdversarialFindingValidator } from './validate-adversarial-finding';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const validator = new AdversarialFindingValidator(repoRoot);
-const promptHash = AdversarialFindingValidator.computeFileHash(
-  path.join(repoRoot, '.github/adversarial-agents/unit-test-reviewer/prompt.md'),
-);
 const registration = JSON.parse(
   fs.readFileSync(path.join(repoRoot, 'config/adversarial-agents/agents-config.json'), 'utf8'),
 ).agents.find((agent) => agent.name === 'unit-test-reviewer');
 
 function resultWithFinding() {
   return {
-    schemaVersion: '1.0.0',
-    findingVersion: 'unit-test-reviewer@2026-08-11T19:00:00Z',
+    schemaVersion: '2.0.0',
+    findingVersion: 'unit-test-reviewer@2026-08-12T19:00:00Z',
     attribution: {
       agentName: 'unit-test-reviewer',
-      agentVersion: '1.0.0',
-      modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
-      promptVersion: '1.0.5',
-      promptContentHash: promptHash,
-      policyVersion: '1.0.0',
-      toolsVersion: '1.0.1',
+      agentVersion: registration.version,
+      modelDeployment: registration.modelDeployment,
+      modelVersion: registration.modelVersion,
+      promptVersion: registration.promptVersion,
+      promptContentHash: registration.promptContentHash,
+      policyVersion: '2.0.0',
+      toolsVersion: registration.toolsVersion,
+      schemaVersion: '2.0.0',
+      schemaContentHash: registration.schemaContentHash,
+      policyContentHash: registration.policyContentHash,
+      contextFingerprint: 'c'.repeat(64),
+      calibrationFingerprint: 'd'.repeat(64),
       subscriptionId: '11213dbd-39fe-46ba-87db-5f5e8c449aed',
       repositoryCommit: 'a'.repeat(40),
-      timestamp: '2026-08-11T19:00:00Z',
+      timestamp: '2026-08-12T19:00:00Z',
     },
+    provenance: {
+      repository: 'jdylanmc/game-hub',
+      pullRequestNumber: 56,
+      sourceIssueNumber: 56,
+      baseCommit: 'b'.repeat(40),
+      headCommit: 'a'.repeat(40),
+      workflowRunId: 1,
+      workflowRunAttempt: 1,
+      contextSha256: 'c'.repeat(64),
+      configurationFingerprint: 'd'.repeat(64),
+    },
+    artifactDigest: { algorithm: 'sha256', value: 'e'.repeat(64) },
     verdict: {
       decision: 'FAIL',
+      kind: 'POLICY',
       severity: 'BLOCKING',
       blockingFindingsCount: 1,
       advisoryFindingsCount: 0,
-      policyDecisionRationale: 'One validated high-confidence blocking finding.',
+      policyDecisionRationale: 'One critic-confirmed blocker.',
     },
     findings: [
       {
         id: 'TAUTOLOGY-1',
         title: 'Assertion cannot fail',
         category: 'tautology',
-        severity: 'BLOCKING',
         confidence: 'HIGH',
         description: 'The assertion does not exercise production behavior.',
         citations: {
@@ -55,9 +70,28 @@ function resultWithFinding() {
             },
           ],
         },
-        missingScenario: 'A production regression must make the test fail.',
-        expectedFailureSignal: 'The assertion fails when production output changes.',
-        suggestedTest: 'Assert the production function result instead of a literal.',
+        proposedSeverity: 'BLOCKING',
+        severity: 'BLOCKING',
+        policyRule: 'High-confidence blockers require remediation.',
+        failureScenario: 'A production regression makes the assertion pass.',
+        impact: 'The regression can merge undetected.',
+        remediation: ['Exercise production behavior.'],
+        verificationGuidance: 'Demonstrate that the regression fails the test.',
+        critic: {
+          decision: 'CONFIRM',
+          rationale: 'The cited assertion cannot observe production behavior.',
+          citations: {
+            productionFiles: [],
+            testFiles: [
+              {
+                path: 'src/example.test.ts',
+                startLine: 10,
+                endLine: 10,
+                snippet: 'expect(true).toBe(true);',
+              },
+            ],
+          },
+        },
       },
     ],
   };
@@ -191,7 +225,7 @@ describe('AdversarialFindingValidator', () => {
     const input = resultWithFinding();
     input.verdict.decision = 'PASS';
     expect(validator.validate(input).errors).toEqual(
-      expect.arrayContaining([expect.objectContaining({ field: 'verdict.decision', code: 3 })]),
+      expect.arrayContaining([expect.objectContaining({ field: 'verdict', code: 3 })]),
     );
   });
 
@@ -199,15 +233,15 @@ describe('AdversarialFindingValidator', () => {
     const input = resultWithFinding();
     input.verdict.blockingFindingsCount = 0;
     expect(validator.validate(input).errors).toEqual(
-      expect.arrayContaining([expect.objectContaining({ field: 'verdict.blockingFindingsCount', code: 3 })]),
+      expect.arrayContaining([expect.objectContaining({ field: 'verdict', code: 3 })]),
     );
   });
 
   it('rejects missing actionable finding fields', () => {
     const input = resultWithFinding();
-    Reflect.deleteProperty(input.findings[0], 'suggestedTest');
+    Reflect.deleteProperty(input.findings[0], 'verificationGuidance');
     expect(validator.validate(input).errors).toEqual(
-      expect.arrayContaining([expect.objectContaining({ field: 'findings[0].suggestedTest' })]),
+      expect.arrayContaining([expect.objectContaining({ field: 'findings[0].verificationGuidance' })]),
     );
   });
 

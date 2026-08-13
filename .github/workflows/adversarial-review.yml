@@ -91,7 +91,7 @@ jobs:
       AZURE_CORE_OUTPUT: none
       ADVERSARIAL_AGENT_NAME: unit-test-reviewer
       AZURE_OPENAI_DEPLOYMENT_ID: game-hub-unit-test-reviewer
-      ACTIVE_CALIBRATION_REPORT: config/adversarial-agents/active-calibration-unit-test-reviewer.json
+      ACTIVE_CALIBRATION_REPORT: config/adversarial-agents/shared-v2/active-calibration-unit-test-reviewer.json
 
     steps:
       - name: Check out protected base workflow code
@@ -247,6 +247,14 @@ jobs:
             --exceptions config/adversarial-agents/exceptions.json \
             --output-dir adversarial-review-evidence \
             > publication-result.json
+
+      - name: Publish exact-head reviewer fan-in
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          yarn publish:adversarial-fan-in "$GITHUB_REPOSITORY" "$HEAD_SHA"
 
       - name: Retain adversarial review evidence
         if: always()

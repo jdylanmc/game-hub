@@ -345,14 +345,17 @@ async function snapshotRepositoryFiles() {
   const relativePaths = result.stdout
     .split('\0')
     .filter((relativePath) => relativePath && snapshotExtensionPattern.test(relativePath));
-  return new Map(
-    await Promise.all(
-      relativePaths.map(async (relativePath) => [
-        relativePath,
-        await fs.readFile(path.join(rootDirectory, relativePath)),
-      ]),
-    ),
+  const snapshots = await Promise.all(
+    relativePaths.map(async (relativePath) => {
+      try {
+        return [relativePath, await fs.readFile(path.join(rootDirectory, relativePath))];
+      } catch (error) {
+        if (error?.code === 'ENOENT') return undefined;
+        throw error;
+      }
+    }),
   );
+  return new Map(snapshots.filter((snapshot) => snapshot !== undefined));
 }
 
 async function withScratchFiles(files, callback) {
