@@ -89,7 +89,12 @@ try {
 
   const fixProbePaths = await Promise.all(
     ignoredPaths
-      .filter((ignoredPath) => !ignoredPath.startsWith('.yarn/') && !ignoredPath.startsWith('node_modules/'))
+      .filter(
+        (ignoredPath) =>
+          !ignoredPath.startsWith('.yarn/') &&
+          !ignoredPath.startsWith('node_modules/') &&
+          !ignoredPath.startsWith('docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/'),
+      )
       .map((ignoredPath) => createScratchFile(path.dirname(ignoredPath), path.basename(ignoredPath), fixProbeSource)),
   );
   const fixingEslint = new ESLint({
