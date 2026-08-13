@@ -382,9 +382,9 @@ function stripCanonicalInertDeclaration(filePath: string, content: string, inert
   const inertGlob = `${inertRoot}/**`;
   const declarations =
     filePath === 'scripts/collect-adversarial-context.ts'
-      ? [`const INERT_CHANGED_EVIDENCE_PATH =\n  '${inertGlob}';`]
+      ? [`const INERT_CHANGED_EVIDENCE_PATH = '${inertGlob}';`]
       : filePath === 'scripts/check-adversarial-policy.mjs'
-        ? [`const INERT_CHANGED_EVIDENCE_PATHS = [\n  '${inertGlob}',\n];`]
+        ? [`const INERT_CHANGED_EVIDENCE_PATHS = ['${inertGlob}'];`]
         : [];
   if (declarations.length === 0) return content;
   const declaration = declarations[0];
