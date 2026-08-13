@@ -111,6 +111,7 @@ interface PublishOptions {
   repoRoot: string;
   repository: string;
   issueNumber: number;
+  pullRequestNumber: number;
   headSha: string;
   result: unknown;
   calibration: CalibrationAttribution;
@@ -670,6 +671,9 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
   if (!Number.isInteger(options.issueNumber) || options.issueNumber < 1) {
     throw new Error('issueNumber must be a positive integer');
   }
+  if (!Number.isInteger(options.pullRequestNumber) || options.pullRequestNumber < 1) {
+    throw new Error('pullRequestNumber must be a positive integer');
+  }
   validateCalibration(options.calibration);
   const config = loadPublisherConfig(options.repoRoot);
   const sanitized = redactSensitiveContent(options.result);
@@ -689,7 +693,8 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
   if (
     attribution.repositoryCommit !== options.headSha ||
     (verdict.decision !== 'ERROR' &&
-      (summary.pullRequestCommit !== options.headSha || !Number.isInteger(summary.pullRequestNumber)))
+      (summary.pullRequestCommit !== options.headSha || !Number.isInteger(summary.pullRequestNumber))) ||
+    (Number.isInteger(summary.pullRequestNumber) && summary.pullRequestNumber !== options.pullRequestNumber)
   ) {
     throw new Error('Reviewer output does not match the requested pull-request head SHA');
   }
@@ -744,7 +749,7 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
   const previousManifest = validatePreviousManifest(options.previousManifest, {
     repository: options.repository,
     issueNumber: options.issueNumber,
-    pullRequestNumber: Number.isInteger(summary.pullRequestNumber) ? Number(summary.pullRequestNumber) : 0,
+    pullRequestNumber: options.pullRequestNumber,
     headSha: options.headSha,
     agentName,
   });
@@ -846,7 +851,7 @@ async function publishAdversarialEvidence(options: PublishOptions): Promise<Publ
     checkName,
     repository: options.repository,
     issueNumber: options.issueNumber,
-    pullRequestNumber: Number(summary.pullRequestNumber),
+    pullRequestNumber: options.pullRequestNumber,
     headSha: options.headSha,
     agentName,
     runFingerprint,
@@ -980,7 +985,15 @@ function parseArguments(argv: string[]): Record<string, string> {
 async function main(): Promise<void> {
   const args = parseArguments(process.argv.slice(2));
   const repoRoot = path.resolve(args['repo-root'] ?? '.');
-  for (const required of ['result', 'repository', 'issue', 'head', 'output-dir', 'calibration-report']) {
+  for (const required of [
+    'result',
+    'repository',
+    'issue',
+    'pull-request',
+    'head',
+    'output-dir',
+    'calibration-report',
+  ]) {
     if (!args[required]) throw new Error(`Missing --${required}`);
   }
   const result = parseJsonObject(path.resolve(args.result));
@@ -1008,6 +1021,7 @@ async function main(): Promise<void> {
     repoRoot,
     repository: args.repository,
     issueNumber: Number(args.issue),
+    pullRequestNumber: Number(args['pull-request']),
     headSha: args.head,
     result,
     calibration,

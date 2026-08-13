@@ -107,6 +107,7 @@ describe('v1 bootstrap compatibility', () => {
       repoRoot,
       repository: 'jdylanmc/game-hub',
       issueNumber: 56,
+      pullRequestNumber: 57,
       headSha,
       result,
       calibration: {

@@ -74,11 +74,16 @@ try {
     'src/storybook/mamba/source/lint-scope-probe/index.mjs',
     'storybook-static/lint-scope-probe/index.mjs',
     'test-results/lint-scope-probe/index.mjs',
+    'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/runtime.ts',
   ];
 
   for (const ignoredPath of ignoredPaths) {
     if (!(await eslint.isPathIgnored(ignoredPath))) {
       throw new Error(`Generated, imported, dependency, or output path is unexpectedly linted: ${ignoredPath}`);
+    }
+    const futureMemoryPath = 'docs/memories/future-reviewer/shared-v2-source/runtime.ts';
+    if (await eslint.isPathIgnored(futureMemoryPath)) {
+      throw new Error(`Future memory source path is unexpectedly ignored: ${futureMemoryPath}`);
     }
   }
 

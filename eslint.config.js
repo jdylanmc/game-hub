@@ -37,7 +37,7 @@ export default tseslint.config(
       'src/storybook/mamba/generated/',
       'src/storybook/mamba/source/',
       'src/stories/catalog/mamba/',
-      'docs/memories/**/shared-v2-source/**',
+      'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source/**',
     ],
   },
   {
