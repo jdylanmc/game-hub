@@ -286,3 +286,17 @@
   retain filename, byte count, SHA-256, and limitation metadata without
   consuming dormant source patch text, while refusing broad, executable, or
   active-path exclusions.
+
+## Prerequisite hardening
+
+- Inert-path reference detection now scans all active executable roots
+  (`scripts/`, `src/`, `games/`, and `packages/`) as well as active workflow,
+  package, and configuration content. It recognizes literal path strings and
+  static/dynamic import or require paths resolving into the inert root.
+- The collector ignores only its own exact configuration declaration; broad
+  future memory paths are not lint-ignored or collector-excludable. Rename,
+  deletion, symlink, non-regular mode, active reference, and missing mandatory
+  evidence remain blocking.
+- Publisher input now carries the resolved pull request number separately from
+  source issue. Platform ERROR evidence without a summary retains that integer
+  in artifact and manifest; a present summary must match it.

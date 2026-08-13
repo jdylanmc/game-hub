@@ -155,6 +155,11 @@ const requiredCollectorFragments = [
   "'PACKET_SIZE_LIMIT'",
   "'INERT_EVIDENCE_UNSAFE'",
   "'inertChangedEvidence configuration is malformed'",
+  'activeInertReference',
+  "filePath.startsWith('scripts/')",
+  "filePath.startsWith('src/')",
+  "filePath.startsWith('games/')",
+  "filePath.startsWith('packages/')",
 ];
 for (const fragment of requiredCollectorFragments) {
   if (!collector.includes(fragment)) {

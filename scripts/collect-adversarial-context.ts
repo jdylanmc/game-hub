@@ -378,6 +378,56 @@ function classifyChange(filePath: string, config: CollectorConfig): 'production'
   return 'other';
 }
 
+function activeInertReference(repoRoot: string, headSha: string, inertRoot: string): boolean {
+  const activePaths = listTree(repoRoot, headSha)
+    .map((entry) => entry.path)
+    .filter(
+      (filePath) =>
+        filePath === 'package.json' ||
+        filePath.startsWith('.github/workflows/') ||
+        filePath.startsWith('config/') ||
+        ((filePath.startsWith('scripts/') ||
+          filePath.startsWith('src/') ||
+          filePath.startsWith('games/') ||
+          filePath.startsWith('packages/')) &&
+          !/\.test\.[cm]?[jt]sx?$/.test(filePath)),
+    );
+  for (const filePath of activePaths) {
+    const treeEntry = runGit(repoRoot, ['ls-tree', headSha, '--', filePath])
+      .toString('utf8')
+      .trim()
+      .match(/^\d+ blob ([a-f0-9]{40})\t/);
+    if (!treeEntry) continue;
+    let content = readBlob(repoRoot, treeEntry[1]).toString('utf8');
+    if (filePath === 'config/adversarial-agents/context-collector.json') {
+      try {
+        const parsed: unknown = JSON.parse(content);
+        if (isObject(parsed)) {
+          delete parsed.inertChangedEvidence;
+          content = stableStringify(parsed);
+        }
+      } catch {
+        return true;
+      }
+    }
+    if (
+      content.includes(inertRoot) &&
+      !['scripts/collect-adversarial-context.ts', 'scripts/check-adversarial-policy.mjs'].includes(filePath)
+    ) {
+      return true;
+    }
+    for (const match of content.matchAll(
+      /(?:import\s*(?:[^'"]*\s+from\s*)?|require|import)\s*\(?\s*['"]([^'"]+)['"]/g,
+    )) {
+      const importedPath = match[1];
+      if (!importedPath.startsWith('.')) continue;
+      const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(filePath), importedPath));
+      if (resolved === inertRoot || resolved.startsWith(`${inertRoot}/`)) return true;
+    }
+  }
+  return false;
+}
+
 function listTree(repoRoot: string, headSha: string): Array<{ path: string; objectId: string }> {
   return runGit(repoRoot, ['ls-tree', '-r', '-z', headSha])
     .toString('utf8')
@@ -452,22 +502,14 @@ function collectChanges(
         .toString('utf8')
         .trim()
         .match(/^(\d+) blob ([a-f0-9]{40})\t/);
-      const activeReference = runGit(
-        repoRoot,
-        [
-          'grep',
-          '-n',
-          '-F',
-          'docs/memories/56-shared-adversarial-reviewer-platform/shared-v2-source',
-          input.pullRequest.headSha,
-          '--',
-          '.github/workflows',
-          'package.json',
-          'config',
-        ],
-        true,
-      );
-      if (!treeEntry || treeEntry[1] !== '100644' || activeReference.length > 0) {
+      const inertRoot = config.inertChangedEvidence.paths[0].slice(0, -3);
+      const safeStatus = ['A', 'M'].includes(change.status);
+      if (
+        !treeEntry ||
+        treeEntry[1] !== '100644' ||
+        !safeStatus ||
+        activeInertReference(repoRoot, input.pullRequest.headSha, inertRoot)
+      ) {
         blockingReasons.push({
           code: 'INERT_EVIDENCE_UNSAFE',
           section: 'inertChangedEvidence',
