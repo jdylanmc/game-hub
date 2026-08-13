@@ -25,7 +25,7 @@
       "title": "Materializing the reviewed v2 transaction",
       "description": "Add a deterministic, fail-closed activation command that validates and copies the committed v2 manifest sources into their reviewed destinations without enabling Gilfoyle.",
       "priority": 1,
-      "passes": true,
+      "passes": false,
       "notes": "Seam: activation command output and resulting destination hashes."
     },
     {
@@ -33,7 +33,7 @@
       "title": "Activating v2 reviewer execution",
       "description": "Switch the active unit-test reviewer runtime, registry, workflow, package scripts, and policies to the materialized v2 contract while retaining the established required check identity.",
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": "Seam: registry validation and protected workflow matrix."
     },
     {
@@ -41,7 +41,7 @@
       "title": "Calibrating the activated reviewer",
       "description": "Generate a fresh real Azure calibration and required attestation for the exact activated fingerprint without weakening thresholds or reusing dormant evidence.",
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "notes": "Seam: calibration validator and attestation validator."
     },
     {
@@ -49,7 +49,7 @@
       "title": "Retiring the dormant staging boundary",
       "description": "Remove inert staging artifacts only after active materialization is verified, document the #22 proof boundary, and publish passing exact-head evidence.",
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "notes": "Seam: active policy, workflow, and documentation checks."
     }
   ]

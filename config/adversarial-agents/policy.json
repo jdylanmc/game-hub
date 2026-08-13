@@ -1,15 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-2020-12/schema",
-  "$id": "https://github.com/jdylanmc/game-hub/config/adversarial-agents/shared-policy.json",
-  "title": "Shared Adversarial Reviewer Policy Configuration",
-  "description": "Defines how critic-adjusted findings produce PASS, FAIL, or compute-only INCONCLUSIVE.",
-  "version": "2.0.0",
+  "$id": "https://github.com/jdylanmc/game-hub/config/adversarial-agents/policy.json",
+  "title": "Adversarial Agent Policy Configuration",
+  "description": "Defines how findings are evaluated against policy thresholds to produce a pass/fail verdict.",
+  "version": "1.0.0",
   "properties": {
     "policyVersion": {
       "type": "string",
       "description": "Semantic version of this policy configuration.",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "const": "2.0.0"
+      "const": "1.0.0"
     },
     "failThresholds": {
       "type": "object",

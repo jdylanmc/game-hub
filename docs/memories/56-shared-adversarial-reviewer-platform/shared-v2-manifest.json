@@ -4,7 +4,7 @@
   "activationIssue": 58,
   "activeReviewerContractVersion": "1.0.0",
   "v2ContractVersion": "2.0.0",
-  "aggregateSha256": "a7e2af68a4193a32ad4b8a54d3e02624f0375fd26155985d854157c29e2b03ce",
+  "aggregateSha256": "86d140b2a2653b1d92e74261365db466e26de73789a095a9348c72535d5783fc",
   "files": [
     {
       "sourcePath": "shared-v2-source/.github/adversarial-agents/system-policy.md",
@@ -72,6 +72,11 @@
       "sha256": "cd46bbd7d12fd7b257c2ee24304f673a6a79ab13bda0696247ebc2b9313e375a"
     },
     {
+      "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/active-calibration-unit-test-reviewer.json",
+      "destination": "config/adversarial-agents/shared-v2/active-calibration-unit-test-reviewer.json",
+      "sha256": "6c6529257f3fe9b6a4591ab2b38bebb5d108983d66aa3622c2f65a59e01f6c6e"
+    },
+    {
       "sourcePath": "shared-v2-source/config/adversarial-agents/shared-v2/agents-config.json",
       "destination": "config/adversarial-agents/shared-v2/agents-config.json",
       "sha256": "35392a6eb1837b1a3a27f19bc2ac2f5c4b2cc827ad0c9ed6e1c2f40f865cab54"
@@ -119,7 +124,7 @@
     {
       "sourcePath": "shared-v2-source/scripts/evaluate-adversarial-reviewer.test.mjs",
       "destination": "scripts/evaluate-adversarial-reviewer.test.mjs",
-      "sha256": "dbbbbe914b8c63bdc393c75d37f8e9d3634e7b37c8f04093945d5dc3b2eecca0"
+      "sha256": "10148644656b82f1aa0fe4f3c6efd787452f5838769c61ae73cc02c931759829"
     },
     {
       "sourcePath": "shared-v2-source/scripts/evaluate-adversarial-reviewer.ts",
@@ -164,7 +169,7 @@
     {
       "sourcePath": "shared-v2-source/scripts/resolve-adversarial-reviewer-matrix.test.mjs",
       "destination": "scripts/resolve-adversarial-reviewer-matrix.test.mjs",
-      "sha256": "8b52c96b77c2463f7223c263269b013d75db1b1646b824d144142e9b3254a496"
+      "sha256": "ebab4ebb30ed3711708051319d076feeabe55d1273068dc8f36f0a0b7be7e052"
     },
     {
       "sourcePath": "shared-v2-source/scripts/resolve-adversarial-reviewer-matrix.ts",
@@ -174,17 +179,17 @@
     {
       "sourcePath": "shared-v2-source/scripts/review-adversarial-context.test.mjs",
       "destination": "scripts/review-adversarial-context.test.mjs",
-      "sha256": "d27611eeab92a440b3dd669b829700ea32ed99cf6c9b42f21c6c96997ac62dae"
+      "sha256": "46c3c08652e2d4d0c419f4369431cba2a325349899432293c87d366976221fbe"
     },
     {
       "sourcePath": "shared-v2-source/scripts/review-adversarial-context.ts",
       "destination": "scripts/review-adversarial-context.ts",
-      "sha256": "27fdbf8e540a97759b73b340d03df8cb425af283d4a22deaa0469133fc12490c"
+      "sha256": "ba76ac565c9f339552ea1f52956c8f0c87fde3f2e24afe4826fa1829cc9147bb"
     },
     {
       "sourcePath": "shared-v2-source/scripts/validate-adversarial-agent-registry.test.mjs",
       "destination": "scripts/validate-adversarial-agent-registry.test.mjs",
-      "sha256": "31bfe9a375990f66dcfba11db2a8c6aedf11fb8e379c4e590ce277550a06acc2"
+      "sha256": "d0a61bd64c5765df73ff9d28f708df2e53ac787341084499c82d8bddba74b88e"
     },
     {
       "sourcePath": "shared-v2-source/scripts/validate-adversarial-agent-registry.ts",
@@ -194,7 +199,7 @@
     {
       "sourcePath": "shared-v2-source/scripts/validate-adversarial-finding.test.mjs",
       "destination": "scripts/validate-adversarial-finding.test.mjs",
-      "sha256": "f9109a649651ec62fcc3b829dfff68f6e45cf161ad92c9e2ffb82265f8b3b494"
+      "sha256": "cebb8abd488bb004be7fffc8fac8e3e5137f161b94c9750d44255c9356fb3a92"
     },
     {
       "sourcePath": "shared-v2-source/scripts/validate-adversarial-finding.ts",
@@ -215,16 +220,11 @@
   "externalDependencies": [
     {
       "destination": "package.json",
-      "sha256": "bda02215bdef705203b62d9d5ec47e08ae4fdf1bf6b66f3f5da0b5b05d7ba64d"
+      "sha256": "e566e393e98d1fe8711574970cb6a549752d59c15e5b0bfb13ea3aa1bd5ebb04"
     },
     {
       "destination": ".github/workflows/adversarial-calibration.yml",
       "sha256": "db376c308bfad6169dc923a929a4e15ec29ccc48597dd8e0eaab979793546f68"
-    }
-  ],
-  "activationOutputs": [
-    {
-      "destination": "config/adversarial-agents/shared-v2/active-calibration-unit-test-reviewer.json"
     }
   ]
 }

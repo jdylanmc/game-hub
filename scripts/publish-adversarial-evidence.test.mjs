@@ -67,8 +67,8 @@ function reviewResult(findings = [], overrides = {}) {
       agentName: 'unit-test-reviewer',
       agentVersion: '1.0.0',
       modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
-      promptVersion: '1.0.5',
-      promptContentHash: '95db6cddd17acbb8acaf5e498d3c40e191c8cc258deed586105b57ae7df40843',
+      promptVersion: '1.0.3',
+      promptContentHash: '9d5667c8233da813b06adc93eba7daf832339653b44c617a006df51b21697c68',
       policyVersion: '1.0.0',
       toolsVersion: '1.0.1',
       subscriptionId: '11213dbd-39fe-46ba-87db-5f5e8c449aed',
@@ -147,6 +147,7 @@ function options(transport, result = reviewResult([finding()]), outputName = 'de
     repoRoot,
     repository,
     issueNumber: 30,
+    pullRequestNumber: 35,
     headSha,
     result,
     calibration,
@@ -201,7 +202,55 @@ afterEach(async () => {
 });
 
 describe('publishAdversarialEvidence', () => {
-  it('retains an exact exception as a warning without overriding a confirmed FAIL', async () => {
+  it('publishes schema-valid platform ERROR evidence without inventing a missing summary mismatch', async () => {
+    const transport = new FakeGitHubTransport();
+    const result = reviewResult([], {
+      verdict: {
+        decision: 'ERROR',
+        severity: 'ERROR',
+        blockingFindingsCount: 0,
+        advisoryFindingsCount: 0,
+        errorMessage: 'CONTEXT_IDENTITY_INVALID: packet attribution is missing.',
+        policyDecisionRationale: 'Review failed before a policy verdict was available.',
+      },
+    });
+    delete result.summary;
+
+    const publication = await publishAdversarialEvidence(options(transport, result, 'platform-error'));
+    const manifest = await readJson(publication.manifestPath);
+
+    expect(publication).toMatchObject({ conclusion: 'failure', created: true });
+    expect(manifest).toMatchObject({ issueNumber: 30, pullRequestNumber: 35 });
+    expect(transport.createCalls).toHaveLength(1);
+  });
+
+  it('requires an explicit pull request number for platform errors and rejects summary disagreement', async () => {
+    const errorTransport = new FakeGitHubTransport();
+    const errorResult = reviewResult([], {
+      verdict: {
+        decision: 'ERROR',
+        severity: 'ERROR',
+        blockingFindingsCount: 0,
+        advisoryFindingsCount: 0,
+        errorMessage: 'PLATFORM_FAILURE',
+        policyDecisionRationale: 'Platform failure.',
+      },
+    });
+    delete errorResult.summary;
+    const missing = options(errorTransport, errorResult, 'missing-pr');
+    delete missing.pullRequestNumber;
+    await expect(publishAdversarialEvidence(missing)).rejects.toThrow(/pullRequestNumber/);
+
+    const mismatchTransport = new FakeGitHubTransport();
+    await expect(
+      publishAdversarialEvidence({
+        ...options(mismatchTransport, reviewResult(), 'mismatched-pr'),
+        pullRequestNumber: 36,
+      }),
+    ).rejects.toThrow(/pull-request head SHA/);
+  });
+
+  it('publishes an exact exception as a warning and neutral check while retaining immutable audit evidence', async () => {
     const transport = new FakeGitHubTransport();
     const result = reviewResult([finding()]);
     const publication = await publishAdversarialEvidence({
@@ -210,7 +259,7 @@ describe('publishAdversarialEvidence', () => {
     });
     const artifact = await readJson(publication.artifactPath);
 
-    expect(publication.conclusion).toBe('failure');
+    expect(publication.conclusion).toBe('neutral');
     expect(transport.createCalls[0].request.output.annotations[0].annotation_level).toBe('warning');
     expect(artifact.result).toEqual(result);
     expect(artifact.exceptions.applications).toHaveLength(1);
@@ -272,13 +321,13 @@ describe('publishAdversarialEvidence', () => {
     expect(transport.createCalls).toHaveLength(0);
   });
 
-  it('maps PASS findings to success warnings and confirmed blockers to failures', async () => {
+  it('maps advisory findings to neutral warnings and blocking findings to failures', async () => {
     const advisoryTransport = new FakeGitHubTransport();
     const advisory = finding({ severity: 'ADVISORY', confidence: 'MEDIUM' });
     const advisoryPublication = await publishAdversarialEvidence(
       options(advisoryTransport, reviewResult([advisory]), 'advisory'),
     );
-    expect(advisoryPublication.conclusion).toBe('success');
+    expect(advisoryPublication.conclusion).toBe('neutral');
     expect(advisoryTransport.createCalls[0].request.output.annotations[0].annotation_level).toBe('warning');
 
     const blockingTransport = new FakeGitHubTransport();
@@ -375,7 +424,7 @@ describe('publishAdversarialEvidence', () => {
       repository,
       headSha,
       modelDeployment: 'gpt-4.1-mini@2025-04-14/eastus/GlobalStandard',
-      promptVersion: '1.0.5',
+      promptVersion: '1.0.3',
       promptContentHash: expect.stringMatching(/^[a-f0-9]{64}$/),
       schemaVersion: '1.0.0',
       policyVersion: '1.0.0',

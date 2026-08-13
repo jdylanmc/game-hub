@@ -11,7 +11,6 @@ interface AgentRegistration extends JsonObject {
   name: string;
   version: string;
   enabled: boolean;
-  promoted: boolean;
   promptFile: string;
   promptVersion: string;
   promptContentHash: string;
@@ -48,7 +47,6 @@ const REQUIRED_AGENT_FIELDS = [
   'name',
   'version',
   'enabled',
-  'promoted',
   'promptFile',
   'promptVersion',
   'promptContentHash',
@@ -155,8 +153,6 @@ function validateAgentRegistry(
       typeof candidate.contextConfigVersion !== 'string' ||
       !/^\d+\.\d+\.\d+$/.test(candidate.contextConfigVersion) ||
       typeof candidate.enabled !== 'boolean' ||
-      typeof candidate.promoted !== 'boolean' ||
-      (candidate.promoted === true && candidate.enabled !== true) ||
       typeof candidate.checkName !== 'string' ||
       candidate.checkName !== `Adversarial Review / ${candidate.name}` ||
       candidate.stateNamespace !== `adversarial/${candidate.name}` ||
@@ -207,7 +203,7 @@ function validateAgentRegistry(
     if (
       !safeRepositoryPath(registration.activeCalibrationReportFile) ||
       registration.activeCalibrationReportFile !==
-        `config/adversarial-agents/shared-v2/active-calibration-${registration.name}.json`
+        `config/adversarial-agents/active-calibration-${registration.name}.json`
     ) {
       errors.push(`agents[${index}].activeCalibrationReportFile is not agent-specific.`);
     }
@@ -241,7 +237,7 @@ function loadAgentRegistration(
   agentName: string,
   options: { allowDisabledForCalibration?: boolean } = {},
 ): AgentRegistration {
-  const registryPath = path.join(repoRoot, 'config/adversarial-agents/shared-v2/agents-config.json');
+  const registryPath = path.join(repoRoot, 'config/adversarial-agents/agents-config.json');
   const registry: unknown = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
   const validation = validateAgentRegistry(repoRoot, registry);
   if (!validation.valid) {
@@ -257,7 +253,7 @@ function loadAgentRegistration(
 function main(): void {
   const repoRoot = path.resolve(process.argv[2] ?? '.');
   const registry: unknown = JSON.parse(
-    fs.readFileSync(path.join(repoRoot, 'config/adversarial-agents/shared-v2/agents-config.json'), 'utf8'),
+    fs.readFileSync(path.join(repoRoot, 'config/adversarial-agents/agents-config.json'), 'utf8'),
   );
   const validation = validateAgentRegistry(repoRoot, registry);
   console.log(JSON.stringify(validation, null, 2));

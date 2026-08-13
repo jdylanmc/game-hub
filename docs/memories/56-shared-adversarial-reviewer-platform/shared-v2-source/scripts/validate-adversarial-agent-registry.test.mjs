@@ -22,8 +22,7 @@ describe('validateAgentRegistry', () => {
     expect(validateAgentRegistry(repoRoot, missingPromotion).valid).toBe(false);
 
     const weakened = structuredClone(registry);
-    weakened.agents[0].enabled = false;
-    weakened.agents[0].promoted = true;
+    weakened.agents[1].promoted = true;
     expect(validateAgentRegistry(repoRoot, weakened).valid).toBe(false);
   });
 
