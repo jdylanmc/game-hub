@@ -16,6 +16,8 @@
       "scripts/check-shared-v2-boundary.mjs",
       "scripts/check-shared-v2-boundary.test.mjs",
       "scripts/shared-v2-activation-smoke.test.mjs",
+      "scripts/check-lint-scope.mjs",
+      "scripts/collect-adversarial-context.test.mjs",
       "package.json"
     ]
   },
@@ -50,7 +52,7 @@
       "description": "Document committed-main activation input for #58 and pass full deterministic plus exact-head checks.",
       "priority": 4,
       "passes": true,
-      "notes": "Seam: documented handoff and check evidence."
+      "notes": "Seam: documented handoff, collector metadata-only packet, and check evidence."
     }
   ]
 }

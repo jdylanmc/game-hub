@@ -21,5 +21,14 @@
   and proves active v1 files remain unchanged.
 - **US-004:** Added the durable #56 activation handoff; #58 now consumes
   committed main-branch text only.
-- **Validation:** format, lint, typecheck, full policy, 379 deterministic
-  tests, and all 23 fail-closed probes pass locally.
+- **Collector retry fix:** protected-main collection initially blocked the
+  inert tree because the active lint-scope policy probe held a literal inert
+  path. The probe is now built from inert path segments, so it remains a
+  non-executing lint assertion rather than an apparent activation reference.
+  Its public collector seam was driven red with
+  `yarn vitest run scripts/collect-adversarial-context.test.mjs --coverage.enabled=false -t 'allows the lint-scope policy probe'`
+  (`BLOCKED` before the fix), then green with the same command (`READY`).
+- **Validation:** `yarn format:check`, `yarn lint`, `yarn typecheck`,
+  `yarn policy:check`, `yarn shared-v2:check`, the targeted v2/collector
+  suite, `yarn test` (380 deterministic tests), and
+  `yarn test:ci-fail-closed` (23 probes) pass locally.
